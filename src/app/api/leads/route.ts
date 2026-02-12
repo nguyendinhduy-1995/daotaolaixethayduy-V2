@@ -1,36 +1,168 @@
 import { NextResponse } from "next/server";
+import type { LeadStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireAuth } from "@/lib/auth";
 import { jsonError } from "@/lib/api-response";
+import { isLeadStatusType, logLeadEvent } from "@/lib/lead-events";
 
-export async function POST(req: Request) {
+type SortField = "createdAt" | "updatedAt" | "lastContactAt";
+type SortOrder = "asc" | "desc";
+
+function assertAuth(req: Request) {
   try {
-    requireAuth(req);
+    return requireAuth(req);
   } catch (error) {
     if (error instanceof AuthError) {
-      return jsonError(error.status, error.code, error.message);
+      return { error: jsonError(error.status, error.code, error.message) };
     }
-    return jsonError(401, "UNAUTHORIZED", "Unauthorized");
+    return { error: jsonError(401, "AUTH_MISSING_BEARER", "Missing or invalid Authorization Bearer token") };
   }
+}
+
+function parsePagination(value: string | null, fallback: number, max?: number) {
+  if (value === null) return fallback;
+  const n = Number(value);
+  if (!Number.isInteger(n) || n <= 0) {
+    throw new Error("INVALID_PAGINATION");
+  }
+  if (max) return Math.min(n, max);
+  return n;
+}
+
+function parseDateYmd(value: string, endOfDay = false) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error("INVALID_DATE");
+  const [y, m, d] = value.split("-").map(Number);
+  const utc = new Date(Date.UTC(y, m - 1, d));
+  if (utc.getUTCFullYear() !== y || utc.getUTCMonth() !== m - 1 || utc.getUTCDate() !== d) {
+    throw new Error("INVALID_DATE");
+  }
+  return new Date(`${value}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}Z`);
+}
+
+function validateTags(tags: unknown) {
+  return (
+    Array.isArray(tags) &&
+    tags.every((tag) => typeof tag === "string")
+  );
+}
+
+export async function GET(req: Request) {
+  const auth = assertAuth(req);
+  if ("error" in auth) return auth.error;
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const status = searchParams.get("status");
+    const source = searchParams.get("source");
+    const channel = searchParams.get("channel");
+    const licenseType = searchParams.get("licenseType");
+    const ownerId = searchParams.get("ownerId");
+    const q = searchParams.get("q")?.trim();
+    const createdFrom = searchParams.get("createdFrom");
+    const createdTo = searchParams.get("createdTo");
+    const page = parsePagination(searchParams.get("page"), 1);
+    const pageSize = parsePagination(searchParams.get("pageSize"), 20, 100);
+    const sort = (searchParams.get("sort") ?? "createdAt") as SortField;
+    const order = (searchParams.get("order") ?? "desc") as SortOrder;
+
+    if (status && !isLeadStatusType(status)) {
+      return jsonError(400, "VALIDATION_ERROR", "Invalid status");
+    }
+    if (!["createdAt", "updatedAt", "lastContactAt"].includes(sort)) {
+      return jsonError(400, "VALIDATION_ERROR", "Invalid sort field");
+    }
+    if (!["asc", "desc"].includes(order)) {
+      return jsonError(400, "VALIDATION_ERROR", "Invalid order");
+    }
+
+    const createdAtFilter: Prisma.DateTimeFilter = {};
+    if (createdFrom) createdAtFilter.gte = parseDateYmd(createdFrom);
+    if (createdTo) createdAtFilter.lte = parseDateYmd(createdTo, true);
+
+    const where: Prisma.LeadWhereInput = {
+      ...(status ? { status: status as LeadStatus } : {}),
+      ...(source ? { source } : {}),
+      ...(channel ? { channel } : {}),
+      ...(licenseType ? { licenseType } : {}),
+      ...(ownerId ? { ownerId } : {}),
+      ...(createdFrom || createdTo ? { createdAt: createdAtFilter } : {}),
+      ...(q
+        ? {
+            OR: [
+              { fullName: { contains: q, mode: "insensitive" } },
+              { phone: { contains: q, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    };
+
+    const [items, total] = await Promise.all([
+      prisma.lead.findMany({
+        where,
+        orderBy: { [sort]: order },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.lead.count({ where }),
+    ]);
+
+    return NextResponse.json({
+      items,
+      page,
+      pageSize,
+      total,
+    });
+  } catch (error) {
+    if (error instanceof Error && (error.message === "INVALID_DATE" || error.message === "INVALID_PAGINATION")) {
+      return jsonError(400, "VALIDATION_ERROR", "Invalid query params");
+    }
+    return jsonError(500, "INTERNAL_ERROR", "Internal server error");
+  }
+}
+
+export async function POST(req: Request) {
+  const auth = assertAuth(req);
+  if ("error" in auth) return auth.error;
 
   try {
     const body = await req.json().catch(() => null);
-    if (!body) return jsonError(400, "BAD_REQUEST", "Invalid JSON");
+    if (!body || typeof body !== "object") {
+      return jsonError(400, "VALIDATION_ERROR", "Invalid JSON body");
+    }
+    if (body.tags !== undefined && !validateTags(body.tags)) {
+      return jsonError(400, "VALIDATION_ERROR", "tags must be an array of strings");
+    }
 
-    const phone = body.phone?.trim() || null;
+    const phone = typeof body.phone === "string" ? body.phone.trim() : "";
+    const lead = await prisma.$transaction(async (tx) => {
+      const created = await tx.lead.create({
+        data: {
+          fullName: typeof body.fullName === "string" ? body.fullName : null,
+          phone: phone || null,
+          province: typeof body.province === "string" ? body.province : null,
+          licenseType: typeof body.licenseType === "string" ? body.licenseType : null,
+          source: typeof body.source === "string" ? body.source : "manual",
+          channel: typeof body.channel === "string" ? body.channel : "manual",
+          status: phone ? "HAS_PHONE" : "NEW",
+          note: typeof body.note === "string" ? body.note : null,
+          tags: body.tags ?? [],
+        },
+      });
 
-    const lead = await prisma.lead.create({
-      data: {
-        fullName: body.fullName || null,
-        phone,
-        province: body.province || null,
-        licenseType: body.licenseType || null,
-        source: body.source || "manual",
-        channel: body.channel || "manual",
-        status: phone ? "HAS_PHONE" : "NEW",
-        note: body.note || null,
-        tags: Array.isArray(body.tags) ? body.tags : [],
-      },
+      if (created.status === "HAS_PHONE") {
+        await logLeadEvent(
+          {
+            leadId: created.id,
+            type: "HAS_PHONE",
+            note: "Auto status from lead creation with phone",
+            meta: { source: "api.leads.create" },
+            createdById: auth.sub,
+          },
+          tx
+        );
+      }
+
+      return created;
     });
 
     return NextResponse.json({ lead });

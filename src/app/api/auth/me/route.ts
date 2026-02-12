@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { AuthError, requireAuth } from "@/lib/auth";
 import { jsonError } from "@/lib/api-response";
-import { getKpiDaily, KpiDateError, resolveKpiDateParam } from "@/lib/services/kpi-daily";
 
 export async function GET(req: Request) {
+  let auth;
   try {
-    requireAuth(req);
+    auth = requireAuth(req);
   } catch (error) {
     if (error instanceof AuthError) {
       return jsonError(error.status, error.code, error.message);
@@ -14,14 +15,19 @@ export async function GET(req: Request) {
   }
 
   try {
-    const { searchParams } = new URL(req.url);
-    const date = resolveKpiDateParam(searchParams.get("date"));
-    const kpi = await getKpiDaily(date);
-    return NextResponse.json(kpi);
-  } catch (error) {
-    if (error instanceof KpiDateError) {
-      return jsonError(400, "BAD_REQUEST", error.message);
+    const user = await prisma.user.findUnique({
+      where: { id: auth.sub },
+      select: { id: true, email: true, name: true, role: true, isActive: true },
+    });
+
+    if (!user || !user.isActive) {
+      return jsonError(401, "UNAUTHORIZED", "Unauthorized");
     }
+
+    return NextResponse.json({
+      user: { id: user.id, email: user.email, name: user.name, role: user.role },
+    });
+  } catch {
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }
