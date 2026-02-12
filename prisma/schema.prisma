@@ -1,0 +1,268 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+}
+
+
+enum Role {
+  admin
+  manager
+  telesales
+  direct_page
+  viewer
+}
+
+enum LeadStatus {
+  NEW
+  HAS_PHONE
+  APPOINTED
+  ARRIVED
+  SIGNED
+  STUDYING
+  EXAMED
+  RESULT
+  LOST
+}
+
+enum CallOutcome {
+  no_answer
+  interested
+  not_interested
+  wrong_number
+  call_back
+}
+
+enum AppointmentOutcome {
+  confirmed
+  rescheduled
+  cancelled
+  no_show
+}
+
+enum ArrivalOutcome {
+  arrived_ok
+  arrived_waiting
+  arrived_refused
+}
+
+enum ExamResult {
+  pass
+  fail
+}
+
+enum StudyStatus {
+  studying
+  paused
+  done
+}
+
+enum ReceiptMethod {
+  cash
+  bank_transfer
+  card
+  other
+}
+
+enum MessageDirection {
+  inbound
+  outbound
+}
+
+enum ScheduleType {
+  study
+  exam
+  reminder
+}
+
+enum AutomationStatus {
+  sent
+  failed
+  skipped
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  role      Role     @default(viewer)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  leads     Lead[]    @relation("OwnerLeads")
+  receipts  Receipt[] @relation("ReceiptCreatedBy")
+  events    LeadEvent[] @relation("EventCreatedBy")
+}
+
+model Lead {
+  id          String     @id @default(cuid())
+  fullName    String?
+  phone       String?    @unique
+  province    String?
+  licenseType String?
+  source      String?
+  channel     String?
+  status      LeadStatus @default(NEW)
+
+  ownerId     String?
+  owner       User?      @relation("OwnerLeads", fields: [ownerId], references: [id])
+
+  callOutcome    CallOutcome?
+  apptOutcome    AppointmentOutcome?
+  arrivalOutcome ArrivalOutcome?
+
+  note         String?
+  tags         String[]   @default([])
+  lastContactAt DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  messages      LeadMessage[]
+  events        LeadEvent[]
+  student       Student?
+  automationLogs AutomationLog[]
+}
+
+model LeadMessage {
+  id        String           @id @default(cuid())
+  leadId    String
+  channel   String
+  direction MessageDirection
+  content   String
+  externalMessageId String?
+  createdAt DateTime         @default(now())
+
+  lead      Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId, createdAt])
+}
+
+model LeadEvent {
+  id        String   @id @default(cuid())
+  leadId    String
+  type      String
+  payload   Json?
+  createdAt DateTime @default(now())
+
+  createdById String?
+  createdBy   User?  @relation("EventCreatedBy", fields: [createdById], references: [id])
+
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId, createdAt])
+}
+
+model TuitionPlan {
+  id          String   @id @default(cuid())
+  province    String
+  licenseType String
+  tuition     Int
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  students    Student[]
+
+  @@unique([province, licenseType])
+  @@index([province, licenseType])
+}
+
+model Course {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  province    String?
+  licenseType String?
+  startDate   DateTime?
+  examDate    DateTime?
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  students    Student[]
+  scheduleItems CourseScheduleItem[]
+}
+
+model CourseScheduleItem {
+  id        String       @id @default(cuid())
+  courseId  String
+  type      ScheduleType
+  title     String
+  startAt   DateTime
+  endAt     DateTime?
+  rule      Json?
+  isActive  Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  course    Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId, startAt])
+}
+
+model Student {
+  id              String       @id @default(cuid())
+  leadId          String       @unique
+  courseId        String?
+
+  tuitionPlanId   String?
+  tuitionPlan     TuitionPlan? @relation(fields: [tuitionPlanId], references: [id])
+
+  tuitionSnapshot Int?
+  signedAt        DateTime?
+  arrivedAt       DateTime?
+
+  studyStatus     StudyStatus  @default(studying)
+  examDate        DateTime?
+  examStatus      String?
+  examResult      ExamResult?
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  lead            Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  course          Course?      @relation(fields: [courseId], references: [id])
+
+  receipts        Receipt[]
+  automationLogs  AutomationLog[]
+
+  @@index([courseId])
+}
+
+model Receipt {
+  id          String        @id @default(cuid())
+  studentId   String
+  amount      Int
+  method      ReceiptMethod @default(cash)
+  note        String?
+  receivedAt  DateTime      @default(now())
+  createdAt   DateTime      @default(now())
+
+  createdById String?
+  createdBy   User?         @relation("ReceiptCreatedBy", fields: [createdById], references: [id])
+
+  student     Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, receivedAt])
+}
+
+model AutomationLog {
+  id          String           @id @default(cuid())
+  leadId      String?
+  studentId   String?
+  channel     String
+  templateKey String?
+  milestone   String?
+  status      AutomationStatus @default(sent)
+  sentAt      DateTime         @default(now())
+  payload     Json?
+
+  lead        Lead?            @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  student     Student?         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([leadId, sentAt])
+  @@index([studentId, sentAt])
+}
