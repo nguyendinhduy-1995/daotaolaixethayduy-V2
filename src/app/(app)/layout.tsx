@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useState } from "react";
 import { clearToken, fetchMe, getToken, type MeResponse } from "@/lib/auth-client";
+import { isAdminRole } from "@/lib/admin-auth";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 
@@ -86,6 +87,17 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             >
               Khóa học
             </Link>
+            {user && isAdminRole(user.role) ? (
+              <div className="pt-2">
+                <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-zinc-400">Quản trị</p>
+                <Link
+                  href="/admin/users"
+                  className={`block rounded-lg px-3 py-2 text-sm ${pathname.startsWith("/admin/users") ? "bg-zinc-900 text-white" : "text-zinc-700 hover:bg-zinc-100"}`}
+                >
+                  Người dùng
+                </Link>
+              </div>
+            ) : null}
           </nav>
         </aside>
 

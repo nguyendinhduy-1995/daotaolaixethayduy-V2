@@ -13,7 +13,7 @@ export const LEAD_STATUS_TYPES = [
   "LOST",
 ] as const;
 
-export const LEAD_EVENT_TYPES = [...LEAD_STATUS_TYPES, "CALLED"] as const;
+export const LEAD_EVENT_TYPES = [...LEAD_STATUS_TYPES, "CALLED", "OWNER_CHANGED", "ASSIGNED_OWNER"] as const;
 
 export const STATUS_TRANSITION_EVENT_TYPES = [
   "APPOINTED",

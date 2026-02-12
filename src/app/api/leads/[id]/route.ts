@@ -31,7 +31,12 @@ export async function GET(req: Request, context: RouteContext) {
 
   try {
     const { id } = await Promise.resolve(context.params);
-    const lead = await prisma.lead.findUnique({ where: { id } });
+    const lead = await prisma.lead.findUnique({
+      where: { id },
+      include: {
+        owner: { select: { id: true, name: true, email: true, role: true, isActive: true } },
+      },
+    });
     if (!lead) return jsonError(404, "NOT_FOUND", "Lead not found");
     return NextResponse.json({ lead });
   } catch {
@@ -60,6 +65,21 @@ export async function PATCH(req: Request, context: RouteContext) {
       const current = await tx.lead.findUnique({ where: { id } });
       if (!current) return null;
 
+      let nextOwnerId: string | null | undefined;
+      if (body.ownerId !== undefined) {
+        if (typeof body.ownerId !== "string" || !body.ownerId.trim()) {
+          nextOwnerId = null;
+        } else {
+          const owner = await tx.user.findUnique({
+            where: { id: body.ownerId },
+            select: { id: true, isActive: true },
+          });
+          if (!owner) throw new Error("OWNER_NOT_FOUND");
+          if (!owner.isActive) throw new Error("OWNER_INACTIVE");
+          nextOwnerId = owner.id;
+        }
+      }
+
       const data: Prisma.LeadUpdateInput = {
         ...(body.fullName !== undefined ? { fullName: typeof body.fullName === "string" ? body.fullName : null } : {}),
         ...(body.phone !== undefined
@@ -72,7 +92,7 @@ export async function PATCH(req: Request, context: RouteContext) {
         ...(body.source !== undefined ? { source: typeof body.source === "string" ? body.source : null } : {}),
         ...(body.channel !== undefined ? { channel: typeof body.channel === "string" ? body.channel : null } : {}),
         ...(body.status !== undefined ? { status: body.status } : {}),
-        ...(body.ownerId !== undefined ? { ownerId: typeof body.ownerId === "string" ? body.ownerId : null } : {}),
+        ...(body.ownerId !== undefined ? { ownerId: nextOwnerId } : {}),
         ...(body.note !== undefined ? { note: typeof body.note === "string" ? body.note : null } : {}),
         ...(body.tags !== undefined ? { tags: body.tags } : {}),
       };
@@ -80,6 +100,9 @@ export async function PATCH(req: Request, context: RouteContext) {
       const updated = await tx.lead.update({
         where: { id },
         data,
+        include: {
+          owner: { select: { id: true, name: true, email: true, role: true, isActive: true } },
+        },
       });
 
       if (body.status !== undefined && body.status !== current.status) {
@@ -95,12 +118,35 @@ export async function PATCH(req: Request, context: RouteContext) {
         );
       }
 
+      if (body.ownerId !== undefined && current.ownerId !== updated.ownerId) {
+        await logLeadEvent(
+          {
+            leadId: id,
+            type: "OWNER_CHANGED",
+            note: "Owner changed via PATCH",
+            meta: {
+              fromOwnerId: current.ownerId ?? null,
+              toOwnerId: updated.ownerId ?? null,
+              source: "api.leads.patch",
+            },
+            createdById: auth.sub,
+          },
+          tx
+        );
+      }
+
       return updated;
     });
 
     if (!lead) return jsonError(404, "NOT_FOUND", "Lead not found");
     return NextResponse.json({ lead });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "OWNER_NOT_FOUND") {
+      return jsonError(404, "NOT_FOUND", "Owner not found");
+    }
+    if (error instanceof Error && error.message === "OWNER_INACTIVE") {
+      return jsonError(400, "VALIDATION_ERROR", "Owner is inactive");
+    }
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }

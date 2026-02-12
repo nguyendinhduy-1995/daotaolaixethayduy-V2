@@ -71,6 +71,17 @@ If a route file is missing in `src/app/api`, verification prints `SKIP (route mi
 - [ ] `npm run build` passes
 - [ ] `npm run verify` passes
 
+## Quản trị người dùng & phân lead
+
+- API quản trị người dùng (chỉ `admin`):
+  - `GET/POST /api/users`
+  - `GET/PATCH /api/users/[id]`
+- Gán telesale cho lead qua `PATCH /api/leads/[id] { ownerId }`
+- Khi đổi owner, hệ thống tự ghi `LeadEvent` loại `OWNER_CHANGED` với payload `fromOwnerId/toOwnerId`
+- UI:
+  - Trang quản trị người dùng: `/admin/users`
+  - Filter/gán owner trên `/leads`, `/leads/board`, `/leads/[id]` (hiển thị theo quyền)
+
 ## Troubleshooting
 
 - Prisma client mismatch:

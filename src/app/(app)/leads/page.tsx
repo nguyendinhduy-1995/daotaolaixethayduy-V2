@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchJson, type ApiClientError } from "@/lib/api-client";
-import { clearToken, getToken } from "@/lib/auth-client";
+import { clearToken, fetchMe, getToken } from "@/lib/auth-client";
+import { isAdminRole } from "@/lib/admin-auth";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,13 @@ type Lead = {
   tags: string[];
   createdAt: string;
   updatedAt: string;
+  owner?: {
+    id: string;
+    name: string | null;
+    email: string;
+    role: string;
+    isActive: boolean;
+  } | null;
 };
 
 type LeadListResponse = {
@@ -47,6 +55,14 @@ type LeadEvent = {
   createdById?: string | null;
 };
 type LeadEventsResponse = { items: LeadEvent[] };
+type UserOption = {
+  id: string;
+  name: string | null;
+  email: string;
+  role: string;
+  isActive: boolean;
+};
+type UsersResponse = { items: UserOption[] };
 
 const STATUS_OPTIONS = ["NEW", "HAS_PHONE", "APPOINTED", "ARRIVED", "SIGNED", "STUDYING", "EXAMED", "RESULT", "LOST"];
 const EVENT_OPTIONS = [...STATUS_OPTIONS, "CALLED"];
@@ -89,6 +105,8 @@ export default function LeadsPage() {
   const [filters, setFilters] = useState<Filters>(INITIAL_FILTERS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [canManageOwner, setCanManageOwner] = useState(false);
+  const [owners, setOwners] = useState<UserOption[]>([]);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createSaving, setCreateSaving] = useState(false);
@@ -111,6 +129,9 @@ export default function LeadsPage() {
 
   const [pendingStatus, setPendingStatus] = useState<{ id: string; status: string } | null>(null);
   const [statusSaving, setStatusSaving] = useState(false);
+  const [assignLead, setAssignLead] = useState<Lead | null>(null);
+  const [assignOwnerId, setAssignOwnerId] = useState("");
+  const [assignSaving, setAssignSaving] = useState(false);
 
   const query = useMemo(() => {
     const params = new URLSearchParams();
@@ -153,6 +174,41 @@ export default function LeadsPage() {
   useEffect(() => {
     loadLeads();
   }, [loadLeads]);
+
+  useEffect(() => {
+    fetchMe()
+      .then((data) => {
+        if (isAdminRole(data.user.role)) {
+          setCanManageOwner(true);
+        } else {
+          setCanManageOwner(false);
+        }
+      })
+      .catch(() => {
+        setCanManageOwner(false);
+      });
+  }, []);
+
+  const loadOwners = useCallback(async () => {
+    if (!canManageOwner) {
+      setOwners([]);
+      return;
+    }
+    const token = getToken();
+    if (!token) return;
+    try {
+      const data = await fetchJson<UsersResponse>("/api/users?page=1&pageSize=100&isActive=true", { token });
+      const active = data.items.filter((item) => item.isActive && item.role !== "admin");
+      const saleLike = active.filter((item) => item.role === "telesales" || item.role === "direct_page");
+      setOwners(saleLike.length > 0 ? saleLike : active);
+    } catch {
+      setOwners([]);
+    }
+  }, [canManageOwner]);
+
+  useEffect(() => {
+    loadOwners();
+  }, [loadOwners]);
 
   async function openDetail(id: string) {
     const token = getToken();
@@ -249,6 +305,30 @@ export default function LeadsPage() {
     }
   }
 
+  async function submitAssignOwner() {
+    if (!assignLead) return;
+    const token = getToken();
+    if (!token) return;
+    setAssignSaving(true);
+    setError("");
+    try {
+      await fetchJson(`/api/leads/${assignLead.id}`, {
+        method: "PATCH",
+        token,
+        body: { ownerId: assignOwnerId || null },
+      });
+      setAssignLead(null);
+      setAssignOwnerId("");
+      await loadLeads();
+      if (detailLead?.id === assignLead.id) openDetail(assignLead.id);
+    } catch (e) {
+      const err = e as ApiClientError;
+      if (!handleAuthError(err)) setError(formatError(err));
+    } finally {
+      setAssignSaving(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -290,11 +370,25 @@ export default function LeadsPage() {
           value={filtersDraft.licenseType}
           onChange={(e) => setFiltersDraft((s) => ({ ...s, licenseType: e.target.value }))}
         />
-        <Input
-          placeholder="Owner ID"
-          value={filtersDraft.ownerId}
-          onChange={(e) => setFiltersDraft((s) => ({ ...s, ownerId: e.target.value }))}
-        />
+        {canManageOwner ? (
+          <Select
+            value={filtersDraft.ownerId}
+            onChange={(e) => setFiltersDraft((s) => ({ ...s, ownerId: e.target.value }))}
+          >
+            <option value="">All owners</option>
+            {owners.map((owner) => (
+              <option key={owner.id} value={owner.id}>
+                {owner.name || owner.email}
+              </option>
+            ))}
+          </Select>
+        ) : (
+          <Input
+            placeholder="Owner ID"
+            value={filtersDraft.ownerId}
+            onChange={(e) => setFiltersDraft((s) => ({ ...s, ownerId: e.target.value }))}
+          />
+        )}
         <Input
           type="date"
           value={filtersDraft.createdFrom}
@@ -352,7 +446,7 @@ export default function LeadsPage() {
       ) : items.length === 0 ? (
         <div className="rounded-xl bg-white p-6 text-zinc-500">No leads found.</div>
       ) : (
-        <Table headers={["Name", "Phone", "Status", "Source/Channel", "Created", "Actions"]}>
+        <Table headers={["Name", "Phone", "Status", "Owner", "Source/Channel", "Created", "Actions"]}>
           {items.map((lead) => (
             <tr key={lead.id} className="border-t border-zinc-100">
               <td className="px-3 py-2">
@@ -363,6 +457,7 @@ export default function LeadsPage() {
               <td className="px-3 py-2">
                 <Badge text={lead.status} />
               </td>
+              <td className="px-3 py-2 text-xs text-zinc-600">{lead.owner?.name || lead.owner?.email || "-"}</td>
               <td className="px-3 py-2">
                 <div>{lead.source || "-"}</div>
                 <div className="text-xs text-zinc-500">{lead.channel || "-"}</div>
@@ -372,6 +467,18 @@ export default function LeadsPage() {
                 <Button variant="secondary" className="w-full" onClick={() => openDetail(lead.id)}>
                   View
                 </Button>
+                {canManageOwner ? (
+                  <Button
+                    variant="secondary"
+                    className="w-full"
+                    onClick={() => {
+                      setAssignLead(lead);
+                      setAssignOwnerId(lead.ownerId || "");
+                    }}
+                  >
+                    Assign
+                  </Button>
+                ) : null}
                 <Select value={lead.status} onChange={(e) => setPendingStatus({ id: lead.id, status: e.target.value })}>
                   {STATUS_OPTIONS.map((status) => (
                     <option key={status} value={status}>
@@ -447,6 +554,9 @@ export default function LeadsPage() {
               <div>
                 <span className="text-zinc-500">License:</span> {detailLead.licenseType || "-"}
               </div>
+              <div>
+                <span className="text-zinc-500">Owner:</span> {detailLead.owner?.name || detailLead.owner?.email || "-"}
+              </div>
             </div>
 
             <div className="rounded-lg border border-zinc-200 p-3">
@@ -493,6 +603,30 @@ export default function LeadsPage() {
             </div>
           </div>
         ) : null}
+      </Modal>
+
+      <Modal open={Boolean(assignLead)} title="Gán telesale phụ trách" onClose={() => setAssignLead(null)}>
+        <div className="space-y-3">
+          <p className="text-sm text-zinc-700">
+            {assignLead ? `Lead: ${assignLead.fullName || assignLead.id}` : ""}
+          </p>
+          <Select value={assignOwnerId} onChange={(e) => setAssignOwnerId(e.target.value)}>
+            <option value="">Chưa gán</option>
+            {owners.map((owner) => (
+              <option key={owner.id} value={owner.id}>
+                {owner.name || owner.email}
+              </option>
+            ))}
+          </Select>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setAssignLead(null)}>
+              Hủy
+            </Button>
+            <Button onClick={submitAssignOwner} disabled={assignSaving}>
+              {assignSaving ? "Đang lưu..." : "Lưu"}
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

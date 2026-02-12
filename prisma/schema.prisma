@@ -124,6 +124,8 @@ model Lead {
   events        LeadEvent[]
   student       Student?
   automationLogs AutomationLog[]
+
+  @@index([ownerId, createdAt])
 }
 
 model LeadMessage {

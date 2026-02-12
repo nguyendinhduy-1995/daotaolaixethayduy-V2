@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { fetchJson, type ApiClientError } from "@/lib/api-client";
-import { clearToken, getToken } from "@/lib/auth-client";
+import { clearToken, fetchMe, getToken } from "@/lib/auth-client";
+import { isAdminRole } from "@/lib/admin-auth";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,11 +25,26 @@ type Lead = {
   lastContactAt: string | null;
   createdAt: string;
   status: string;
+  owner?: {
+    id: string;
+    name: string | null;
+    email: string;
+    role: string;
+    isActive: boolean;
+  } | null;
 };
 
 type LeadListResponse = {
   items: Lead[];
 };
+type UserOption = {
+  id: string;
+  name: string | null;
+  email: string;
+  role: string;
+  isActive: boolean;
+};
+type UsersResponse = { items: UserOption[] };
 
 const STATUSES = ["NEW", "HAS_PHONE", "APPOINTED", "ARRIVED", "SIGNED", "STUDYING", "EXAMED", "RESULT", "LOST"];
 const EVENT_OPTIONS = [...STATUSES, "CALLED"];
@@ -72,6 +88,8 @@ export default function LeadsBoardPage() {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [canManageOwner, setCanManageOwner] = useState(false);
+  const [owners, setOwners] = useState<UserOption[]>([]);
   const [byStatus, setByStatus] = useState<Record<string, Lead[]>>({});
   const [draggingLead, setDraggingLead] = useState<Lead | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -82,6 +100,9 @@ export default function LeadsBoardPage() {
   const [eventNote, setEventNote] = useState("");
   const [eventMeta, setEventMeta] = useState("");
   const [eventSaving, setEventSaving] = useState(false);
+  const [assignLead, setAssignLead] = useState<Lead | null>(null);
+  const [assignOwnerId, setAssignOwnerId] = useState("");
+  const [assignSaving, setAssignSaving] = useState(false);
 
   useEffect(() => {
     setFilters({
@@ -117,6 +138,33 @@ export default function LeadsBoardPage() {
     },
     [router]
   );
+
+  useEffect(() => {
+    fetchMe()
+      .then((data) => setCanManageOwner(isAdminRole(data.user.role)))
+      .catch(() => setCanManageOwner(false));
+  }, []);
+
+  const loadOwners = useCallback(async () => {
+    if (!canManageOwner) {
+      setOwners([]);
+      return;
+    }
+    const token = getToken();
+    if (!token) return;
+    try {
+      const data = await fetchJson<UsersResponse>("/api/users?page=1&pageSize=100&isActive=true", { token });
+      const active = data.items.filter((item) => item.isActive && item.role !== "admin");
+      const saleLike = active.filter((item) => item.role === "telesales" || item.role === "direct_page");
+      setOwners(saleLike.length > 0 ? saleLike : active);
+    } catch {
+      setOwners([]);
+    }
+  }, [canManageOwner]);
+
+  useEffect(() => {
+    loadOwners();
+  }, [loadOwners]);
 
   const baseParams = useMemo(() => {
     const params = new URLSearchParams();
@@ -223,6 +271,29 @@ export default function LeadsBoardPage() {
     }
   }
 
+  async function submitAssignOwner() {
+    if (!assignLead) return;
+    const token = getToken();
+    if (!token) return;
+    setAssignSaving(true);
+    setError("");
+    try {
+      await fetchJson(`/api/leads/${assignLead.id}`, {
+        method: "PATCH",
+        token,
+        body: { ownerId: assignOwnerId || null },
+      });
+      setAssignLead(null);
+      setAssignOwnerId("");
+      await loadBoard();
+    } catch (e) {
+      const err = e as ApiClientError;
+      if (!handleAuthError(err)) setError(formatError(err));
+    } finally {
+      setAssignSaving(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
@@ -243,7 +314,18 @@ export default function LeadsBoardPage() {
           placeholder="License type"
           onChange={(e) => setFilters((s) => ({ ...s, licenseType: e.target.value }))}
         />
-        <Input value={filters.ownerId} placeholder="Owner ID" onChange={(e) => setFilters((s) => ({ ...s, ownerId: e.target.value }))} />
+        {canManageOwner ? (
+          <Select value={filters.ownerId} onChange={(e) => setFilters((s) => ({ ...s, ownerId: e.target.value }))}>
+            <option value="">All owners</option>
+            {owners.map((owner) => (
+              <option key={owner.id} value={owner.id}>
+                {owner.name || owner.email}
+              </option>
+            ))}
+          </Select>
+        ) : (
+          <Input value={filters.ownerId} placeholder="Owner ID" onChange={(e) => setFilters((s) => ({ ...s, ownerId: e.target.value }))} />
+        )}
         <Input type="date" value={filters.createdFrom} onChange={(e) => setFilters((s) => ({ ...s, createdFrom: e.target.value }))} />
         <Input type="date" value={filters.createdTo} onChange={(e) => setFilters((s) => ({ ...s, createdTo: e.target.value }))} />
         <div className="flex flex-wrap gap-2">
@@ -318,7 +400,7 @@ export default function LeadsBoardPage() {
                         {lead.source || "-"} / {lead.channel || "-"}
                       </div>
                       <div className="text-zinc-500">License: {lead.licenseType || "-"}</div>
-                      <div className="text-zinc-500">Owner: {lead.ownerId || "-"}</div>
+                      <div className="text-zinc-500">Owner: {lead.owner?.name || lead.owner?.email || "-"}</div>
                       <div className="text-zinc-500">
                         Last contact: {lead.lastContactAt ? new Date(lead.lastContactAt).toLocaleString() : "-"}
                       </div>
@@ -336,6 +418,18 @@ export default function LeadsBoardPage() {
                           ))}
                         </Select>
                         <div className="flex gap-1">
+                          {canManageOwner ? (
+                            <Button
+                              variant="secondary"
+                              className="flex-1"
+                              onClick={() => {
+                                setAssignLead(lead);
+                                setAssignOwnerId(lead.ownerId || "");
+                              }}
+                            >
+                              Gán telesale
+                            </Button>
+                          ) : null}
                           <Button
                             variant="secondary"
                             className="flex-1"
@@ -386,6 +480,30 @@ export default function LeadsBoardPage() {
               ) : (
                 "Save Event"
               )}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={Boolean(assignLead)} title="Gán telesale phụ trách" onClose={() => setAssignLead(null)}>
+        <div className="space-y-3">
+          <p className="text-sm text-zinc-700">
+            {assignLead ? `Lead: ${assignLead.fullName || assignLead.id}` : ""}
+          </p>
+          <Select value={assignOwnerId} onChange={(e) => setAssignOwnerId(e.target.value)}>
+            <option value="">Chưa gán</option>
+            {owners.map((owner) => (
+              <option key={owner.id} value={owner.id}>
+                {owner.name || owner.email}
+              </option>
+            ))}
+          </Select>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setAssignLead(null)}>
+              Hủy
+            </Button>
+            <Button onClick={submitAssignOwner} disabled={assignSaving}>
+              {assignSaving ? "Đang lưu..." : "Lưu"}
             </Button>
           </div>
         </div>

@@ -81,6 +81,24 @@ wait_for_health || fail "Health check failed at $BASE_URL/api/health/db"
 TOKEN="$(get_token)" || fail "Login failed; cannot obtain token"
 log "Login OK"
 
+USER_ID=""
+if route_exists "users"; then
+  TS="$(date +%s)"
+  USER_EMAIL="verify-user-$TS@thayduy.local"
+  USER_ID="$(
+    curl -sS -X POST "$BASE_URL/api/users" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H 'Content-Type: application/json' \
+      -d "{\"name\":\"Verify User\",\"email\":\"$USER_EMAIL\",\"password\":\"Verify@123456\",\"role\":\"telesales\",\"isActive\":true}" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.user?.id){process.exit(1)}; process.stdout.write(o.user.id);'
+  )"
+  curl -sS "$BASE_URL/api/users?q=verify-user&page=1&pageSize=20" -H "Authorization: Bearer $TOKEN" \
+  | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!Array.isArray(o.items)){process.exit(1)}'
+  log "users create/list OK"
+else
+  log "SKIP (route missing): /api/users"
+fi
+
 if route_exists "health/db"; then
   curl -sS "$BASE_URL/api/health/db" | grep -q '"ok":true' || fail "Health endpoint failed"
   log "health/db OK"
@@ -117,6 +135,16 @@ if route_exists "leads"; then
   )"
   curl -sS "$BASE_URL/api/leads?q=Verify%20Lead&page=1&pageSize=10" -H "Authorization: Bearer $TOKEN" \
   | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!Array.isArray(o.items)){process.exit(1)}'
+  if [[ -n "$USER_ID" && -f "src/app/api/leads/[id]/route.ts" && -f "src/app/api/leads/[id]/events/route.ts" ]]; then
+    curl -sS -X PATCH "$BASE_URL/api/leads/$LEAD_ID" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H 'Content-Type: application/json' \
+      -d "{\"ownerId\":\"$USER_ID\"}" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.lead?.ownerId===undefined){process.exit(1)}'
+    curl -sS "$BASE_URL/api/leads/$LEAD_ID/events?page=1&pageSize=20&sort=createdAt&order=desc" -H "Authorization: Bearer $TOKEN" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!Array.isArray(o.items)){process.exit(1)}; if(!o.items.some(i=>i.type==="OWNER_CHANGED")){process.exit(1)}'
+    log "leads owner assignment + OWNER_CHANGED event OK"
+  fi
   log "leads create/list OK"
 else
   log "SKIP (route missing): /api/leads"

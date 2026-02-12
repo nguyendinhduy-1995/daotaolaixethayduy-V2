@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { fetchJson, type ApiClientError } from "@/lib/api-client";
-import { clearToken, getToken } from "@/lib/auth-client";
+import { clearToken, fetchMe, getToken } from "@/lib/auth-client";
+import { isAdminRole } from "@/lib/admin-auth";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,13 @@ type Lead = {
   lastContactAt: string | null;
   createdAt: string;
   updatedAt: string;
+  owner?: {
+    id: string;
+    name: string | null;
+    email: string;
+    role: string;
+    isActive: boolean;
+  } | null;
 };
 
 type LeadEvent = {
@@ -38,6 +46,14 @@ type LeadEvent = {
   createdAt: string;
   createdById?: string | null;
 };
+type UserOption = {
+  id: string;
+  name: string | null;
+  email: string;
+  role: string;
+  isActive: boolean;
+};
+type UsersResponse = { items: UserOption[] };
 
 const STATUS_OPTIONS = ["NEW", "HAS_PHONE", "APPOINTED", "ARRIVED", "SIGNED", "STUDYING", "EXAMED", "RESULT", "LOST"];
 const EVENT_OPTIONS = [...STATUS_OPTIONS, "CALLED"];
@@ -69,6 +85,9 @@ export default function LeadDetailPage() {
   const [eventPageSize] = useState(20);
   const [eventTotal, setEventTotal] = useState(0);
   const [eventsLoading, setEventsLoading] = useState(false);
+  const [canManageOwner, setCanManageOwner] = useState(false);
+  const [owners, setOwners] = useState<UserOption[]>([]);
+  const [ownerSaving, setOwnerSaving] = useState(false);
 
   const [eventType, setEventType] = useState("CALLED");
   const [eventNote, setEventNote] = useState("");
@@ -81,6 +100,12 @@ export default function LeadDetailPage() {
     }
     return map;
   }, [events]);
+
+  const ownerMap = useMemo(() => {
+    return Object.fromEntries(
+      owners.map((owner) => [owner.id, owner.name || owner.email])
+    ) as Record<string, string>;
+  }, [owners]);
 
   const handleAuthError = useCallback(
     (err: ApiClientError) => {
@@ -147,6 +172,33 @@ export default function LeadDetailPage() {
   useEffect(() => {
     loadEvents();
   }, [loadEvents]);
+
+  useEffect(() => {
+    fetchMe()
+      .then((data) => setCanManageOwner(isAdminRole(data.user.role)))
+      .catch(() => setCanManageOwner(false));
+  }, []);
+
+  const loadOwners = useCallback(async () => {
+    if (!canManageOwner) {
+      setOwners([]);
+      return;
+    }
+    const token = getToken();
+    if (!token) return;
+    try {
+      const data = await fetchJson<UsersResponse>("/api/users?page=1&pageSize=100&isActive=true", { token });
+      const active = data.items.filter((item) => item.isActive && item.role !== "admin");
+      const saleLike = active.filter((item) => item.role === "telesales" || item.role === "direct_page");
+      setOwners(saleLike.length > 0 ? saleLike : active);
+    } catch {
+      setOwners([]);
+    }
+  }, [canManageOwner]);
+
+  useEffect(() => {
+    loadOwners();
+  }, [loadOwners]);
 
   async function saveOverview() {
     const token = getToken();
@@ -225,6 +277,27 @@ export default function LeadDetailPage() {
     }
   }
 
+  async function changeOwner(nextOwnerId: string) {
+    const token = getToken();
+    if (!token) return;
+    setOwnerSaving(true);
+    setError("");
+    try {
+      await fetchJson(`/api/leads/${id}`, {
+        method: "PATCH",
+        token,
+        body: { ownerId: nextOwnerId || null },
+      });
+      await loadLead();
+      await loadEvents();
+    } catch (e) {
+      const err = e as ApiClientError;
+      if (!handleAuthError(err)) setError(`${err.code}: ${err.message}`);
+    } finally {
+      setOwnerSaving(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-zinc-700">
@@ -281,7 +354,27 @@ export default function LeadDetailPage() {
             <Input placeholder="Source" value={form.source} onChange={(e) => setForm((s) => ({ ...s, source: e.target.value }))} />
             <Input placeholder="Channel" value={form.channel} onChange={(e) => setForm((s) => ({ ...s, channel: e.target.value }))} />
             <Input placeholder="License type" value={form.licenseType} onChange={(e) => setForm((s) => ({ ...s, licenseType: e.target.value }))} />
-            <Input placeholder="Owner ID" value={form.ownerId} onChange={(e) => setForm((s) => ({ ...s, ownerId: e.target.value }))} />
+            {canManageOwner ? (
+              <div className="space-y-2">
+                <Select value={form.ownerId} onChange={(e) => setForm((s) => ({ ...s, ownerId: e.target.value }))}>
+                  <option value="">Chưa gán</option>
+                  {owners.map((owner) => (
+                    <option key={owner.id} value={owner.id}>
+                      {owner.name || owner.email}
+                    </option>
+                  ))}
+                </Select>
+                <Button
+                  variant="secondary"
+                  onClick={() => changeOwner(form.ownerId)}
+                  disabled={ownerSaving}
+                >
+                  {ownerSaving ? "Đang đổi owner..." : "Đổi người phụ trách"}
+                </Button>
+              </div>
+            ) : (
+              <Input placeholder="Owner ID" value={form.ownerId} onChange={(e) => setForm((s) => ({ ...s, ownerId: e.target.value }))} />
+            )}
             <div className="md:col-span-2">
               <Input placeholder="Note" value={form.note} onChange={(e) => setForm((s) => ({ ...s, note: e.target.value }))} />
             </div>
@@ -299,10 +392,11 @@ export default function LeadDetailPage() {
               </span>
             </div>
           </div>
-          <div className="grid gap-2 rounded-lg bg-zinc-50 p-3 text-sm text-zinc-600">
+            <div className="grid gap-2 rounded-lg bg-zinc-50 p-3 text-sm text-zinc-600">
             <div>Created: {new Date(lead.createdAt).toLocaleString()}</div>
             <div>Updated: {new Date(lead.updatedAt).toLocaleString()}</div>
             <div>Last contact: {lead.lastContactAt ? new Date(lead.lastContactAt).toLocaleString() : "-"}</div>
+            <div>Owner hiện tại: {lead.owner?.name || lead.owner?.email || "-"}</div>
           </div>
           <div className="flex justify-end">
             <Button onClick={saveOverview} disabled={saving}>
@@ -346,6 +440,16 @@ export default function LeadDetailPage() {
                     <Badge text={event.type} />
                     <span className="text-xs text-zinc-500">{new Date(event.createdAt).toLocaleString()}</span>
                   </div>
+                  {event.type === "OWNER_CHANGED" ? (
+                    <div className="mt-2 rounded bg-zinc-50 p-2 text-xs text-zinc-700">
+                      {(() => {
+                        const payload = (event.payload as { meta?: { fromOwnerId?: string | null; toOwnerId?: string | null } } | null)?.meta;
+                        const fromName = payload?.fromOwnerId ? ownerMap[payload.fromOwnerId] || payload.fromOwnerId : "Chưa gán";
+                        const toName = payload?.toOwnerId ? ownerMap[payload.toOwnerId] || payload.toOwnerId : "Chưa gán";
+                        return `Đổi người phụ trách: ${fromName} -> ${toName}`;
+                      })()}
+                    </div>
+                  ) : null}
                   {event.payload ? (
                     <pre className="mt-2 overflow-auto rounded bg-zinc-50 p-2 text-xs text-zinc-700">
                       {JSON.stringify(event.payload, null, 2)}

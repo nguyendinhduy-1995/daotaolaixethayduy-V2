@@ -102,6 +102,9 @@ export async function GET(req: Request) {
         orderBy: { [sort]: order },
         skip: (page - 1) * pageSize,
         take: pageSize,
+        include: {
+          owner: { select: { id: true, name: true, email: true, role: true, isActive: true } },
+        },
       }),
       prisma.lead.count({ where }),
     ]);
