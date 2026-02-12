@@ -65,3 +65,24 @@ export async function POST(req: Request, context: RouteContext) {
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }
+
+export async function GET(req: Request, context: RouteContext) {
+  const auth = assertAuth(req);
+  if ("error" in auth) return auth.error;
+
+  try {
+    const { id } = await Promise.resolve(context.params);
+    const lead = await prisma.lead.findUnique({ where: { id }, select: { id: true } });
+    if (!lead) return jsonError(404, "NOT_FOUND", "Lead not found");
+
+    const items = await prisma.leadEvent.findMany({
+      where: { leadId: id },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    });
+
+    return NextResponse.json({ items });
+  } catch {
+    return jsonError(500, "INTERNAL_ERROR", "Internal server error");
+  }
+}
