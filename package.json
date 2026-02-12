@@ -7,7 +7,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:up": "docker compose up -d postgres redis",
+    "db:down": "docker compose down",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed": "npm run seed:admin",
+    "prisma:generate": "prisma generate",
+    "prisma:validate": "prisma validate",
+    "verify": "bash scripts/verify.sh"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.4.0",

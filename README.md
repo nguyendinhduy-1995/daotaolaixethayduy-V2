@@ -1,36 +1,88 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# thayduy-crm Runbook
 
-## Getting Started
+Local-first runbook for Next.js 16 + Prisma 7 + Postgres + Redis.
 
-First, run the development server:
+## Prerequisites
 
+- Node.js 20+
+- npm 10+
+- Docker Desktop (or Docker Engine with `docker compose`)
+
+## First-Time Setup
+
+1. Copy environment file:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env
+```
+2. Install dependencies:
+```bash
+npm install
+```
+3. Start local services (Postgres + Redis):
+```bash
+npm run db:up
+```
+4. Apply migrations:
+```bash
+npm run db:migrate
+```
+5. Generate Prisma client:
+```bash
+npm run prisma:generate
+```
+6. Seed admin user:
+```bash
+npm run db:seed
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Common Commands
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Start dev server: `npm run dev`
+- Lint: `npm run lint`
+- Build: `npm run build`
+- Prisma validate: `npm run prisma:validate`
+- Prisma generate: `npm run prisma:generate`
+- Migrate DB: `npm run db:migrate`
+- Seed admin: `npm run db:seed`
+- Bring DB/Redis up: `npm run db:up`
+- Bring DB/Redis down: `npm run db:down`
+- Full verification: `npm run verify`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Verify Flow
 
-## Learn More
+`npm run verify` will:
 
-To learn more about Next.js, take a look at the following resources:
+1. Check `.env`
+2. Run Prisma validate + generate
+3. Run lint + build
+4. Start dev server (or reuse existing one on port 3000)
+5. Verify API routes with curl (auth + health + KPI + leads + courses + students + receipts + automation)
+6. Stop dev server on exit if it started one
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+If a route file is missing in `src/app/api`, verification prints `SKIP (route missing)` and continues.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Production-Ready Local Checklist
 
-## Deploy on Vercel
+- [ ] `.env` uses strong `JWT_SECRET`
+- [ ] `DATABASE_URL` and `REDIS_URL` point to intended environment
+- [ ] `npm run prisma:validate` passes
+- [ ] `npm run prisma:generate` passes
+- [ ] `npm run lint` passes
+- [ ] `npm run build` passes
+- [ ] `npm run verify` passes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Troubleshooting
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Prisma client mismatch:
+```bash
+npm run prisma:generate
+```
+
+- Database connection errors:
+```bash
+npm run db:up
+npm run db:migrate
+```
+
+- `next build` fails in restricted sandbox environments:
+  run build outside sandbox/CI-restricted process isolation (Turbopack worker spawn requirement).
