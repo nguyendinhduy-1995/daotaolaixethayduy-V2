@@ -15,14 +15,14 @@ export function Pagination({ page, pageSize, total, onPageChange }: PaginationPr
   return (
     <div className="flex items-center justify-between gap-3">
       <p className="text-sm text-zinc-600">
-        Page {page} / {totalPages} - {total} records
+        Trang {page} / {totalPages} - {total} bản ghi
       </p>
       <div className="flex items-center gap-2">
         <Button variant="secondary" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
-          Prev
+          Trước
         </Button>
         <Button variant="secondary" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
-          Next
+          Sau
         </Button>
       </div>
     </div>

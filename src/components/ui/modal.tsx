@@ -19,7 +19,7 @@ export function Modal({ open, title, children, onClose }: ModalProps) {
         <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
           <h2 className="text-base font-semibold text-zinc-900">{title}</h2>
           <Button variant="ghost" onClick={onClose}>
-            Close
+            Đóng
           </Button>
         </div>
         <div className="max-h-[75vh] overflow-auto p-4">{children}</div>
