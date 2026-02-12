@@ -80,6 +80,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             >
               Hoc vien
             </Link>
+            <Link
+              href="/courses"
+              className={`block rounded-lg px-3 py-2 text-sm ${pathname === "/courses" || pathname.startsWith("/courses/") ? "bg-zinc-900 text-white" : "text-zinc-700 hover:bg-zinc-100"}`}
+            >
+              Khóa học
+            </Link>
           </nav>
         </aside>
 
