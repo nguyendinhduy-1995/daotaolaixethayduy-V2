@@ -52,9 +52,15 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <nav className="space-y-2">
             <Link
               href="/leads"
-              className={`block rounded-lg px-3 py-2 text-sm ${pathname.startsWith("/leads") ? "bg-zinc-900 text-white" : "text-zinc-700 hover:bg-zinc-100"}`}
+              className={`block rounded-lg px-3 py-2 text-sm ${pathname === "/leads" || pathname.startsWith("/leads/") && !pathname.startsWith("/leads/board") ? "bg-zinc-900 text-white" : "text-zinc-700 hover:bg-zinc-100"}`}
             >
-              Leads
+              Leads List
+            </Link>
+            <Link
+              href="/leads/board"
+              className={`block rounded-lg px-3 py-2 text-sm ${pathname.startsWith("/leads/board") ? "bg-zinc-900 text-white" : "text-zinc-700 hover:bg-zinc-100"}`}
+            >
+              Leads Board
             </Link>
             <Link
               href="/kpi/daily"

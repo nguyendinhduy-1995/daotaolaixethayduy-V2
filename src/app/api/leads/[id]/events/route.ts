@@ -72,16 +72,36 @@ export async function GET(req: Request, context: RouteContext) {
 
   try {
     const { id } = await Promise.resolve(context.params);
+    const { searchParams } = new URL(req.url);
+    const page = Number(searchParams.get("page") || "1");
+    const pageSize = Number(searchParams.get("pageSize") || "20");
+    const sort = searchParams.get("sort") || "createdAt";
+    const order = searchParams.get("order") || "desc";
+
+    if (!Number.isInteger(page) || page <= 0 || !Number.isInteger(pageSize) || pageSize <= 0 || pageSize > 100) {
+      return jsonError(400, "VALIDATION_ERROR", "Invalid pagination");
+    }
+    if (sort !== "createdAt") {
+      return jsonError(400, "VALIDATION_ERROR", "Invalid sort field");
+    }
+    if (order !== "asc" && order !== "desc") {
+      return jsonError(400, "VALIDATION_ERROR", "Invalid order");
+    }
+
     const lead = await prisma.lead.findUnique({ where: { id }, select: { id: true } });
     if (!lead) return jsonError(404, "NOT_FOUND", "Lead not found");
 
-    const items = await prisma.leadEvent.findMany({
-      where: { leadId: id },
-      orderBy: { createdAt: "desc" },
-      take: 20,
-    });
+    const [items, total] = await Promise.all([
+      prisma.leadEvent.findMany({
+        where: { leadId: id },
+        orderBy: { createdAt: order },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.leadEvent.count({ where: { leadId: id } }),
+    ]);
 
-    return NextResponse.json({ items });
+    return NextResponse.json({ items, page, pageSize, total });
   } catch {
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
