@@ -42,6 +42,7 @@ export async function GET(req: Request) {
     const courseId = searchParams.get("courseId");
     const leadId = searchParams.get("leadId");
     const studyStatus = searchParams.get("studyStatus");
+    const q = searchParams.get("q");
 
     if (studyStatus !== null && !isStudyStatus(studyStatus)) {
       return jsonError(400, "VALIDATION_ERROR", "Invalid studyStatus");
@@ -51,6 +52,13 @@ export async function GET(req: Request) {
       ...(courseId ? { courseId } : {}),
       ...(leadId ? { leadId } : {}),
       ...(studyStatus ? { studyStatus } : {}),
+      ...(q
+        ? {
+            lead: {
+              OR: [{ fullName: { contains: q, mode: "insensitive" } }, { phone: { contains: q, mode: "insensitive" } }],
+            },
+          }
+        : {}),
     };
 
     const [items, total] = await Promise.all([

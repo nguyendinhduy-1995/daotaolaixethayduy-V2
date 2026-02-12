@@ -68,6 +68,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             >
               KPI Daily
             </Link>
+            <Link
+              href="/receipts"
+              className={`block rounded-lg px-3 py-2 text-sm ${pathname.startsWith("/receipts") ? "bg-zinc-900 text-white" : "text-zinc-700 hover:bg-zinc-100"}`}
+            >
+              Thu tien
+            </Link>
           </nav>
         </aside>
 

@@ -103,6 +103,8 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const studentId = searchParams.get("studentId");
+    const method = searchParams.get("method");
+    const q = searchParams.get("q");
     const date = searchParams.get("date");
     const from = searchParams.get("from");
     const to = searchParams.get("to");
@@ -132,12 +134,35 @@ export async function GET(req: Request) {
 
     const where: Prisma.ReceiptWhereInput = {
       ...(studentId ? { studentId } : {}),
+      ...(method ? { method: parseReceiptMethod(method) } : {}),
       ...(receivedAt ? { receivedAt } : {}),
+      ...(q
+        ? {
+            student: {
+              lead: {
+                OR: [{ fullName: { contains: q, mode: "insensitive" } }, { phone: { contains: q, mode: "insensitive" } }],
+              },
+            },
+          }
+        : {}),
     };
 
     const [items, total] = await Promise.all([
       prisma.receipt.findMany({
         where,
+        include: {
+          student: {
+            include: {
+              lead: {
+                select: {
+                  id: true,
+                  fullName: true,
+                  phone: true,
+                },
+              },
+            },
+          },
+        },
         orderBy: { receivedAt: "desc" },
         skip: (page - 1) * pageSize,
         take: pageSize,
@@ -150,8 +175,11 @@ export async function GET(req: Request) {
     if (error instanceof KpiDateError) {
       return jsonError(400, "VALIDATION_ERROR", error.message);
     }
-    if (error instanceof Error && error.message === "INVALID_PAGINATION") {
-      return jsonError(400, "VALIDATION_ERROR", "Invalid pagination");
+    if (
+      error instanceof Error &&
+      (error.message === "INVALID_PAGINATION" || error.message === "INVALID_METHOD")
+    ) {
+      return jsonError(400, "VALIDATION_ERROR", "Invalid receipt query");
     }
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
