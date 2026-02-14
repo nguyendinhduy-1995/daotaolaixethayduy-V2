@@ -94,6 +94,23 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             >
               Khóa học
             </Link>
+            <div className="pt-2">
+              <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-zinc-400">Vận hành</p>
+              <Link
+                href="/automation/logs"
+                className={`block rounded-lg px-3 py-2 text-sm ${pathname.startsWith("/automation/logs") ? "bg-zinc-900 text-white" : "text-zinc-700 hover:bg-zinc-100"}`}
+              >
+                Automation - Nhật ký
+              </Link>
+              {user && isAdminRole(user.role) ? (
+                <Link
+                  href="/automation/run"
+                  className={`block rounded-lg px-3 py-2 text-sm ${pathname.startsWith("/automation/run") ? "bg-zinc-900 text-white" : "text-zinc-700 hover:bg-zinc-100"}`}
+                >
+                  Automation - Chạy tay
+                </Link>
+              ) : null}
+            </div>
             {user && isAdminRole(user.role) ? (
               <div className="pt-2">
                 <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-zinc-400">Quản trị</p>

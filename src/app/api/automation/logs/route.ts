@@ -6,6 +6,7 @@ import { requireRouteAuth } from "@/lib/route-auth";
 import { KpiDateError, resolveKpiDateParam } from "@/lib/services/kpi-daily";
 
 type RuntimeStatus = "queued" | "running" | "success" | "failed";
+type DeliveryStatus = "sent" | "skipped" | "failed";
 
 function parsePositiveInt(value: string | null, fallback: number, max = 100) {
   if (value === null) return fallback;
@@ -22,6 +23,10 @@ function dayRangeInHoChiMinh(dateStr: string) {
 
 function isRuntimeStatus(value: string | null): value is RuntimeStatus {
   return value === "queued" || value === "running" || value === "success" || value === "failed";
+}
+
+function isDeliveryStatus(value: string | null): value is DeliveryStatus {
+  return value === "sent" || value === "skipped" || value === "failed";
 }
 
 function getRuntimeStatus(payload: unknown, fallback: string) {
@@ -51,7 +56,7 @@ export async function GET(req: Request) {
     const page = parsePositiveInt(searchParams.get("page"), 1);
     const pageSize = parsePositiveInt(searchParams.get("pageSize"), 20);
 
-    if (status !== null && !isRuntimeStatus(status)) {
+    if (status !== null && !isRuntimeStatus(status) && !isDeliveryStatus(status)) {
       return jsonError(400, "VALIDATION_ERROR", "Invalid status filter");
     }
 
@@ -70,7 +75,12 @@ export async function GET(req: Request) {
     });
 
     const filtered = status
-      ? logs.filter((log) => getRuntimeStatus(log.payload, log.status) === status)
+      ? logs.filter((log) => {
+          if (isRuntimeStatus(status)) {
+            return getRuntimeStatus(log.payload, log.status) === status;
+          }
+          return log.status === status;
+        })
       : logs;
 
     const total = filtered.length;

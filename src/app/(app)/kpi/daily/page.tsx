@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchJson, type ApiClientError } from "@/lib/api-client";
-import { clearToken, getToken } from "@/lib/auth-client";
+import { clearToken, fetchMe, getToken } from "@/lib/auth-client";
+import { isAdminRole } from "@/lib/admin-auth";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -160,6 +161,9 @@ export default function KpiDailyPage() {
   const [drilldownPageSize] = useState(20);
   const [drilldownTotal, setDrilldownTotal] = useState(0);
   const [drilldownLoading, setDrilldownLoading] = useState(false);
+  const [canRunAutomation, setCanRunAutomation] = useState(false);
+  const [automationRunning, setAutomationRunning] = useState(false);
+  const [automationLogId, setAutomationLogId] = useState("");
 
   const dateList = useMemo(
     () => (mode === "day" ? [date] : getDateRangeYmd(dateFrom, dateTo)),
@@ -247,6 +251,33 @@ export default function KpiDailyPage() {
     }, 60000);
     return () => clearInterval(timer);
   }, [autoRefresh, loadData]);
+
+  useEffect(() => {
+    fetchMe()
+      .then((data) => setCanRunAutomation(isAdminRole(data.user.role)))
+      .catch(() => setCanRunAutomation(false));
+  }, []);
+
+  async function runAutomationToday() {
+    const token = getToken();
+    if (!token) return;
+    setAutomationRunning(true);
+    setError("");
+    setAutomationLogId("");
+    try {
+      const data = await fetchJson<{ log: { id: string } }>("/api/automation/run", {
+        method: "POST",
+        token,
+        body: { scope: "daily", dryRun: false },
+      });
+      setAutomationLogId(data.log.id);
+    } catch (e) {
+      const err = e as ApiClientError;
+      if (!handleAuthError(err)) setError(`Lỗi chạy automation: ${parseApiError(err)}`);
+    } finally {
+      setAutomationRunning(false);
+    }
+  }
 
   async function loadDrilldown(metric: MetricKey, page: number) {
     const token = getToken();
@@ -403,6 +434,11 @@ export default function KpiDailyPage() {
           <Button variant="secondary" onClick={exportCsv} disabled={exporting}>
             {exporting ? "Đang xuất..." : "Xuất CSV"}
           </Button>
+          {canRunAutomation ? (
+            <Button onClick={runAutomationToday} disabled={automationRunning}>
+              {automationRunning ? "Đang chạy..." : "Chạy Automation hôm nay"}
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -513,6 +549,22 @@ export default function KpiDailyPage() {
       ) : null}
 
       {error ? <Alert type="error" message={error} /> : null}
+      {automationLogId ? (
+        <Alert
+          type="success"
+          message="Đã chạy automation hôm nay thành công."
+        />
+      ) : null}
+      {automationLogId ? (
+        <div>
+          <Link
+            href={`/automation/logs?scope=daily&hl=${automationLogId}`}
+            className="inline-block rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
+          >
+            Xem nhật ký automation
+          </Link>
+        </div>
+      ) : null}
 
       {loading && !kpi ? (
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">

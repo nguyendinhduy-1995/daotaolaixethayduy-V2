@@ -279,14 +279,14 @@ fi
 
 if route_exists "automation/run" && route_exists "automation/logs"; then
   curl -sS -X POST "$BASE_URL/api/automation/run" \
-    -H "Authorization: Bearer $TOKEN" \
+    -b "$COOKIE_JAR" -c "$COOKIE_JAR" \
     -H 'Content-Type: application/json' \
     -d '{"scope":"daily","dryRun":true}' \
   | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.log?.id){process.exit(1)}'
   curl -sS "$BASE_URL/api/automation/logs?scope=daily&page=1&pageSize=10" \
-    -H "Authorization: Bearer $TOKEN" \
-  | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!Array.isArray(o.items)){process.exit(1)}'
-  log "automation run/logs OK"
+    -b "$COOKIE_JAR" \
+  | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!Array.isArray(o.items)||o.items.length===0){process.exit(1)}'
+  log "automation run/logs OK (cookie session)"
 else
   log "SKIP (route missing): /api/automation/run or /api/automation/logs"
 fi

@@ -9,6 +9,7 @@ function isProtectedPath(pathname: string) {
     pathname.startsWith("/students") ||
     pathname.startsWith("/courses") ||
     pathname.startsWith("/receipts") ||
+    pathname.startsWith("/automation") ||
     pathname.startsWith("/admin")
   );
 }
@@ -47,6 +48,12 @@ export function middleware(req: NextRequest) {
   }
 
   if (pathname.startsWith("/admin") && payload.role !== "admin") {
+    const leadsUrl = new URL("/leads", req.url);
+    leadsUrl.searchParams.set("err", "forbidden");
+    return NextResponse.redirect(leadsUrl);
+  }
+
+  if (pathname.startsWith("/automation/run") && payload.role !== "admin") {
     const leadsUrl = new URL("/leads", req.url);
     leadsUrl.searchParams.set("err", "forbidden");
     return NextResponse.redirect(leadsUrl);

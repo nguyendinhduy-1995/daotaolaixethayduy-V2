@@ -3,6 +3,7 @@ import type { AutomationLog } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-response";
 import { requireRouteAuth } from "@/lib/route-auth";
+import { requireAdminRole } from "@/lib/admin-auth";
 
 type RunScope = "daily" | "manual";
 
@@ -13,6 +14,8 @@ function isScope(value: unknown): value is RunScope {
 export async function POST(req: Request) {
   const authResult = requireRouteAuth(req);
   if (authResult.error) return authResult.error;
+  const roleError = requireAdminRole(authResult.auth.role);
+  if (roleError) return roleError;
 
   let log: AutomationLog | null = null;
 
