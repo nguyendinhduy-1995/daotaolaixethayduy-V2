@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
 import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import { formatDateTimeVi } from "@/lib/date-utils";
 
 type Lead = {
   id: string;
@@ -301,25 +302,25 @@ export default function LeadDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-zinc-700">
-        <Spinner /> Loading lead...
+        <Spinner /> Đang tải khách hàng...
       </div>
     );
   }
 
   if (!lead) {
-    return <Alert type="error" message={error || "Lead not found"} />;
+    return <Alert type="error" message={error || "Không tìm thấy khách hàng"} />;
   }
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-zinc-900">{lead.fullName || "Unnamed Lead"}</h1>
+          <h1 className="text-xl font-semibold text-zinc-900">{lead.fullName || "Khách hàng chưa có tên"}</h1>
           <p className="text-sm text-zinc-500">{lead.id}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link href="/leads" className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-700">
-            Back
+            Quay lại
           </Link>
           <Select value={lead.status} onChange={(e) => changeStatus(e.target.value)} disabled={saving}>
             {STATUS_OPTIONS.map((status) => (
@@ -328,7 +329,7 @@ export default function LeadDetailPage() {
               </option>
             ))}
           </Select>
-          <Button onClick={() => setTab("events")}>Add Event</Button>
+          <Button onClick={() => setTab("events")}>Thêm sự kiện</Button>
         </div>
       </div>
 
@@ -336,24 +337,24 @@ export default function LeadDetailPage() {
 
       <div className="flex flex-wrap gap-2">
         <Button variant={tab === "overview" ? "primary" : "secondary"} onClick={() => setTab("overview")}>
-          Overview
+          Tổng quan
         </Button>
         <Button variant={tab === "events" ? "primary" : "secondary"} onClick={() => setTab("events")}>
-          Events
+          Nhật ký sự kiện
         </Button>
         <Button variant={tab === "activity" ? "primary" : "secondary"} onClick={() => setTab("activity")}>
-          Activity
+          Hoạt động
         </Button>
       </div>
 
       {tab === "overview" ? (
         <div className="space-y-4 rounded-xl bg-white p-4 shadow-sm">
           <div className="grid gap-3 md:grid-cols-2">
-            <Input placeholder="Full name" value={form.fullName} onChange={(e) => setForm((s) => ({ ...s, fullName: e.target.value }))} />
-            <Input placeholder="Phone" value={form.phone} onChange={(e) => setForm((s) => ({ ...s, phone: e.target.value }))} />
-            <Input placeholder="Source" value={form.source} onChange={(e) => setForm((s) => ({ ...s, source: e.target.value }))} />
-            <Input placeholder="Channel" value={form.channel} onChange={(e) => setForm((s) => ({ ...s, channel: e.target.value }))} />
-            <Input placeholder="License type" value={form.licenseType} onChange={(e) => setForm((s) => ({ ...s, licenseType: e.target.value }))} />
+            <Input placeholder="Họ và tên" value={form.fullName} onChange={(e) => setForm((s) => ({ ...s, fullName: e.target.value }))} />
+            <Input placeholder="SĐT" value={form.phone} onChange={(e) => setForm((s) => ({ ...s, phone: e.target.value }))} />
+            <Input placeholder="Nguồn" value={form.source} onChange={(e) => setForm((s) => ({ ...s, source: e.target.value }))} />
+            <Input placeholder="Kênh" value={form.channel} onChange={(e) => setForm((s) => ({ ...s, channel: e.target.value }))} />
+            <Input placeholder="Hạng bằng" value={form.licenseType} onChange={(e) => setForm((s) => ({ ...s, licenseType: e.target.value }))} />
             {canManageOwner ? (
               <div className="space-y-2">
                 <Select value={form.ownerId} onChange={(e) => setForm((s) => ({ ...s, ownerId: e.target.value }))}>
@@ -369,14 +370,14 @@ export default function LeadDetailPage() {
                   onClick={() => changeOwner(form.ownerId)}
                   disabled={ownerSaving}
                 >
-                  {ownerSaving ? "Đang đổi owner..." : "Đổi người phụ trách"}
+                  {ownerSaving ? "Đang đổi người phụ trách..." : "Đổi người phụ trách"}
                 </Button>
               </div>
             ) : (
-              <Input placeholder="Owner ID" value={form.ownerId} onChange={(e) => setForm((s) => ({ ...s, ownerId: e.target.value }))} />
+              <Input placeholder="Mã người phụ trách" value={form.ownerId} onChange={(e) => setForm((s) => ({ ...s, ownerId: e.target.value }))} />
             )}
             <div className="md:col-span-2">
-              <Input placeholder="Note" value={form.note} onChange={(e) => setForm((s) => ({ ...s, note: e.target.value }))} />
+              <Input placeholder="Ghi chú" value={form.note} onChange={(e) => setForm((s) => ({ ...s, note: e.target.value }))} />
             </div>
             <Select value={form.status} onChange={(e) => setForm((s) => ({ ...s, status: e.target.value }))}>
               {STATUS_OPTIONS.map((status) => (
@@ -386,21 +387,21 @@ export default function LeadDetailPage() {
               ))}
             </Select>
             <div className="flex items-center text-sm text-zinc-500">
-              <span>Current status: </span>
+              <span>Trạng thái hiện tại: </span>
               <span className="ml-2">
                 <Badge text={lead.status} />
               </span>
             </div>
           </div>
             <div className="grid gap-2 rounded-lg bg-zinc-50 p-3 text-sm text-zinc-600">
-            <div>Created: {new Date(lead.createdAt).toLocaleString()}</div>
-            <div>Updated: {new Date(lead.updatedAt).toLocaleString()}</div>
-            <div>Last contact: {lead.lastContactAt ? new Date(lead.lastContactAt).toLocaleString() : "-"}</div>
-            <div>Owner hiện tại: {lead.owner?.name || lead.owner?.email || "-"}</div>
+            <div>Ngày tạo: {formatDateTimeVi(lead.createdAt)}</div>
+            <div>Cập nhật: {formatDateTimeVi(lead.updatedAt)}</div>
+            <div>Liên hệ gần nhất: {lead.lastContactAt ? formatDateTimeVi(lead.lastContactAt) : "-"}</div>
+            <div>Người phụ trách hiện tại: {lead.owner?.name || lead.owner?.email || "-"}</div>
           </div>
           <div className="flex justify-end">
             <Button onClick={saveOverview} disabled={saving}>
-              {saving ? "Saving..." : "Save Changes"}
+              {saving ? "Đang lưu..." : "Lưu thay đổi"}
             </Button>
           </div>
         </div>
@@ -409,7 +410,7 @@ export default function LeadDetailPage() {
       {tab === "events" ? (
         <div className="space-y-4 rounded-xl bg-white p-4 shadow-sm">
           <div className="rounded-lg border border-zinc-200 p-3">
-            <h2 className="mb-2 text-sm font-semibold text-zinc-900">Add Event</h2>
+            <h2 className="mb-2 text-sm font-semibold text-zinc-900">Thêm sự kiện</h2>
             <div className="grid gap-2 md:grid-cols-3">
               <Select value={eventType} onChange={(e) => setEventType(e.target.value)}>
                 {EVENT_OPTIONS.map((type) => (
@@ -418,27 +419,27 @@ export default function LeadDetailPage() {
                   </option>
                 ))}
               </Select>
-              <Input placeholder="Note" value={eventNote} onChange={(e) => setEventNote(e.target.value)} />
-              <Input placeholder="Meta JSON (optional)" value={eventMeta} onChange={(e) => setEventMeta(e.target.value)} />
+              <Input placeholder="Ghi chú" value={eventNote} onChange={(e) => setEventNote(e.target.value)} />
+              <Input placeholder="Dữ liệu JSON (không bắt buộc)" value={eventMeta} onChange={(e) => setEventMeta(e.target.value)} />
             </div>
             <div className="mt-2 flex justify-end">
               <Button onClick={addEvent} disabled={saving}>
-                {saving ? "Saving..." : "Add Event"}
+                {saving ? "Đang lưu..." : "Thêm sự kiện"}
               </Button>
             </div>
           </div>
 
           {eventsLoading ? (
-            <div className="text-sm text-zinc-600">Loading timeline...</div>
+            <div className="text-sm text-zinc-600">Đang tải nhật ký sự kiện...</div>
           ) : events.length === 0 ? (
-            <div className="rounded-lg bg-zinc-50 p-3 text-sm text-zinc-500">No events.</div>
+            <div className="rounded-lg bg-zinc-50 p-3 text-sm text-zinc-500">Chưa có sự kiện.</div>
           ) : (
             <div className="space-y-2">
               {events.map((event) => (
                 <div key={event.id} className="rounded-lg border border-zinc-200 p-3 text-sm">
                   <div className="flex items-center justify-between">
                     <Badge text={event.type} />
-                    <span className="text-xs text-zinc-500">{new Date(event.createdAt).toLocaleString()}</span>
+                    <span className="text-xs text-zinc-500">{formatDateTimeVi(event.createdAt)}</span>
                   </div>
                   {event.type === "OWNER_CHANGED" ? (
                     <div className="mt-2 rounded bg-zinc-50 p-2 text-xs text-zinc-700">
@@ -466,12 +467,12 @@ export default function LeadDetailPage() {
 
       {tab === "activity" ? (
         <div className="space-y-2 rounded-xl bg-white p-4 shadow-sm">
-          <h2 className="text-sm font-semibold text-zinc-900">Milestones (first event)</h2>
+          <h2 className="text-sm font-semibold text-zinc-900">Mốc tiến trình (sự kiện đầu tiên)</h2>
           {STATUS_OPTIONS.map((status) => (
             <div key={status} className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2 text-sm">
               <span>{status}</span>
               <span className="text-zinc-600">
-                {milestones[status] ? new Date(milestones[status]!.createdAt).toLocaleString() : "-"}
+                {milestones[status] ? formatDateTimeVi(milestones[status]!.createdAt) : "-"}
               </span>
             </div>
           ))}

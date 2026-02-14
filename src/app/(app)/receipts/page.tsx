@@ -15,6 +15,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Table } from "@/components/ui/table";
+import { formatCurrencyVnd, formatDateTimeVi } from "@/lib/date-utils";
 
 type ReceiptMethodFilter = "" | "cash" | "bank" | "momo" | "other";
 type ReceiptMethodInput = "cash" | "bank" | "momo" | "other";
@@ -80,15 +81,11 @@ const EMPTY_FORM: FormState = {
   note: "",
 };
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("vi-VN").format(value);
-}
-
 function formatMethod(value: ReceiptItem["method"]) {
-  if (value === "cash") return "Tien mat";
-  if (value === "bank_transfer") return "Chuyen khoan";
-  if (value === "card") return "The";
-  return "Momo/Khac";
+  if (value === "cash") return "Tiền mặt";
+  if (value === "bank_transfer") return "Chuyển khoản";
+  if (value === "card") return "Thẻ";
+  return "Momo/Khác";
 }
 
 function parseApiError(error: ApiClientError) {
@@ -166,7 +163,7 @@ export default function ReceiptsPage() {
         setStudentOptions(data.items);
       } catch (e) {
         const err = e as ApiClientError;
-        if (!handleAuthError(err)) setError(`Co loi xay ra: ${parseApiError(err)}`);
+        if (!handleAuthError(err)) setError(`Có lỗi xảy ra: ${parseApiError(err)}`);
       } finally {
         setStudentsLoading(false);
       }
@@ -192,7 +189,7 @@ export default function ReceiptsPage() {
       }
     } catch (e) {
       const err = e as ApiClientError;
-      if (!handleAuthError(err)) setError(`Co loi xay ra: ${parseApiError(err)}`);
+      if (!handleAuthError(err)) setError(`Có lỗi xảy ra: ${parseApiError(err)}`);
     } finally {
       setLoading(false);
     }
@@ -213,12 +210,12 @@ export default function ReceiptsPage() {
     const token = getToken();
     if (!token) return;
     if (!createForm.studentId) {
-      setError("VALIDATION_ERROR: Vui long chon hoc vien");
+      setError("VALIDATION_ERROR: Vui lòng chọn học viên");
       return;
     }
     const amount = Number(createForm.amount);
     if (!Number.isFinite(amount) || amount <= 0) {
-      setError("VALIDATION_ERROR: So tien phai lon hon 0");
+      setError("VALIDATION_ERROR: Số tiền phải lớn hơn 0");
       return;
     }
 
@@ -241,7 +238,7 @@ export default function ReceiptsPage() {
       await loadReceipts();
     } catch (e) {
       const err = e as ApiClientError;
-      if (!handleAuthError(err)) setError(`Co loi xay ra: ${parseApiError(err)}`);
+      if (!handleAuthError(err)) setError(`Có lỗi xảy ra: ${parseApiError(err)}`);
     } finally {
       setCreateSaving(false);
     }
@@ -252,7 +249,7 @@ export default function ReceiptsPage() {
     if (!token) return;
     const amount = Number(editForm.amount);
     if (!Number.isFinite(amount) || amount <= 0) {
-      setError("VALIDATION_ERROR: So tien phai lon hon 0");
+      setError("VALIDATION_ERROR: Số tiền phải lớn hơn 0");
       return;
     }
 
@@ -273,7 +270,7 @@ export default function ReceiptsPage() {
       await loadReceipts();
     } catch (e) {
       const err = e as ApiClientError;
-      if (!handleAuthError(err)) setError(`Co loi xay ra: ${parseApiError(err)}`);
+      if (!handleAuthError(err)) setError(`Có lỗi xảy ra: ${parseApiError(err)}`);
     } finally {
       setEditSaving(false);
     }
@@ -326,15 +323,15 @@ export default function ReceiptsPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-zinc-900">Phieu thu</h1>
+        <h1 className="text-xl font-semibold text-zinc-900">Phiếu thu</h1>
         <div className="flex items-center gap-2">
           <Button variant="secondary" onClick={loadReceipts} disabled={loading}>
             {loading ? (
               <span className="flex items-center gap-2">
-                <Spinner /> Dang tai...
+                <Spinner /> Đang tải...
               </span>
             ) : (
-              "Lam moi"
+              "Làm mới"
             )}
           </Button>
           <Button
@@ -343,7 +340,7 @@ export default function ReceiptsPage() {
               setCreateOpen(true);
             }}
           >
-            Tao phieu thu
+            Tạo phiếu thu
           </Button>
         </div>
       </div>
@@ -353,7 +350,7 @@ export default function ReceiptsPage() {
       <div className="space-y-3 rounded-xl bg-white p-4 shadow-sm">
         <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
           <div>
-            <label className="mb-1 block text-sm text-zinc-600">Che do</label>
+            <label className="mb-1 block text-sm text-zinc-600">Chế độ</label>
             <Select
               value={mode}
               onChange={(e) => {
@@ -361,14 +358,14 @@ export default function ReceiptsPage() {
                 setMode(e.target.value as "day" | "range");
               }}
             >
-              <option value="day">Theo ngay</option>
-              <option value="range">Theo khoang</option>
+              <option value="day">Theo ngày</option>
+              <option value="range">Theo khoảng</option>
             </Select>
           </div>
 
           {mode === "day" ? (
             <div>
-              <label className="mb-1 block text-sm text-zinc-600">Ngay</label>
+              <label className="mb-1 block text-sm text-zinc-600">Ngày</label>
               <Input
                 type="date"
                 value={date}
@@ -381,7 +378,7 @@ export default function ReceiptsPage() {
           ) : (
             <>
               <div>
-                <label className="mb-1 block text-sm text-zinc-600">Tu ngay</label>
+                <label className="mb-1 block text-sm text-zinc-600">Từ ngày</label>
                 <Input
                   type="date"
                   value={from}
@@ -392,7 +389,7 @@ export default function ReceiptsPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm text-zinc-600">Den ngay</label>
+                <label className="mb-1 block text-sm text-zinc-600">Đến ngày</label>
                 <Input
                   type="date"
                   value={to}
@@ -406,7 +403,7 @@ export default function ReceiptsPage() {
           )}
 
           <div>
-            <label className="mb-1 block text-sm text-zinc-600">Phuong thuc</label>
+            <label className="mb-1 block text-sm text-zinc-600">Phương thức</label>
             <Select
               value={method}
               onChange={(e) => {
@@ -414,18 +411,18 @@ export default function ReceiptsPage() {
                 setMethod(e.target.value as ReceiptMethodFilter);
               }}
             >
-              <option value="">Tat ca</option>
-              <option value="cash">Tien mat</option>
-              <option value="bank">Chuyen khoan</option>
+              <option value="">Tất cả</option>
+              <option value="cash">Tiền mặt</option>
+              <option value="bank">Chuyển khoản</option>
               <option value="momo">Momo</option>
-              <option value="other">Khac</option>
+              <option value="other">Khác</option>
             </Select>
           </div>
         </div>
 
         <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
           <Input
-            placeholder="Tim ten hoc vien/SDT"
+            placeholder="Tìm tên học viên/SĐT"
             value={q}
             onChange={(e) => {
               setPage(1);
@@ -440,16 +437,16 @@ export default function ReceiptsPage() {
               setStudentId(e.target.value);
             }}
           >
-            <option value="">Tat ca hoc vien</option>
+            <option value="">Tất cả học viên</option>
             {studentOptions.map((option) => (
               <option key={option.id} value={option.id}>
-                {option.lead.fullName || "Khong ten"} - {option.lead.phone || "Khong SDT"}
+                {option.lead.fullName || "Không tên"} - {option.lead.phone || "Không SĐT"}
               </option>
             ))}
           </Select>
 
           <Input
-            placeholder="Tim hoc vien de loc..."
+            placeholder="Tìm học viên để lọc..."
             value={studentQuery}
             onChange={(e) => setStudentQuery(e.target.value)}
           />
@@ -469,20 +466,20 @@ export default function ReceiptsPage() {
 
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={() => applyPreset("today")}>
-            Hom nay
+            Hôm nay
           </Button>
           <Button variant="secondary" onClick={() => applyPreset("yesterday")}>
-            Hom qua
+            Hôm qua
           </Button>
           <Button variant="secondary" onClick={() => applyPreset("last7")}>
-            7 ngay gan nhat
+            7 ngày gần nhất
           </Button>
           <Button variant="secondary" onClick={() => applyPreset("thisMonth")}>
-            Thang nay
+            Tháng này
           </Button>
           {studentsLoading ? (
             <span className="inline-flex items-center gap-2 text-sm text-zinc-500">
-              <Spinner /> Dang tai hoc vien...
+              <Spinner /> Đang tải học viên...
             </span>
           ) : null}
         </div>
@@ -490,14 +487,14 @@ export default function ReceiptsPage() {
 
       {mode === "day" && summary ? (
         <div className="rounded-xl bg-white p-4 shadow-sm">
-          <div className="mb-2 text-sm text-zinc-600">Tong quan ngay {summary.date}</div>
+          <div className="mb-2 text-sm text-zinc-600">Tổng quan ngày {summary.date}</div>
           <div className="grid gap-3 md:grid-cols-2">
             <div className="rounded-lg border border-zinc-200 p-3">
-              <p className="text-sm text-zinc-500">Tong thu trong ngay</p>
-              <p className="text-2xl font-semibold text-zinc-900">{formatCurrency(summary.totalThu)} VND</p>
+              <p className="text-sm text-zinc-500">Tổng thu trong ngày</p>
+              <p className="text-2xl font-semibold text-zinc-900">{formatCurrencyVnd(summary.totalThu)}</p>
             </div>
             <div className="rounded-lg border border-zinc-200 p-3">
-              <p className="text-sm text-zinc-500">So phieu thu</p>
+              <p className="text-sm text-zinc-500">Số phiếu thu</p>
               <p className="text-2xl font-semibold text-zinc-900">{summary.totalPhieuThu}</p>
             </div>
           </div>
@@ -505,19 +502,19 @@ export default function ReceiptsPage() {
       ) : null}
 
       {loading ? (
-        <div className="rounded-xl bg-white p-6 text-sm text-zinc-600">Dang tai...</div>
+        <div className="rounded-xl bg-white p-6 text-sm text-zinc-600">Đang tải...</div>
       ) : items.length === 0 ? (
-        <div className="rounded-xl bg-white p-6 text-sm text-zinc-600">Khong co du lieu</div>
+        <div className="rounded-xl bg-white p-6 text-sm text-zinc-600">Không có dữ liệu</div>
       ) : (
-        <Table headers={["Ngay thu", "Hoc vien", "So tien", "Phuong thuc", "Ghi chu", "Hanh dong"]}>
+        <Table headers={["Ngày thu", "Học viên", "Số tiền", "Phương thức", "Ghi chú", "Hành động"]}>
           {items.map((item) => (
             <tr key={item.id} className="border-t border-zinc-100">
-              <td className="px-3 py-2 text-sm text-zinc-700">{new Date(item.receivedAt).toLocaleString("vi-VN")}</td>
+              <td className="px-3 py-2 text-sm text-zinc-700">{formatDateTimeVi(item.receivedAt)}</td>
               <td className="px-3 py-2">
-                <div className="font-medium text-zinc-900">{item.student?.lead?.fullName || "Khong ro"}</div>
+                <div className="font-medium text-zinc-900">{item.student?.lead?.fullName || "Không rõ"}</div>
                 <div className="text-xs text-zinc-500">{item.student?.lead?.phone || "-"}</div>
               </td>
-              <td className="px-3 py-2 font-medium text-zinc-900">{formatCurrency(item.amount)} VND</td>
+              <td className="px-3 py-2 font-medium text-zinc-900">{formatCurrencyVnd(item.amount)}</td>
               <td className="px-3 py-2">
                 <Badge text={formatMethod(item.method)} />
               </td>
@@ -531,7 +528,7 @@ export default function ReceiptsPage() {
                     Xem
                   </Link>
                   <Button variant="secondary" className="h-7 px-2 py-1 text-xs" onClick={() => openEdit(item)}>
-                    Sua
+                    Sửa
                   </Button>
                 </div>
               </td>
@@ -542,26 +539,26 @@ export default function ReceiptsPage() {
 
       <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
 
-      <Modal open={createOpen} title="Tao phieu thu" onClose={() => setCreateOpen(false)}>
+      <Modal open={createOpen} title="Tạo phiếu thu" onClose={() => setCreateOpen(false)}>
         <div className="space-y-3">
           <div>
-            <label className="mb-1 block text-sm text-zinc-600">Tim hoc vien</label>
-            <Input value={studentQuery} onChange={(e) => setStudentQuery(e.target.value)} placeholder="Nhap ten hoac SDT" />
+            <label className="mb-1 block text-sm text-zinc-600">Tìm học viên</label>
+            <Input value={studentQuery} onChange={(e) => setStudentQuery(e.target.value)} placeholder="Nhập tên hoặc SĐT" />
           </div>
           <div>
-            <label className="mb-1 block text-sm text-zinc-600">Hoc vien</label>
+            <label className="mb-1 block text-sm text-zinc-600">Học viên</label>
             <Select value={createForm.studentId} onChange={(e) => setCreateForm((s) => ({ ...s, studentId: e.target.value }))}>
-              <option value="">Chon hoc vien</option>
+              <option value="">Chọn học viên</option>
               {studentOptions.map((option) => (
                 <option key={option.id} value={option.id}>
-                  {option.lead.fullName || "Khong ten"} - {option.lead.phone || "Khong SDT"}
+                  {option.lead.fullName || "Không tên"} - {option.lead.phone || "Không SĐT"}
                 </option>
               ))}
             </Select>
           </div>
           <div className="grid gap-2 md:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm text-zinc-600">So tien</label>
+              <label className="mb-1 block text-sm text-zinc-600">Số tiền</label>
               <Input
                 type="number"
                 min={1}
@@ -570,20 +567,20 @@ export default function ReceiptsPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm text-zinc-600">Phuong thuc</label>
+              <label className="mb-1 block text-sm text-zinc-600">Phương thức</label>
               <Select
                 value={createForm.method}
                 onChange={(e) => setCreateForm((s) => ({ ...s, method: e.target.value as ReceiptMethodInput }))}
               >
-                <option value="cash">Tien mat</option>
-                <option value="bank">Chuyen khoan</option>
+                <option value="cash">Tiền mặt</option>
+                <option value="bank">Chuyển khoản</option>
                 <option value="momo">Momo</option>
-                <option value="other">Khac</option>
+                <option value="other">Khác</option>
               </Select>
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-sm text-zinc-600">Ngay thu</label>
+            <label className="mb-1 block text-sm text-zinc-600">Ngày thu</label>
             <Input
               type="date"
               value={createForm.receivedAt}
@@ -591,24 +588,24 @@ export default function ReceiptsPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm text-zinc-600">Ghi chu</label>
+            <label className="mb-1 block text-sm text-zinc-600">Ghi chú</label>
             <Input value={createForm.note} onChange={(e) => setCreateForm((s) => ({ ...s, note: e.target.value }))} />
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setCreateOpen(false)}>
-              Huy
+              Huỷ
             </Button>
             <Button onClick={submitCreate} disabled={createSaving}>
-              {createSaving ? "Dang luu..." : "Luu"}
+              {createSaving ? "Đang lưu..." : "Lưu"}
             </Button>
           </div>
         </div>
       </Modal>
 
-      <Modal open={editOpen} title="Sua phieu thu" onClose={() => setEditOpen(false)}>
+      <Modal open={editOpen} title="Sửa phiếu thu" onClose={() => setEditOpen(false)}>
         <div className="space-y-3">
           <div>
-            <label className="mb-1 block text-sm text-zinc-600">So tien</label>
+            <label className="mb-1 block text-sm text-zinc-600">Số tiền</label>
             <Input
               type="number"
               min={1}
@@ -617,19 +614,19 @@ export default function ReceiptsPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm text-zinc-600">Phuong thuc</label>
+            <label className="mb-1 block text-sm text-zinc-600">Phương thức</label>
             <Select
               value={editForm.method}
               onChange={(e) => setEditForm((s) => ({ ...s, method: e.target.value as ReceiptMethodInput }))}
             >
-              <option value="cash">Tien mat</option>
-              <option value="bank">Chuyen khoan</option>
+              <option value="cash">Tiền mặt</option>
+              <option value="bank">Chuyển khoản</option>
               <option value="momo">Momo</option>
-              <option value="other">Khac</option>
+              <option value="other">Khác</option>
             </Select>
           </div>
           <div>
-            <label className="mb-1 block text-sm text-zinc-600">Ngay thu</label>
+            <label className="mb-1 block text-sm text-zinc-600">Ngày thu</label>
             <Input
               type="date"
               value={editForm.receivedAt}
@@ -637,15 +634,15 @@ export default function ReceiptsPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm text-zinc-600">Ghi chu</label>
+            <label className="mb-1 block text-sm text-zinc-600">Ghi chú</label>
             <Input value={editForm.note} onChange={(e) => setEditForm((s) => ({ ...s, note: e.target.value }))} />
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setEditOpen(false)}>
-              Huy
+              Huỷ
             </Button>
             <Button onClick={submitEdit} disabled={editSaving}>
-              {editSaving ? "Dang luu..." : "Luu"}
+              {editSaving ? "Đang lưu..." : "Lưu"}
             </Button>
           </div>
         </div>

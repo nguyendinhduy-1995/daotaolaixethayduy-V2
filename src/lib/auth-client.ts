@@ -28,6 +28,6 @@ export function clearToken() {
 
 export async function fetchMe() {
   const token = getToken();
-  if (!token) throw { code: "AUTH_MISSING_BEARER", message: "Missing token", status: 401 };
+  if (!token) throw { code: "AUTH_MISSING_BEARER", message: "Thiếu token", status: 401 };
   return fetchJson<MeResponse>("/api/auth/me", { token });
 }

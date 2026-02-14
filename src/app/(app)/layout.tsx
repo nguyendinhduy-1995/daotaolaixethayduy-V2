@@ -8,6 +8,15 @@ import { isAdminRole } from "@/lib/admin-auth";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 
+function roleLabel(role: string) {
+  if (role === "admin") return "Quản trị";
+  if (role === "manager") return "Quản lý";
+  if (role === "telesales") return "Telesale";
+  if (role === "direct_page") return "Trực page";
+  if (role === "viewer") return "Chỉ xem";
+  return role;
+}
+
 export default function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -39,7 +48,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-100">
         <div className="flex items-center gap-2 text-zinc-700">
-          <Spinner /> Loading...
+          <Spinner /> Đang tải...
         </div>
       </div>
     );
@@ -55,31 +64,31 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               href="/leads"
               className={`block rounded-lg px-3 py-2 text-sm ${pathname === "/leads" || pathname.startsWith("/leads/") && !pathname.startsWith("/leads/board") ? "bg-zinc-900 text-white" : "text-zinc-700 hover:bg-zinc-100"}`}
             >
-              Leads List
+              Khách hàng
             </Link>
             <Link
               href="/leads/board"
               className={`block rounded-lg px-3 py-2 text-sm ${pathname.startsWith("/leads/board") ? "bg-zinc-900 text-white" : "text-zinc-700 hover:bg-zinc-100"}`}
             >
-              Leads Board
+              Bảng Kanban
             </Link>
             <Link
               href="/kpi/daily"
               className={`block rounded-lg px-3 py-2 text-sm ${pathname.startsWith("/kpi/daily") ? "bg-zinc-900 text-white" : "text-zinc-700 hover:bg-zinc-100"}`}
             >
-              KPI Daily
+              KPI ngày
             </Link>
             <Link
               href="/receipts"
               className={`block rounded-lg px-3 py-2 text-sm ${pathname.startsWith("/receipts") ? "bg-zinc-900 text-white" : "text-zinc-700 hover:bg-zinc-100"}`}
             >
-              Thu tien
+              Thu tiền
             </Link>
             <Link
               href="/students"
               className={`block rounded-lg px-3 py-2 text-sm ${pathname === "/students" || pathname.startsWith("/students/") ? "bg-zinc-900 text-white" : "text-zinc-700 hover:bg-zinc-100"}`}
             >
-              Hoc vien
+              Học viên
             </Link>
             <Link
               href="/courses"
@@ -100,7 +109,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                   href="/admin/assign-leads"
                   className={`block rounded-lg px-3 py-2 text-sm ${pathname.startsWith("/admin/assign-leads") ? "bg-zinc-900 text-white" : "text-zinc-700 hover:bg-zinc-100"}`}
                 >
-                  Phân lead
+                  Phân khách hàng
                 </Link>
               </div>
             ) : null}
@@ -114,9 +123,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 ThayDuy CRM
               </Link>
             </div>
-            <div className="text-sm text-zinc-600">{user ? `${user.name || user.email} (${user.role})` : ""}</div>
+            <div className="text-sm text-zinc-600">{user ? `${user.name || user.email} (${roleLabel(user.role)})` : ""}</div>
             <Button variant="secondary" onClick={logout}>
-              Logout
+              Đăng xuất
             </Button>
           </header>
           <main className="flex-1 p-4 lg:p-6">{children}</main>

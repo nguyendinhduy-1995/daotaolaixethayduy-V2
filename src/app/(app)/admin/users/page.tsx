@@ -15,6 +15,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Table } from "@/components/ui/table";
+import { formatDateTimeVi } from "@/lib/date-utils";
 
 type Role = "admin" | "manager" | "telesales" | "direct_page" | "viewer";
 type UserItem = {
@@ -35,11 +36,11 @@ type UserListResponse = {
 };
 
 const ROLE_OPTIONS: Array<{ value: Role; label: string }> = [
-  { value: "admin", label: "Admin" },
+  { value: "admin", label: "Quản trị" },
   { value: "manager", label: "Quản lý" },
   { value: "telesales", label: "Telesale" },
-  { value: "direct_page", label: "Direct Page" },
-  { value: "viewer", label: "Viewer" },
+  { value: "direct_page", label: "Trực page" },
+  { value: "viewer", label: "Chỉ xem" },
 ];
 
 function roleLabel(role: Role) {
@@ -277,7 +278,7 @@ export default function AdminUsersPage() {
       <div className="space-y-3 rounded-xl bg-white p-6 shadow-sm">
         <Alert type="error" message="Bạn không có quyền truy cập." />
         <Link href="/leads" className="inline-block rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-700">
-          Quay về Leads
+          Quay về Khách hàng
         </Link>
       </div>
     );
@@ -286,7 +287,7 @@ export default function AdminUsersPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-zinc-900">Người dùng</h1>
+        <h1 className="text-xl font-semibold text-zinc-900">Quản trị người dùng</h1>
         <div className="flex items-center gap-2">
           <Button variant="secondary" onClick={loadUsers} disabled={loading}>
             {loading ? (
@@ -374,7 +375,7 @@ export default function AdminUsersPage() {
               <td className="px-3 py-2">
                 <Badge text={user.isActive ? "Đang hoạt động" : "Đã khóa"} />
               </td>
-              <td className="px-3 py-2 text-sm text-zinc-600">{new Date(user.createdAt).toLocaleString("vi-VN")}</td>
+              <td className="px-3 py-2 text-sm text-zinc-600">{formatDateTimeVi(user.createdAt)}</td>
               <td className="px-3 py-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <Button variant="secondary" className="h-7 px-2 py-1 text-xs" onClick={() => openEdit(user)}>
@@ -442,7 +443,7 @@ export default function AdminUsersPage() {
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setCreateOpen(false)}>
-              Hủy
+              Huỷ
             </Button>
             <Button onClick={createUser} disabled={createSaving}>
               {createSaving ? "Đang tạo..." : "Tạo người dùng"}
@@ -490,7 +491,7 @@ export default function AdminUsersPage() {
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setEditOpen(false)}>
-              Hủy
+              Huỷ
             </Button>
             <Button onClick={saveEdit} disabled={editSaving}>
               {editSaving ? "Đang lưu..." : "Lưu"}
@@ -511,7 +512,7 @@ export default function AdminUsersPage() {
         </p>
         <div className="mt-4 flex justify-end gap-2">
           <Button variant="secondary" onClick={() => setToggleTarget(null)}>
-            Hủy
+            Huỷ
           </Button>
           <Button onClick={confirmToggleActive} disabled={toggleSaving}>
             {toggleSaving ? "Đang xử lý..." : "Xác nhận"}

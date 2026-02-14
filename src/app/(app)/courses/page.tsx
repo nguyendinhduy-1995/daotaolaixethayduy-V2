@@ -13,6 +13,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Table } from "@/components/ui/table";
+import { formatDateTimeVi } from "@/lib/date-utils";
 
 type Course = {
   id: string;
@@ -291,7 +292,7 @@ export default function CoursesPage() {
               </td>
               <td className="px-3 py-2">{item.licenseType || "-"}</td>
               <td className="px-3 py-2">{item.province || "-"}</td>
-              <td className="px-3 py-2 text-sm text-zinc-600">{new Date(item.createdAt).toLocaleString("vi-VN")}</td>
+              <td className="px-3 py-2 text-sm text-zinc-600">{formatDateTimeVi(item.createdAt)}</td>
               <td className="px-3 py-2">
                 <div className="flex items-center gap-2">
                   <Link
@@ -360,7 +361,7 @@ export default function CoursesPage() {
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setCreateOpen(false)}>
-              Hủy
+              Huỷ
             </Button>
             <Button onClick={createCourse} disabled={createSaving}>
               {createSaving ? "Đang tạo..." : "Tạo khóa học"}
@@ -417,7 +418,7 @@ export default function CoursesPage() {
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setEditOpen(false)}>
-              Hủy
+              Huỷ
             </Button>
             <Button onClick={updateCourse} disabled={editSaving}>
               {editSaving ? "Đang lưu..." : "Lưu"}

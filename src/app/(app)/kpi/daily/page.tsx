@@ -15,6 +15,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { Table } from "@/components/ui/table";
 import {
   firstDayOfMonthYmd,
+  formatCurrencyVnd,
+  formatDateTimeVi,
   formatTimeHms,
   getDateRangeYmd,
   shiftDateYmd,
@@ -121,7 +123,7 @@ function metricValue(kpi: KpiResponse | null, key: MetricKey) {
 }
 
 function percentDiff(current: number, previous: number) {
-  if (previous === 0) return current === 0 ? "0%" : "N/A";
+  if (previous === 0) return current === 0 ? "0%" : "Không áp dụng";
   const pct = ((current - previous) / previous) * 100;
   return `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`;
 }
@@ -526,6 +528,7 @@ export default function KpiDailyPage() {
             const current = metricValue(kpi, card.key);
             const previous = metricValue(previousKpi, card.key);
             const showCompare = mode === "day" && comparePrevDay;
+            const isMoneyMetric = card.key === "finance.totalThu" || card.key === "finance.totalRemaining";
             return (
               <button
                 key={card.key}
@@ -536,10 +539,12 @@ export default function KpiDailyPage() {
                   <p className="text-sm text-zinc-500">{card.label}</p>
                   <Badge text="Xem chi tiết" />
                 </div>
-                <p className="mt-2 text-2xl font-semibold text-zinc-900">{current.toLocaleString("vi-VN")}</p>
+                <p className="mt-2 text-2xl font-semibold text-zinc-900">
+                  {isMoneyMetric ? formatCurrencyVnd(current) : current.toLocaleString("vi-VN")}
+                </p>
                 {showCompare ? (
                   <p className="mt-1 text-xs text-zinc-500">
-                    So với hôm trước: {percentDiff(current, previous)} ({previous.toLocaleString("vi-VN")})
+                    So với hôm trước: {percentDiff(current, previous)} ({isMoneyMetric ? formatCurrencyVnd(previous) : previous.toLocaleString("vi-VN")})
                   </p>
                 ) : null}
               </button>
@@ -573,7 +578,7 @@ export default function KpiDailyPage() {
                   <td className="px-3 py-2">
                     <Badge text={lead.status} />
                   </td>
-                  <td className="px-3 py-2 text-xs text-zinc-600">{new Date(lead.createdAt).toLocaleString("vi-VN")}</td>
+                  <td className="px-3 py-2 text-xs text-zinc-600">{formatDateTimeVi(lead.createdAt)}</td>
                   <td className="px-3 py-2">
                     <Link
                       href={`/leads/${lead.id}`}

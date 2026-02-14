@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import { formatDateTimeVi } from "@/lib/date-utils";
 
 type Lead = {
   id: string;
@@ -304,26 +305,26 @@ export default function LeadsBoardPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-zinc-900">Leads Board</h1>
+        <h1 className="text-xl font-semibold text-zinc-900">Bảng Kanban khách hàng</h1>
         <Button variant="secondary" onClick={loadBoard}>
-          Refresh
+          Làm mới
         </Button>
       </div>
 
       {error ? <Alert type="error" message={error} /> : null}
 
       <div className="grid gap-2 rounded-xl bg-white p-4 shadow-sm md:grid-cols-4">
-        <Input value={filters.q} placeholder="Search q" onChange={(e) => setFilters((s) => ({ ...s, q: e.target.value }))} />
-        <Input value={filters.source} placeholder="Source" onChange={(e) => setFilters((s) => ({ ...s, source: e.target.value }))} />
-        <Input value={filters.channel} placeholder="Channel" onChange={(e) => setFilters((s) => ({ ...s, channel: e.target.value }))} />
+        <Input value={filters.q} placeholder="Tìm kiếm tên/SĐT" onChange={(e) => setFilters((s) => ({ ...s, q: e.target.value }))} />
+        <Input value={filters.source} placeholder="Nguồn" onChange={(e) => setFilters((s) => ({ ...s, source: e.target.value }))} />
+        <Input value={filters.channel} placeholder="Kênh" onChange={(e) => setFilters((s) => ({ ...s, channel: e.target.value }))} />
         <Input
           value={filters.licenseType}
-          placeholder="License type"
+          placeholder="Hạng bằng"
           onChange={(e) => setFilters((s) => ({ ...s, licenseType: e.target.value }))}
         />
         {canManageOwner ? (
           <Select value={filters.ownerId} onChange={(e) => setFilters((s) => ({ ...s, ownerId: e.target.value }))}>
-            <option value="">All owners</option>
+            <option value="">Tất cả người phụ trách</option>
             {owners.map((owner) => (
               <option key={owner.id} value={owner.id}>
                 {owner.name || owner.email}
@@ -331,12 +332,12 @@ export default function LeadsBoardPage() {
             ))}
           </Select>
         ) : !isTelesales ? (
-          <Input value={filters.ownerId} placeholder="Owner ID" onChange={(e) => setFilters((s) => ({ ...s, ownerId: e.target.value }))} />
+          <Input value={filters.ownerId} placeholder="Mã người phụ trách" onChange={(e) => setFilters((s) => ({ ...s, ownerId: e.target.value }))} />
         ) : null}
         <Input type="date" value={filters.createdFrom} onChange={(e) => setFilters((s) => ({ ...s, createdFrom: e.target.value }))} />
         <Input type="date" value={filters.createdTo} onChange={(e) => setFilters((s) => ({ ...s, createdTo: e.target.value }))} />
         <div className="flex flex-wrap gap-2">
-          <Button onClick={() => applyFiltersToUrl(filters)}>Apply</Button>
+          <Button onClick={() => applyFiltersToUrl(filters)}>Áp dụng</Button>
           <Button
             variant="secondary"
             onClick={() => {
@@ -344,7 +345,7 @@ export default function LeadsBoardPage() {
               applyFiltersToUrl(EMPTY_FILTERS);
             }}
           >
-            Clear
+            Xoá bộ lọc
           </Button>
         </div>
         <div className="md:col-span-4 flex flex-wrap gap-2">
@@ -357,7 +358,7 @@ export default function LeadsBoardPage() {
               applyFiltersToUrl(next);
             }}
           >
-            Today
+            Hôm nay
           </Button>
           <Button
             variant="secondary"
@@ -370,13 +371,13 @@ export default function LeadsBoardPage() {
               applyFiltersToUrl(next);
             }}
           >
-            This week
+            Tuần này
           </Button>
         </div>
       </div>
 
       {loading ? (
-        <div className="rounded-xl bg-white p-6 text-zinc-600">Loading board...</div>
+        <div className="rounded-xl bg-white p-6 text-zinc-600">Đang tải bảng Kanban...</div>
       ) : (
         <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-5">
           {STATUSES.map((status) => (
@@ -392,7 +393,7 @@ export default function LeadsBoardPage() {
               </div>
               <div className="space-y-2">
                 {(byStatus[status] || []).length === 0 ? (
-                  <div className="rounded-lg bg-zinc-50 p-3 text-xs text-zinc-500">Empty</div>
+                  <div className="rounded-lg bg-zinc-50 p-3 text-xs text-zinc-500">Không có dữ liệu</div>
                 ) : (
                   byStatus[status].map((lead) => (
                     <div
@@ -401,17 +402,17 @@ export default function LeadsBoardPage() {
                       onDragStart={() => setDraggingLead(lead)}
                       className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-xs"
                     >
-                      <div className="font-medium text-zinc-900">{lead.fullName || "Unnamed"}</div>
+                      <div className="font-medium text-zinc-900">{lead.fullName || "Chưa có tên"}</div>
                       <div className="text-zinc-600">{lead.phone || "-"}</div>
                       <div className="mt-1 text-zinc-500">
                         {lead.source || "-"} / {lead.channel || "-"}
                       </div>
-                      <div className="text-zinc-500">License: {lead.licenseType || "-"}</div>
-                      <div className="text-zinc-500">Owner: {lead.owner?.name || lead.owner?.email || "-"}</div>
+                      <div className="text-zinc-500">Hạng bằng: {lead.licenseType || "-"}</div>
+                      <div className="text-zinc-500">Người phụ trách: {lead.owner?.name || lead.owner?.email || "-"}</div>
                       <div className="text-zinc-500">
-                        Last contact: {lead.lastContactAt ? new Date(lead.lastContactAt).toLocaleString() : "-"}
+                        Liên hệ gần nhất: {lead.lastContactAt ? formatDateTimeVi(lead.lastContactAt) : "-"}
                       </div>
-                      <div className="text-zinc-500">Created: {new Date(lead.createdAt).toLocaleString()}</div>
+                      <div className="text-zinc-500">Ngày tạo: {formatDateTimeVi(lead.createdAt)}</div>
                       <div className="mt-2 space-y-1">
                         <Select
                           value={lead.status}
@@ -445,13 +446,13 @@ export default function LeadsBoardPage() {
                               setEventOpen(true);
                             }}
                           >
-                            Add Event
+                            Thêm sự kiện
                           </Button>
                           <Link
                             href={`/leads/${lead.id}`}
                             className="flex-1 rounded-lg border border-zinc-300 bg-white px-2 py-2 text-center text-xs font-medium text-zinc-700 hover:bg-zinc-100"
                           >
-                            Detail
+                            Chi tiết
                           </Link>
                         </div>
                       </div>
@@ -464,7 +465,7 @@ export default function LeadsBoardPage() {
         </div>
       )}
 
-      <Modal open={eventOpen} title="Add Lead Event" onClose={() => setEventOpen(false)}>
+      <Modal open={eventOpen} title="Thêm sự kiện khách hàng" onClose={() => setEventOpen(false)}>
         <div className="space-y-3">
           <Select value={eventType} onChange={(e) => setEventType(e.target.value)}>
             {EVENT_OPTIONS.map((t) => (
@@ -473,19 +474,19 @@ export default function LeadsBoardPage() {
               </option>
             ))}
           </Select>
-          <Input placeholder="Note" value={eventNote} onChange={(e) => setEventNote(e.target.value)} />
-          <Input placeholder="Meta JSON (optional)" value={eventMeta} onChange={(e) => setEventMeta(e.target.value)} />
+          <Input placeholder="Ghi chú" value={eventNote} onChange={(e) => setEventNote(e.target.value)} />
+          <Input placeholder="Dữ liệu JSON (không bắt buộc)" value={eventMeta} onChange={(e) => setEventMeta(e.target.value)} />
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setEventOpen(false)}>
-              Cancel
+              Huỷ
             </Button>
             <Button onClick={submitEvent} disabled={eventSaving}>
               {eventSaving ? (
                 <span className="flex items-center gap-2">
-                  <Spinner /> Saving...
+                  <Spinner /> Đang lưu...
                 </span>
               ) : (
-                "Save Event"
+                "Lưu sự kiện"
               )}
             </Button>
           </div>
@@ -495,7 +496,7 @@ export default function LeadsBoardPage() {
       <Modal open={Boolean(assignLead)} title="Gán telesale phụ trách" onClose={() => setAssignLead(null)}>
         <div className="space-y-3">
           <p className="text-sm text-zinc-700">
-            {assignLead ? `Lead: ${assignLead.fullName || assignLead.id}` : ""}
+            {assignLead ? `Khách hàng: ${assignLead.fullName || assignLead.id}` : ""}
           </p>
           <Select value={assignOwnerId} onChange={(e) => setAssignOwnerId(e.target.value)}>
             <option value="">Chưa gán</option>
@@ -507,7 +508,7 @@ export default function LeadsBoardPage() {
           </Select>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setAssignLead(null)}>
-              Hủy
+              Huỷ
             </Button>
             <Button onClick={submitAssignOwner} disabled={assignSaving}>
               {assignSaving ? "Đang lưu..." : "Lưu"}

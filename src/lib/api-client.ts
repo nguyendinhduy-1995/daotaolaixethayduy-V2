@@ -34,7 +34,7 @@ export async function fetchJson<T>(
     const errorData = data as { error?: { code?: string; message?: string } } | null;
     const error: ApiClientError = {
       code: errorData?.error?.code || "INTERNAL_ERROR",
-      message: errorData?.error?.message || "Unexpected error",
+      message: errorData?.error?.message || "Lỗi không xác định",
       status: res.status,
     };
     throw error;

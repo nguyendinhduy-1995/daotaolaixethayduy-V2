@@ -15,6 +15,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Table } from "@/components/ui/table";
+import { formatCurrencyVnd, formatDateTimeVi } from "@/lib/date-utils";
 
 type StudentDetail = {
   id: string;
@@ -65,15 +66,18 @@ type FormState = {
   note: string;
 };
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("vi-VN").format(value);
+function formatMethod(value: ReceiptItem["method"]) {
+  if (value === "cash") return "Tiền mặt";
+  if (value === "bank_transfer") return "Chuyển khoản";
+  if (value === "card") return "Thẻ";
+  return "Momo/Khác";
 }
 
-function formatMethod(value: ReceiptItem["method"]) {
-  if (value === "cash") return "Tien mat";
-  if (value === "bank_transfer") return "Chuyen khoan";
-  if (value === "card") return "The";
-  return "Momo/Khac";
+function studyStatusLabel(value: string) {
+  if (value === "studying") return "Đang học";
+  if (value === "paused") return "Tạm dừng";
+  if (value === "done") return "Hoàn thành";
+  return value;
 }
 
 export default function StudentDetailPage() {
@@ -132,7 +136,7 @@ export default function StudentDetailPage() {
       setStudent(data.student);
     } catch (e) {
       const err = e as ApiClientError;
-      if (!handleAuthError(err)) setError(`Co loi xay ra: ${err.code}: ${err.message}`);
+      if (!handleAuthError(err)) setError(`Có lỗi xảy ra: ${err.code}: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -154,7 +158,7 @@ export default function StudentDetailPage() {
       setReceiptTotal(data.total);
     } catch (e) {
       const err = e as ApiClientError;
-      if (!handleAuthError(err)) setError(`Co loi xay ra: ${err.code}: ${err.message}`);
+      if (!handleAuthError(err)) setError(`Có lỗi xảy ra: ${err.code}: ${err.message}`);
     } finally {
       setReceiptLoading(false);
     }
@@ -174,7 +178,7 @@ export default function StudentDetailPage() {
     if (!token) return;
     const amount = Number(createForm.amount);
     if (!Number.isFinite(amount) || amount <= 0) {
-      setError("VALIDATION_ERROR: So tien phai lon hon 0");
+      setError("VALIDATION_ERROR: Số tiền phải lớn hơn 0");
       return;
     }
 
@@ -197,7 +201,7 @@ export default function StudentDetailPage() {
       await loadReceipts();
     } catch (e) {
       const err = e as ApiClientError;
-      if (!handleAuthError(err)) setError(`Co loi xay ra: ${err.code}: ${err.message}`);
+      if (!handleAuthError(err)) setError(`Có lỗi xảy ra: ${err.code}: ${err.message}`);
     } finally {
       setCreateSaving(false);
     }
@@ -206,24 +210,24 @@ export default function StudentDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-zinc-700">
-        <Spinner /> Dang tai...
+        <Spinner /> Đang tải...
       </div>
     );
   }
 
   if (!student) {
-    return <Alert type="error" message={error || "Khong tim thay hoc vien"} />;
+    return <Alert type="error" message={error || "Không tìm thấy học viên"} />;
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-zinc-900">{student.lead.fullName || "Hoc vien"}</h1>
-          <p className="text-sm text-zinc-500">{student.lead.phone || "Khong co SDT"}</p>
+          <h1 className="text-xl font-semibold text-zinc-900">{student.lead.fullName || "Học viên"}</h1>
+          <p className="text-sm text-zinc-500">{student.lead.phone || "Không có SĐT"}</p>
         </div>
         <Link href="/receipts" className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-700">
-          Quay lai
+          Quay lại
         </Link>
       </div>
 
@@ -231,10 +235,10 @@ export default function StudentDetailPage() {
 
       <div className="flex gap-2">
         <Button variant={tab === "overview" ? "primary" : "secondary"} onClick={() => setTab("overview")}>
-          Tong quan
+          Tổng quan
         </Button>
         <Button variant={tab === "receipts" ? "primary" : "secondary"} onClick={() => setTab("receipts")}>
-          Thu tien
+          Thu tiền
         </Button>
       </div>
 
@@ -242,30 +246,30 @@ export default function StudentDetailPage() {
         <div className="rounded-xl bg-white p-4 shadow-sm">
           <div className="grid gap-3 md:grid-cols-2">
             <div>
-              <p className="text-sm text-zinc-500">Trang thai lead</p>
+              <p className="text-sm text-zinc-500">Trạng thái khách hàng</p>
               <Badge text={student.lead.status} />
             </div>
             <div>
-              <p className="text-sm text-zinc-500">Trang thai hoc</p>
-              <Badge text={student.studyStatus} />
+              <p className="text-sm text-zinc-500">Trạng thái học</p>
+              <Badge text={studyStatusLabel(student.studyStatus)} />
             </div>
             <div>
-              <p className="text-sm text-zinc-500">Khoa hoc</p>
+              <p className="text-sm text-zinc-500">Khóa học</p>
               <p className="text-zinc-900">{student.course?.code || "-"}</p>
             </div>
             <div>
-              <p className="text-sm text-zinc-500">Hoc phi</p>
+              <p className="text-sm text-zinc-500">Học phí</p>
               <p className="text-zinc-900">
-                {student.tuitionSnapshot !== null ? `${formatCurrency(student.tuitionSnapshot)} VND` : "-"}
+                {student.tuitionSnapshot !== null ? formatCurrencyVnd(student.tuitionSnapshot) : "-"}
               </p>
             </div>
             <div>
-              <p className="text-sm text-zinc-500">Ngay tao</p>
-              <p className="text-zinc-900">{new Date(student.createdAt).toLocaleString("vi-VN")}</p>
+              <p className="text-sm text-zinc-500">Ngày tạo</p>
+              <p className="text-zinc-900">{formatDateTimeVi(student.createdAt)}</p>
             </div>
             <div>
-              <p className="text-sm text-zinc-500">Cap nhat</p>
-              <p className="text-zinc-900">{new Date(student.updatedAt).toLocaleString("vi-VN")}</p>
+              <p className="text-sm text-zinc-500">Cập nhật</p>
+              <p className="text-zinc-900">{formatDateTimeVi(student.updatedAt)}</p>
             </div>
           </div>
         </div>
@@ -275,21 +279,21 @@ export default function StudentDetailPage() {
         <div className="space-y-4 rounded-xl bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="text-sm text-zinc-600">
-              Da thu tren trang nay: <span className="font-semibold text-zinc-900">{formatCurrency(totalCollected)} VND</span>
+              Đã thu trên trang này: <span className="font-semibold text-zinc-900">{formatCurrencyVnd(totalCollected)}</span>
             </div>
-            <Button onClick={() => setCreateOpen(true)}>Tao phieu thu</Button>
+            <Button onClick={() => setCreateOpen(true)}>Tạo phiếu thu</Button>
           </div>
 
           {receiptLoading ? (
-            <div className="text-sm text-zinc-600">Dang tai...</div>
+            <div className="text-sm text-zinc-600">Đang tải...</div>
           ) : receiptItems.length === 0 ? (
-            <div className="rounded-lg bg-zinc-50 p-4 text-sm text-zinc-600">Khong co du lieu</div>
+            <div className="rounded-lg bg-zinc-50 p-4 text-sm text-zinc-600">Không có dữ liệu</div>
           ) : (
-            <Table headers={["Ngay thu", "So tien", "Phuong thuc", "Ghi chu"]}>
+            <Table headers={["Ngày thu", "Số tiền", "Phương thức", "Ghi chú"]}>
               {receiptItems.map((item) => (
                 <tr key={item.id} className="border-t border-zinc-100">
-                  <td className="px-3 py-2 text-sm text-zinc-700">{new Date(item.receivedAt).toLocaleString("vi-VN")}</td>
-                  <td className="px-3 py-2 font-medium text-zinc-900">{formatCurrency(item.amount)} VND</td>
+                  <td className="px-3 py-2 text-sm text-zinc-700">{formatDateTimeVi(item.receivedAt)}</td>
+                  <td className="px-3 py-2 font-medium text-zinc-900">{formatCurrencyVnd(item.amount)}</td>
                   <td className="px-3 py-2">
                     <Badge text={formatMethod(item.method)} />
                   </td>
@@ -303,10 +307,10 @@ export default function StudentDetailPage() {
         </div>
       ) : null}
 
-      <Modal open={createOpen} title="Tao phieu thu" onClose={() => setCreateOpen(false)}>
+      <Modal open={createOpen} title="Tạo phiếu thu" onClose={() => setCreateOpen(false)}>
         <div className="space-y-3">
           <div>
-            <label className="mb-1 block text-sm text-zinc-600">So tien</label>
+            <label className="mb-1 block text-sm text-zinc-600">Số tiền</label>
             <Input
               type="number"
               min={1}
@@ -315,19 +319,19 @@ export default function StudentDetailPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm text-zinc-600">Phuong thuc</label>
+            <label className="mb-1 block text-sm text-zinc-600">Phương thức</label>
             <Select
               value={createForm.method}
               onChange={(e) => setCreateForm((s) => ({ ...s, method: e.target.value as FormState["method"] }))}
             >
-              <option value="cash">Tien mat</option>
-              <option value="bank">Chuyen khoan</option>
+              <option value="cash">Tiền mặt</option>
+              <option value="bank">Chuyển khoản</option>
               <option value="momo">Momo</option>
-              <option value="other">Khac</option>
+              <option value="other">Khác</option>
             </Select>
           </div>
           <div>
-            <label className="mb-1 block text-sm text-zinc-600">Ngay thu</label>
+            <label className="mb-1 block text-sm text-zinc-600">Ngày thu</label>
             <Input
               type="date"
               value={createForm.receivedAt}
@@ -335,15 +339,15 @@ export default function StudentDetailPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm text-zinc-600">Ghi chu</label>
+            <label className="mb-1 block text-sm text-zinc-600">Ghi chú</label>
             <Input value={createForm.note} onChange={(e) => setCreateForm((s) => ({ ...s, note: e.target.value }))} />
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setCreateOpen(false)}>
-              Huy
+              Huỷ
             </Button>
             <Button onClick={createReceipt} disabled={createSaving}>
-              {createSaving ? "Dang luu..." : "Luu"}
+              {createSaving ? "Đang lưu..." : "Lưu"}
             </Button>
           </div>
         </div>

@@ -14,6 +14,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Table } from "@/components/ui/table";
+import { formatDateTimeVi } from "@/lib/date-utils";
 
 type Lead = {
   id: string;
@@ -197,7 +198,7 @@ export default function AdminAssignLeadsPage() {
       return;
     }
     if (selectedLeadIds.length === 0) {
-      setError("Vui lòng chọn ít nhất một lead.");
+      setError("Vui lòng chọn ít nhất một khách hàng.");
       return;
     }
 
@@ -210,12 +211,12 @@ export default function AdminAssignLeadsPage() {
         token,
         body: { leadIds: selectedLeadIds, ownerId: selectedOwnerId },
       });
-      setSuccess(`Đã gán ${result.updated} lead.`);
+      setSuccess(`Đã gán ${result.updated} khách hàng.`);
       setSelectedLeadIds([]);
       await loadLeads();
     } catch (e) {
       const err = e as ApiClientError;
-      if (!handleAuthError(err)) setError(`Không thể gán lead: ${parseApiError(err)}`);
+      if (!handleAuthError(err)) setError(`Không thể gán khách hàng: ${parseApiError(err)}`);
     } finally {
       setAssignSaving(false);
     }
@@ -241,13 +242,13 @@ export default function AdminAssignLeadsPage() {
           body,
         }
       );
-      setSuccess(`Tự chia thành công ${result.updated} lead.`);
+      setSuccess(`Tự chia thành công ${result.updated} khách hàng.`);
       setSelectedLeadIds([]);
       setConfirmAutoOpen(false);
       await loadLeads();
     } catch (e) {
       const err = e as ApiClientError;
-      if (!handleAuthError(err)) setError(`Không thể tự chia lead: ${parseApiError(err)}`);
+      if (!handleAuthError(err)) setError(`Không thể tự chia khách hàng: ${parseApiError(err)}`);
     } finally {
       setAutoSaving(false);
     }
@@ -266,7 +267,7 @@ export default function AdminAssignLeadsPage() {
       <div className="space-y-3 rounded-xl bg-white p-6 shadow-sm">
         <Alert type="error" message="Bạn không có quyền truy cập." />
         <Link href="/leads" className="inline-block rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-700">
-          Quay về Leads
+          Quay về Khách hàng
         </Link>
       </div>
     );
@@ -275,7 +276,7 @@ export default function AdminAssignLeadsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-zinc-900">Phân lead vận hành</h1>
+        <h1 className="text-xl font-semibold text-zinc-900">Phân khách hàng vận hành</h1>
         <Button variant="secondary" onClick={loadLeads} disabled={loading}>
           {loading ? "Đang tải..." : "Làm mới"}
         </Button>
@@ -298,7 +299,7 @@ export default function AdminAssignLeadsPage() {
         <Input placeholder="Kênh" value={filters.channel} onChange={(e) => setFilters((s) => ({ ...s, channel: e.target.value }))} />
         <Input placeholder="Hạng bằng" value={filters.licenseType} onChange={(e) => setFilters((s) => ({ ...s, licenseType: e.target.value }))} />
         <Select value={filters.ownerId} onChange={(e) => setFilters((s) => ({ ...s, ownerId: e.target.value }))}>
-          <option value="">Tất cả owner</option>
+            <option value="">Tất cả người phụ trách</option>
           {owners.map((owner) => (
             <option key={owner.id} value={owner.id}>
               {owner.name || owner.email}
@@ -319,7 +320,7 @@ export default function AdminAssignLeadsPage() {
               loadLeads();
             }}
           >
-            Áp dụng lọc
+            Áp dụng bộ lọc
           </Button>
           <Button
             variant="secondary"
@@ -328,7 +329,7 @@ export default function AdminAssignLeadsPage() {
               setPage(1);
             }}
           >
-            Xóa lọc
+            Xoá bộ lọc
           </Button>
         </div>
       </div>
@@ -336,11 +337,11 @@ export default function AdminAssignLeadsPage() {
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         <div>
           {loading ? (
-            <div className="rounded-xl bg-white p-6 text-sm text-zinc-600">Đang tải lead...</div>
+            <div className="rounded-xl bg-white p-6 text-sm text-zinc-600">Đang tải khách hàng...</div>
           ) : items.length === 0 ? (
-            <div className="rounded-xl bg-white p-6 text-sm text-zinc-600">Không có dữ liệu lead.</div>
+            <div className="rounded-xl bg-white p-6 text-sm text-zinc-600">Không có dữ liệu khách hàng.</div>
           ) : (
-            <Table headers={["", "Khách hàng", "SĐT", "Trạng thái", "Owner", "Ngày tạo"]}>
+            <Table headers={["", "Khách hàng", "SĐT", "Trạng thái", "Người phụ trách", "Ngày tạo"]}>
               {items.map((lead) => (
                 <tr key={lead.id} className="border-t border-zinc-100">
                   <td className="px-3 py-2">
@@ -354,14 +355,14 @@ export default function AdminAssignLeadsPage() {
                   <td className="px-3 py-2">{lead.phone || "-"}</td>
                   <td className="px-3 py-2">{lead.status}</td>
                   <td className="px-3 py-2">{lead.owner?.name || lead.owner?.email || "-"}</td>
-                  <td className="px-3 py-2 text-sm text-zinc-600">{new Date(lead.createdAt).toLocaleString("vi-VN")}</td>
+                  <td className="px-3 py-2 text-sm text-zinc-600">{formatDateTimeVi(lead.createdAt)}</td>
                 </tr>
               ))}
             </Table>
           )}
           <div className="mt-2 flex items-center gap-2">
             <input type="checkbox" checked={allInPageSelected} onChange={toggleSelectAllPage} />
-            <span className="text-sm text-zinc-600">Chọn tất cả lead trong trang</span>
+            <span className="text-sm text-zinc-600">Chọn tất cả khách hàng trong trang</span>
           </div>
           <div className="mt-3">
             <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
@@ -370,7 +371,7 @@ export default function AdminAssignLeadsPage() {
 
         <div className="space-y-3 rounded-xl bg-white p-4 shadow-sm">
           <h2 className="text-base font-semibold text-zinc-900">Panel phân công</h2>
-          <p className="text-sm text-zinc-600">Đã chọn: {selectedLeadIds.length} lead</p>
+          <p className="text-sm text-zinc-600">Đã chọn: {selectedLeadIds.length} khách hàng</p>
           <div>
             <label className="mb-1 block text-sm text-zinc-600">Telesales</label>
             <Select value={selectedOwnerId} onChange={(e) => setSelectedOwnerId(e.target.value)}>
@@ -383,7 +384,7 @@ export default function AdminAssignLeadsPage() {
             </Select>
           </div>
           <Button className="w-full" onClick={bulkAssign} disabled={assignSaving}>
-            {assignSaving ? "Đang gán..." : "Gán lead"}
+            {assignSaving ? "Đang gán..." : "Gán khách hàng"}
           </Button>
           <Button variant="secondary" className="w-full" onClick={() => setConfirmAutoOpen(true)} disabled={autoSaving}>
             {autoSaving ? "Đang tự chia..." : "Tự chia vòng tròn"}
@@ -391,16 +392,16 @@ export default function AdminAssignLeadsPage() {
         </div>
       </div>
 
-      <Modal open={confirmAutoOpen} title="Xác nhận tự chia lead" onClose={() => setConfirmAutoOpen(false)}>
+      <Modal open={confirmAutoOpen} title="Xác nhận tự chia khách hàng" onClose={() => setConfirmAutoOpen(false)}>
         <div className="space-y-3">
           <p className="text-sm text-zinc-700">
             {selectedLeadIds.length > 0
-              ? `Bạn sẽ tự chia vòng tròn cho ${selectedLeadIds.length} lead đã chọn.`
-              : "Bạn chưa chọn lead. Hệ thống sẽ tự chia theo bộ lọc hiện tại."}
+              ? `Bạn sẽ tự chia vòng tròn cho ${selectedLeadIds.length} khách hàng đã chọn.`
+              : "Bạn chưa chọn khách hàng. Hệ thống sẽ tự chia theo bộ lọc hiện tại."}
           </p>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setConfirmAutoOpen(false)}>
-              Hủy
+              Huỷ
             </Button>
             <Button onClick={autoAssign} disabled={autoSaving}>
               {autoSaving ? "Đang xử lý..." : "Xác nhận"}

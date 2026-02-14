@@ -14,6 +14,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Table } from "@/components/ui/table";
+import { formatDateTimeVi } from "@/lib/date-utils";
 
 type StudyStatus = "studying" | "paused" | "done";
 
@@ -189,7 +190,7 @@ export default function StudentsPage() {
         setLeadOptions(data.items);
       } catch (e) {
         const err = e as ApiClientError;
-        if (!handleAuthError(err)) setError(`Không tải được danh sách lead: ${parseApiError(err)}`);
+        if (!handleAuthError(err)) setError(`Không tải được danh sách khách hàng: ${parseApiError(err)}`);
       } finally {
         setLeadsLoading(false);
       }
@@ -237,7 +238,7 @@ export default function StudentsPage() {
     if (!token) return;
 
     if (!createForm.leadId) {
-      setError("Vui lòng chọn lead để tạo học viên.");
+      setError("Vui lòng chọn khách hàng để tạo học viên.");
       return;
     }
 
@@ -421,7 +422,7 @@ export default function StudentsPage() {
               <td className="px-3 py-2">
                 <Badge text={statusLabel(item.studyStatus)} />
               </td>
-              <td className="px-3 py-2 text-sm text-zinc-600">{new Date(item.createdAt).toLocaleString("vi-VN")}</td>
+              <td className="px-3 py-2 text-sm text-zinc-600">{formatDateTimeVi(item.createdAt)}</td>
               <td className="px-3 py-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <Link
@@ -455,7 +456,7 @@ export default function StudentsPage() {
       <Modal open={createOpen} title="Tạo học viên" onClose={() => setCreateOpen(false)}>
         <div className="space-y-3">
           <div>
-            <label className="mb-1 block text-sm text-zinc-600">Tìm lead</label>
+            <label className="mb-1 block text-sm text-zinc-600">Tìm khách hàng</label>
             <Input
               placeholder="Nhập tên hoặc SĐT"
               value={leadQueryInput}
@@ -464,19 +465,19 @@ export default function StudentsPage() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-zinc-600">Chọn lead</label>
+            <label className="mb-1 block text-sm text-zinc-600">Chọn khách hàng</label>
             <Select
               value={createForm.leadId}
               onChange={(e) => setCreateForm((prev) => ({ ...prev, leadId: e.target.value }))}
             >
-              <option value="">Chọn một lead</option>
+              <option value="">Chọn một khách hàng</option>
               {leadOptions.map((lead) => (
                 <option key={lead.id} value={lead.id}>
                   {(lead.fullName || "Chưa có tên") + " - " + (lead.phone || "Không SĐT")}
                 </option>
               ))}
             </Select>
-            {leadsLoading ? <p className="mt-1 text-xs text-zinc-500">Đang tải lead...</p> : null}
+            {leadsLoading ? <p className="mt-1 text-xs text-zinc-500">Đang tải khách hàng...</p> : null}
           </div>
 
           <div>
@@ -512,7 +513,7 @@ export default function StudentsPage() {
 
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setCreateOpen(false)}>
-              Hủy
+              Huỷ
             </Button>
             <Button onClick={createStudent} disabled={createSaving}>
               {createSaving ? "Đang tạo..." : "Tạo học viên"}
@@ -525,7 +526,7 @@ export default function StudentsPage() {
         <p className="text-sm text-zinc-700">Đổi trạng thái học viên?</p>
         <div className="mt-4 flex justify-end gap-2">
           <Button variant="secondary" onClick={cancelStatusChange}>
-            Hủy
+            Huỷ
           </Button>
           <Button onClick={confirmStatusChange} disabled={statusSaving}>
             {statusSaving ? "Đang cập nhật..." : "Xác nhận"}

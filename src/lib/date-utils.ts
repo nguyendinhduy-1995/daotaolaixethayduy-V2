@@ -42,13 +42,52 @@ export function getDateRangeYmd(from: string, to: string) {
 
 export function formatTimeHms(date: Date) {
   return new Intl.DateTimeFormat("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
   }).format(date);
 }
 
+export function formatTimeHm(value: string | Date) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return new Intl.DateTimeFormat("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
 export function firstDayOfMonthYmd(baseYmd: string) {
   const base = new Date(`${baseYmd}T00:00:00`);
   return formatDateYmd(new Date(base.getFullYear(), base.getMonth(), 1));
+}
+
+export function formatDateTimeVi(value: string | Date) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return new Intl.DateTimeFormat("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+export function formatDateVi(value: string | Date) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return new Intl.DateTimeFormat("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+}
+
+export function formatCurrencyVnd(value: number) {
+  return `${new Intl.NumberFormat("vi-VN").format(value)} đ`;
 }

@@ -35,7 +35,7 @@ export default function LoginPage() {
         body: { email, password },
       });
       const token = data.accessToken || data.token;
-      if (!token) throw { code: "INTERNAL_ERROR", message: "Missing access token", status: 500 };
+      if (!token) throw { code: "INTERNAL_ERROR", message: "Thiếu access token", status: 500 };
       setToken(token);
       router.replace("/leads");
     } catch (e) {
@@ -58,17 +58,17 @@ export default function LoginPage() {
             <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required />
           </div>
           <div>
-            <label className="mb-1 block text-sm text-zinc-700">Password</label>
+            <label className="mb-1 block text-sm text-zinc-700">Mật khẩu</label>
             <Input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required />
           </div>
           {error ? <Alert type="error" message={error} /> : null}
           <Button className="w-full" type="submit" disabled={loading}>
             {loading ? (
               <span className="flex items-center gap-2">
-                <Spinner /> Signing in...
+                <Spinner /> Đang đăng nhập...
               </span>
             ) : (
-              "Sign in"
+              "Đăng nhập"
             )}
           </Button>
         </form>

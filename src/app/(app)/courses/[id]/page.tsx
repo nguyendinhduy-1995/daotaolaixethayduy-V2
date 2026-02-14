@@ -13,6 +13,7 @@ import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Table } from "@/components/ui/table";
+import { formatDateVi, formatTimeHm } from "@/lib/date-utils";
 
 type Course = {
   id: string;
@@ -319,13 +320,13 @@ export default function CourseDetailPage() {
             <div>
               <p className="text-sm text-zinc-500">Ngày bắt đầu</p>
               <p className="text-zinc-900">
-                {course.startDate ? new Date(course.startDate).toLocaleDateString("vi-VN") : "-"}
+                {course.startDate ? formatDateVi(course.startDate) : "-"}
               </p>
             </div>
             <div>
               <p className="text-sm text-zinc-500">Ngày thi</p>
               <p className="text-zinc-900">
-                {course.examDate ? new Date(course.examDate).toLocaleDateString("vi-VN") : "-"}
+                {course.examDate ? formatDateVi(course.examDate) : "-"}
               </p>
             </div>
             <div className="md:col-span-2">
@@ -355,14 +356,11 @@ export default function CourseDetailPage() {
                 const end = item.endAt ? new Date(item.endAt) : null;
                 return (
                   <tr key={item.id} className="border-t border-zinc-100">
-                    <td className="px-3 py-2">{start.toLocaleDateString("vi-VN")}</td>
+                    <td className="px-3 py-2">{formatDateVi(start)}</td>
                     <td className="px-3 py-2">
-                      {start.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+                      {formatTimeHm(start)}
                       {end
-                        ? ` - ${end.toLocaleTimeString("vi-VN", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}`
+                        ? ` - ${formatTimeHm(end)}`
                         : ""}
                     </td>
                     <td className="px-3 py-2">{scheduleTypeLabel(item.type)}</td>
@@ -427,7 +425,7 @@ export default function CourseDetailPage() {
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setEditOpen(false)}>
-              Hủy
+              Huỷ
             </Button>
             <Button onClick={saveCourseInfo} disabled={editSaving}>
               {editSaving ? "Đang lưu..." : "Lưu"}
@@ -502,7 +500,7 @@ export default function CourseDetailPage() {
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setAddScheduleOpen(false)}>
-              Hủy
+              Huỷ
             </Button>
             <Button onClick={addScheduleItem} disabled={addScheduleSaving}>
               {addScheduleSaving ? "Đang lưu..." : "Thêm buổi học"}

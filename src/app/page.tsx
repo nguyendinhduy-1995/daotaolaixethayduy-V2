@@ -15,7 +15,7 @@ export default function HomePage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-100">
       <div className="flex items-center gap-2 text-zinc-700">
-        <Spinner /> Redirecting...
+        <Spinner /> Đang chuyển hướng...
       </div>
     </div>
   );
