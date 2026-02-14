@@ -60,6 +60,13 @@ function statusLabel(value: string) {
   return value;
 }
 
+function scopeLabel(value: string) {
+  if (value === "daily") return "Hằng ngày";
+  if (value === "manual") return "Thủ công";
+  if (value === "outbound-worker") return "Worker gửi tin";
+  return value;
+}
+
 function shortError(payload: PayloadMeta) {
   if (!payload.error) return "-";
   if (typeof payload.error === "string") return payload.error.slice(0, 120);
@@ -203,8 +210,9 @@ export default function AutomationLogsPage() {
       <div className="grid gap-2 rounded-xl bg-white p-4 shadow-sm md:grid-cols-5">
         <Select value={scope} onChange={(e) => { setScope(e.target.value); setPage(1); }}>
           <option value="">Tất cả phạm vi</option>
-          <option value="daily">Daily</option>
-          <option value="manual">Manual</option>
+          <option value="daily">Hằng ngày</option>
+          <option value="manual">Thủ công</option>
+          <option value="outbound-worker">Worker gửi tin</option>
         </Select>
         <Select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}>
           <option value="">Tất cả trạng thái</option>
@@ -235,7 +243,7 @@ export default function AutomationLogsPage() {
             return (
               <tr key={item.id} className={`border-t border-zinc-100 ${highlightId === item.id ? "bg-amber-50" : ""}`}>
                 <td className="px-3 py-2 text-sm text-zinc-700">{formatDateTimeVi(item.sentAt)}</td>
-                <td className="px-3 py-2">{item.milestone}</td>
+                <td className="px-3 py-2">{scopeLabel(item.milestone)}</td>
                 <td className="px-3 py-2"><Badge text={statusLabel(item.status)} /></td>
                 <td className="px-3 py-2"><Badge text={runtimeLabel(runtime)} /></td>
                 <td className="px-3 py-2 text-xs text-zinc-700">

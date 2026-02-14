@@ -15,7 +15,9 @@
     "db:seed": "npm run seed:admin && npm run seed:templates",
     "prisma:generate": "prisma generate",
     "prisma:validate": "prisma validate",
-    "verify": "bash scripts/verify.sh"
+    "verify": "bash scripts/verify.sh",
+    "worker:outbound:dry": "bash scripts/worker-outbound.sh dry",
+    "worker:outbound": "bash scripts/worker-outbound.sh run"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.4.0",

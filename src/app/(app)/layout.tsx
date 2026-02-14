@@ -162,6 +162,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 >
                   Vận hành tự động
                 </Link>
+                <Link
+                  href="/admin/worker"
+                  className={`block rounded-lg px-3 py-2 text-sm ${pathname.startsWith("/admin/worker") ? "bg-zinc-900 text-white" : "text-zinc-700 hover:bg-zinc-100"}`}
+                >
+                  Worker gửi tin
+                </Link>
               </div>
             ) : null}
           </nav>

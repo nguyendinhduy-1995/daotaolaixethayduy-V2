@@ -57,6 +57,9 @@ CREATE TABLE IF NOT EXISTS "OutboundMessage" (
   "retryCount" INTEGER NOT NULL DEFAULT 0,
   "nextAttemptAt" TIMESTAMP(3),
   "providerMessageId" TEXT,
+  "leaseId" TEXT,
+  "leaseExpiresAt" TIMESTAMP(3),
+  "dispatchedAt" TIMESTAMP(3),
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "sentAt" TIMESTAMP(3),
   CONSTRAINT "OutboundMessage_leadId_fkey" FOREIGN KEY ("leadId") REFERENCES "Lead"("id") ON DELETE CASCADE ON UPDATE CASCADE,
@@ -69,7 +72,10 @@ CREATE TABLE IF NOT EXISTS "OutboundMessage" (
 ALTER TABLE "OutboundMessage"
   ADD COLUMN IF NOT EXISTS "nextAttemptAt" TIMESTAMP(3),
   ADD COLUMN IF NOT EXISTS "providerMessageId" TEXT,
-  ADD COLUMN IF NOT EXISTS "priority" "OutboundPriority" NOT NULL DEFAULT 'MEDIUM';
+  ADD COLUMN IF NOT EXISTS "priority" "OutboundPriority" NOT NULL DEFAULT 'MEDIUM',
+  ADD COLUMN IF NOT EXISTS "leaseId" TEXT,
+  ADD COLUMN IF NOT EXISTS "leaseExpiresAt" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "dispatchedAt" TIMESTAMP(3);
 `);
 
   await prisma.$executeRawUnsafe(`
@@ -80,6 +86,7 @@ WHERE "status" = 'QUEUED'::"OutboundStatus" AND "nextAttemptAt" IS NULL;
 
   await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "OutboundMessage_status_createdAt_idx" ON "OutboundMessage"("status","createdAt");`);
   await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "OutboundMessage_status_nextAttemptAt_idx" ON "OutboundMessage"("status","nextAttemptAt");`);
+  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "OutboundMessage_leaseExpiresAt_idx" ON "OutboundMessage"("leaseExpiresAt");`);
   await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "OutboundMessage_studentId_createdAt_idx" ON "OutboundMessage"("studentId","createdAt");`);
   await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "OutboundMessage_leadId_createdAt_idx" ON "OutboundMessage"("leadId","createdAt");`);
 }

@@ -137,6 +137,23 @@ If a route file is missing in `src/app/api`, verification prints `SKIP (route mi
   - Gọi `POST /api/cron/daily` với header `x-cron-secret`.
   - Ban ngày gọi bình thường, cần chạy ngoài giờ yên tĩnh thì gửi `force=true`.
 
+## Worker dispatch outbound
+
+- Endpoint secret (không cần session): `POST /api/worker/outbound`
+  - Header: `x-worker-secret: <WORKER_SECRET>`
+  - Body hỗ trợ: `dryRun`, `batchSize`, `retryFailedOnly`, `force`, `concurrency`
+- Endpoint admin UI proxy: `POST /api/admin/worker/outbound` (cookie session + admin role)
+- Cấu hình worker:
+  - `WORKER_CONCURRENCY=5`
+  - `WORKER_RATE_LIMIT_PER_MIN=120`
+  - `WORKER_RATE_LIMIT_PER_OWNER_PER_MIN=30`
+  - `WORKER_LEASE_SECONDS=60`
+  - `WORKER_BATCH_SIZE=50`
+  - `WORKER_TZ=Asia/Ho_Chi_Minh`
+- Scripts local:
+  - `npm run worker:outbound:dry`
+  - `npm run worker:outbound`
+
 ## Troubleshooting
 
 - Prisma client mismatch:

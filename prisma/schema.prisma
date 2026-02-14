@@ -379,6 +379,9 @@ model OutboundMessage {
   retryCount     Int             @default(0)
   nextAttemptAt  DateTime?
   providerMessageId String?
+  leaseId        String?
+  leaseExpiresAt DateTime?
+  dispatchedAt   DateTime?
   createdAt      DateTime        @default(now())
   sentAt         DateTime?
 
@@ -387,6 +390,7 @@ model OutboundMessage {
   notification   Notification?   @relation(fields: [notificationId], references: [id], onDelete: SetNull)
 
   @@index([status, nextAttemptAt])
+  @@index([leaseExpiresAt])
   @@index([studentId, createdAt])
   @@index([leadId, createdAt])
 }

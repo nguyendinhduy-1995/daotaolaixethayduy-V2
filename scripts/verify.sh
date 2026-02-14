@@ -11,6 +11,7 @@ COOKIE_JAR="/tmp/thayduy-crm-verify-cookie.txt"
 CALLBACK_SECRET="${N8N_CALLBACK_SECRET:-verify-callback-secret}"
 export N8N_CALLBACK_SECRET="$CALLBACK_SECRET"
 CRON_SECRET_VALUE="${CRON_SECRET:-}"
+WORKER_SECRET_VALUE="${WORKER_SECRET:-}"
 
 log() {
   printf '[verify] %s\n' "$1"
@@ -416,6 +417,37 @@ if route_exists "outbound/messages"; then
     curl -sS "$BASE_URL/api/outbound/messages?page=1&pageSize=50" -H "Authorization: Bearer $TOKEN" \
     | node -e "const fs=require('fs'); const o=JSON.parse(fs.readFileSync(0,'utf8')); const id='$OUTBOUND_MESSAGE_ID'; const msg=Array.isArray(o.items)?o.items.find(i=>i.id===id):null; if(!msg||msg.status!=='SENT'||!msg.providerMessageId){process.exit(1)}"
     log "outbound callback cập nhật trạng thái OK"
+  fi
+
+  if route_exists "worker/outbound"; then
+    if [[ -z "$WORKER_SECRET_VALUE" ]]; then
+      log "SKIP worker: thiếu biến WORKER_SECRET trong môi trường"
+    else
+      WORKER_MESSAGE_ID="$(
+        curl -sS -X POST "$BASE_URL/api/outbound/messages" \
+          -H "Authorization: Bearer $TOKEN" \
+          -H 'Content-Type: application/json' \
+          -d "{\"channel\":\"CALL_NOTE\",\"templateKey\":\"remind_schedule\"${LEAD_ID:+,\"leadId\":\"$LEAD_ID\"},\"variables\":{\"scheduleAt\":\"Ngay mai\"}}" \
+        | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.outboundMessage?.id){process.exit(1)}; process.stdout.write(o.outboundMessage.id);'
+      )"
+
+      curl -sS -X POST "$BASE_URL/api/worker/outbound" \
+        -H "x-worker-secret: $WORKER_SECRET_VALUE" \
+        -H 'Content-Type: application/json' \
+        -d '{"dryRun":true,"batchSize":20}' \
+      | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.ok!==true||typeof o.processed!=="number"){process.exit(1)}'
+
+      curl -sS -X POST "$BASE_URL/api/worker/outbound" \
+        -H "x-worker-secret: $WORKER_SECRET_VALUE" \
+        -H 'Content-Type: application/json' \
+        -d '{"dryRun":false,"batchSize":20,"force":true}' \
+      | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.ok!==true||typeof o.processed!=="number"){process.exit(1)}'
+
+      curl -sS "$BASE_URL/api/outbound/messages?page=1&pageSize=100" -H "Authorization: Bearer $TOKEN" \
+      | node -e "const fs=require('fs'); const o=JSON.parse(fs.readFileSync(0,'utf8')); const id='$WORKER_MESSAGE_ID'; const msg=Array.isArray(o.items)?o.items.find(i=>i.id===id):null; if(!msg){process.exit(1)}; if(msg.status==='QUEUED'){process.exit(1)}; if(msg.status==='FAILED' && Number(msg.retryCount)<=0){process.exit(1)}"
+
+      log "worker outbound dry-run + real OK"
+    fi
   fi
 else
   log "SKIP (route missing): /api/outbound/messages"
