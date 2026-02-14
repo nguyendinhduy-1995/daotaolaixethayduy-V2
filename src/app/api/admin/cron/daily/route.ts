@@ -2,24 +2,22 @@ import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-response";
 import { requireRouteAuth } from "@/lib/route-auth";
 import { requireAdminRole } from "@/lib/admin-auth";
-import { isGenerateScope, runNotificationGenerate } from "@/lib/services/notification-generate";
+import { runDailyCron } from "@/lib/services/cron-daily";
 
 export async function POST(req: Request) {
   const authResult = requireRouteAuth(req);
   if (authResult.error) return authResult.error;
-  const adminError = requireAdminRole(authResult.auth.role);
-  if (adminError) return adminError;
+  const roleError = requireAdminRole(authResult.auth.role);
+  if (roleError) return roleError;
 
   try {
     const body = await req.json().catch(() => null);
-    if (!body || typeof body !== "object" || !isGenerateScope(body.scope)) {
-      return jsonError(400, "VALIDATION_ERROR", "Invalid generate input");
-    }
-    if (body.dryRun !== undefined && typeof body.dryRun !== "boolean") {
+    const dryRun = Boolean(body && typeof body === "object" ? body.dryRun : false);
+    if (body && typeof body === "object" && body.dryRun !== undefined && typeof body.dryRun !== "boolean") {
       return jsonError(400, "VALIDATION_ERROR", "dryRun must be boolean");
     }
 
-    const result = await runNotificationGenerate(body.scope, Boolean(body.dryRun));
+    const result = await runDailyCron({ dryRun, requestedBy: authResult.auth.sub });
     return NextResponse.json(result);
   } catch {
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");

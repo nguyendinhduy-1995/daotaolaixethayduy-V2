@@ -10,6 +10,7 @@ DEV_PID=""
 COOKIE_JAR="/tmp/thayduy-crm-verify-cookie.txt"
 CALLBACK_SECRET="${N8N_CALLBACK_SECRET:-verify-callback-secret}"
 export N8N_CALLBACK_SECRET="$CALLBACK_SECRET"
+CRON_SECRET_VALUE="${CRON_SECRET:-}"
 
 log() {
   printf '[verify] %s\n' "$1"
@@ -356,6 +357,33 @@ if route_exists "notifications/generate" && route_exists "notifications"; then
   log "notifications generate/list/patch OK"
 else
   log "SKIP (route missing): /api/notifications or /api/notifications/generate"
+fi
+
+if route_exists "cron/daily"; then
+  if [[ -z "$CRON_SECRET_VALUE" ]]; then
+    log "SKIP cron: thiếu biến CRON_SECRET trong môi trường"
+  else
+    curl -sS -X POST "$BASE_URL/api/cron/daily" \
+      -H "x-cron-secret: $CRON_SECRET_VALUE" \
+      -H 'Content-Type: application/json' \
+      -d '{"dryRun":true}' \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.ok!==true){process.exit(1)}; const keys=["notificationsCreated","notificationsSkipped","outboundQueued","outboundSkipped","errors"]; if(keys.some(k=>typeof o[k]!=="number")) process.exit(1);'
+
+    curl -sS -X POST "$BASE_URL/api/cron/daily" \
+      -H "x-cron-secret: $CRON_SECRET_VALUE" \
+      -H 'Content-Type: application/json' \
+      -d '{"dryRun":false}' \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.ok!==true){process.exit(1)}; const keys=["notificationsCreated","notificationsSkipped","outboundQueued","outboundSkipped","errors"]; if(keys.some(k=>typeof o[k]!=="number")) process.exit(1);'
+
+    curl -sS "$BASE_URL/api/notifications?page=1&pageSize=20" -H "Authorization: Bearer $TOKEN" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!Array.isArray(o.items)||o.items.length===0){process.exit(1)}'
+    curl -sS "$BASE_URL/api/outbound/messages?page=1&pageSize=20" -H "Authorization: Bearer $TOKEN" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!Array.isArray(o.items)||o.items.length===0){process.exit(1)}'
+
+    log "cron daily dry-run + execute OK"
+  fi
+else
+  log "SKIP (route missing): /api/cron/daily"
 fi
 
 if route_exists "outbound/messages"; then

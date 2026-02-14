@@ -65,6 +65,7 @@ If a route file is missing in `src/app/api`, verification prints `SKIP (route mi
 
 - [ ] `.env` uses strong `JWT_SECRET`
 - [ ] `.env` sets `N8N_CALLBACK_SECRET` and (optional) `N8N_WEBHOOK_URL`
+- [ ] `.env` sets `CRON_SECRET` for internal cron endpoint
 - [ ] `DATABASE_URL` and `REDIS_URL` point to intended environment
 - [ ] `npm run prisma:validate` passes
 - [ ] `npm run prisma:generate` passes
@@ -111,6 +112,20 @@ If a route file is missing in `src/app/api`, verification prints `SKIP (route mi
 ```
 - Retry/backoff:
   - Khi gửi lỗi hoặc callback `FAILED`, hệ thống tăng `retryCount` và hẹn `nextAttemptAt` theo 2 phút, 10 phút, 60 phút (tối đa 3 lần).
+
+## Cron hằng ngày
+
+- Endpoint nội bộ: `POST /api/cron/daily`
+- Bảo vệ bằng header: `x-cron-secret: <CRON_SECRET>` (không dùng session người dùng)
+- Body:
+```json
+{ "dryRun": true }
+```
+- Tác vụ:
+  - Sinh thông báo tài chính theo rule hiện có.
+  - Khi chạy thật, tự xếp hàng outbound từ thông báo `NEW/DOING` (có dedupe theo ngày).
+  - Ghi `AutomationLog` scope `daily` với thống kê đầu ra.
+- Trang admin chạy tay: `/admin/cron`.
 
 ## Troubleshooting
 
