@@ -1,8 +1,6 @@
 "use client";
 
-import { fetchJson } from "@/lib/api-client";
-
-const ACCESS_TOKEN_KEY = "accessToken";
+import { COOKIE_SESSION_TOKEN, fetchJson } from "@/lib/api-client";
 
 export type MeResponse = {
   user: {
@@ -15,19 +13,22 @@ export type MeResponse = {
 
 export function getToken() {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(ACCESS_TOKEN_KEY);
+  return COOKIE_SESSION_TOKEN;
 }
 
-export function setToken(token: string) {
-  localStorage.setItem(ACCESS_TOKEN_KEY, token);
+export function setToken() {
+  // Cookie session is managed by server.
 }
 
 export function clearToken() {
-  localStorage.removeItem(ACCESS_TOKEN_KEY);
+  if (typeof window === "undefined") return;
+  void fetch("/api/auth/logout", { method: "POST", credentials: "include" }).catch(() => undefined);
 }
 
 export async function fetchMe() {
-  const token = getToken();
-  if (!token) throw { code: "AUTH_MISSING_BEARER", message: "Thiếu token", status: 401 };
-  return fetchJson<MeResponse>("/api/auth/me", { token });
+  return fetchJson<MeResponse>("/api/auth/me");
+}
+
+export async function logoutSession() {
+  await fetchJson<{ ok: boolean }>("/api/auth/logout", { method: "POST" });
 }

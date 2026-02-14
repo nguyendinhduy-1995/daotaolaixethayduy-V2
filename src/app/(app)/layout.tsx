@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useState } from "react";
-import { clearToken, fetchMe, getToken, type MeResponse } from "@/lib/auth-client";
+import { clearToken, fetchMe, logoutSession, type MeResponse } from "@/lib/auth-client";
 import { isAdminRole } from "@/lib/admin-auth";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -24,12 +24,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<MeResponse["user"] | null>(null);
 
   useEffect(() => {
-    const token = getToken();
-    if (!token) {
-      router.replace("/login");
-      return;
-    }
-
     fetchMe()
       .then((data) => setUser(data.user))
       .catch(() => {
@@ -39,8 +33,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, [router]);
 
-  function logout() {
-    clearToken();
+  async function logout() {
+    try {
+      await logoutSession();
+    } catch {
+      // no-op
+    }
     router.replace("/login");
   }
 

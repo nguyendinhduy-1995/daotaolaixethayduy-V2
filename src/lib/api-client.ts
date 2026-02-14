@@ -6,6 +6,8 @@ export type ApiClientError = {
   status: number;
 };
 
+const COOKIE_SESSION_TOKEN = "__cookie_session__";
+
 export async function fetchJson<T>(
   path: string,
   options?: {
@@ -14,11 +16,17 @@ export async function fetchJson<T>(
     token?: string | null;
   }
 ): Promise<T> {
+  const shouldAttachBearer =
+    typeof options?.token === "string" &&
+    options.token.length > 0 &&
+    options.token !== COOKIE_SESSION_TOKEN;
+
   const res = await fetch(path, {
     method: options?.method ?? "GET",
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
-      ...(options?.token ? { Authorization: `Bearer ${options.token}` } : {}),
+      ...(shouldAttachBearer ? { Authorization: `Bearer ${options?.token}` } : {}),
     },
     ...(options?.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
   });
@@ -42,3 +50,5 @@ export async function fetchJson<T>(
 
   return data as T;
 }
+
+export { COOKIE_SESSION_TOKEN };

@@ -1,4 +1,4 @@
-import jwt from "jsonwebtoken";
+import { ACCESS_TOKEN_COOKIE, verifyAccessToken } from "@/lib/jwt";
 
 export type AuthPayload = { sub: string; role: string; email: string };
 
@@ -12,16 +12,35 @@ export class AuthError extends Error {
   }
 }
 
-export function requireAuth(req: Request): AuthPayload {
+function parseCookie(header: string, name: string) {
+  const parts = header.split(";");
+  for (const part of parts) {
+    const [k, ...rest] = part.trim().split("=");
+    if (k === name) return decodeURIComponent(rest.join("="));
+  }
+  return "";
+}
+
+function getTokenFromRequest(req: Request) {
   const header = req.headers.get("authorization")?.trim() ?? "";
   const parts = header.split(/\s+/);
 
-  if (parts.length !== 2 || parts[0].toLowerCase() !== "bearer" || !parts[1]) {
+  if (parts.length === 2 && parts[0].toLowerCase() === "bearer" && parts[1]) {
+    return parts[1];
+  }
+
+  const cookieHeader = req.headers.get("cookie") ?? "";
+  return parseCookie(cookieHeader, ACCESS_TOKEN_COOKIE);
+}
+
+export function requireAuth(req: Request): AuthPayload {
+  const token = getTokenFromRequest(req);
+  if (!token) {
     throw new AuthError("AUTH_MISSING_BEARER", "Missing or invalid Authorization Bearer token");
   }
 
   try {
-    return jwt.verify(parts[1], process.env.JWT_SECRET!) as AuthPayload;
+    return verifyAccessToken(token);
   } catch {
     throw new AuthError("AUTH_INVALID_TOKEN", "Invalid or expired token");
   }

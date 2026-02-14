@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { fetchJson, type ApiClientError } from "@/lib/api-client";
 import { clearToken, fetchMe, getToken } from "@/lib/auth-client";
 import { isAdminRole, isTelesalesRole } from "@/lib/admin-auth";
@@ -96,6 +96,7 @@ function formatError(err: ApiClientError) {
 
 export default function LeadsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [items, setItems] = useState<Lead[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -188,6 +189,12 @@ export default function LeadsPage() {
         setIsTelesales(false);
       });
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get("err") === "forbidden") {
+      setError("AUTH_FORBIDDEN: Bạn không có quyền truy cập trang quản trị.");
+    }
+  }, [searchParams]);
 
   const loadOwners = useCallback(async () => {
     if (!canManageOwner) {

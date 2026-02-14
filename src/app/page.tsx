@@ -2,14 +2,16 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getToken } from "@/lib/auth-client";
+import { fetchMe } from "@/lib/auth-client";
 import { Spinner } from "@/components/ui/spinner";
 
 export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace(getToken() ? "/leads" : "/login");
+    fetchMe()
+      .then(() => router.replace("/leads"))
+      .catch(() => router.replace("/login"));
   }, [router]);
 
   return (

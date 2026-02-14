@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchJson, type ApiClientError } from "@/lib/api-client";
-import { getToken, setToken } from "@/lib/auth-client";
+import { fetchMe } from "@/lib/auth-client";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (getToken()) router.replace("/leads");
+    fetchMe()
+      .then(() => router.replace("/leads"))
+      .catch(() => undefined);
   }, [router]);
 
   async function onSubmit(event: FormEvent) {
@@ -30,13 +32,10 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      const data = await fetchJson<LoginResponse>("/api/auth/login", {
+      await fetchJson<LoginResponse>("/api/auth/login", {
         method: "POST",
         body: { email, password },
       });
-      const token = data.accessToken || data.token;
-      if (!token) throw { code: "INTERNAL_ERROR", message: "Thiếu access token", status: 500 };
-      setToken(token);
       router.replace("/leads");
     } catch (e) {
       const err = e as ApiClientError;

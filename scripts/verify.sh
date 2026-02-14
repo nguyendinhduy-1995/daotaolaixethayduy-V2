@@ -7,6 +7,7 @@ cd "$ROOT_DIR"
 BASE_URL="http://localhost:3000"
 STARTED_SERVER=0
 DEV_PID=""
+COOKIE_JAR="/tmp/thayduy-crm-verify-cookie.txt"
 
 log() {
   printf '[verify] %s\n' "$1"
@@ -23,6 +24,7 @@ cleanup() {
     kill "$DEV_PID" >/dev/null 2>&1 || true
     wait "$DEV_PID" >/dev/null 2>&1 || true
   fi
+  rm -f "$COOKIE_JAR" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
@@ -49,6 +51,7 @@ wait_for_health() {
 
 get_token() {
   curl -sS -X POST "$BASE_URL/api/auth/login" \
+    -c "$COOKIE_JAR" \
     -H 'Content-Type: application/json' \
     -d '{"email":"admin@thayduy.local","password":"Admin@123456"}' \
   | node -e 'const fs=require("fs"); const raw=fs.readFileSync(0,"utf8"); const o=JSON.parse(raw); const t=o.accessToken||o.token; if(!t){process.exit(1)}; process.stdout.write(t);'
@@ -80,6 +83,34 @@ wait_for_health || fail "Health check failed at $BASE_URL/api/health/db"
 
 TOKEN="$(get_token)" || fail "Login failed; cannot obtain token"
 log "Login OK"
+
+if route_exists "auth/me"; then
+  curl -sS "$BASE_URL/api/auth/me" -b "$COOKIE_JAR" \
+  | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.user?.id){process.exit(1)}'
+  log "auth/me qua cookie OK"
+else
+  log "SKIP (route missing): /api/auth/me"
+fi
+
+if route_exists "auth/refresh"; then
+  curl -sS -X POST "$BASE_URL/api/auth/refresh" -b "$COOKIE_JAR" -c "$COOKIE_JAR" \
+  | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!(o.accessToken||o.token)){process.exit(1)}'
+  log "auth/refresh qua cookie OK"
+else
+  log "SKIP (route missing): /api/auth/refresh"
+fi
+
+if route_exists "auth/logout"; then
+  curl -sS -X POST "$BASE_URL/api/auth/logout" -b "$COOKIE_JAR" -c "$COOKIE_JAR" \
+  | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.ok!==true){process.exit(1)}'
+  HTTP_CODE="$(curl -sS -o /tmp/thayduy-crm-verify-auth-me-out.json -w '%{http_code}' "$BASE_URL/api/auth/me" -b "$COOKIE_JAR")"
+  [[ "$HTTP_CODE" != "200" ]] || fail "auth/me should fail after logout"
+  log "auth/logout + revoke cookie OK"
+  TOKEN="$(get_token)" || fail "Login failed after logout"
+  log "Login lại sau logout OK"
+else
+  log "SKIP (route missing): /api/auth/logout"
+fi
 
 USER_ID=""
 USER_A_ID=""
@@ -129,7 +160,7 @@ fi
 if route_exists "auth/me"; then
   curl -sS "$BASE_URL/api/auth/me" -H "Authorization: Bearer $TOKEN" \
   | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.user?.id){process.exit(1)}'
-  log "auth/me OK"
+  log "auth/me qua Bearer OK"
 else
   log "SKIP (route missing): /api/auth/me"
 fi
