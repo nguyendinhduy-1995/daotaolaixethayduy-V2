@@ -168,6 +168,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 >
                   Worker gửi tin
                 </Link>
+                <Link
+                  href="/admin/scheduler"
+                  className={`block rounded-lg px-3 py-2 text-sm ${pathname.startsWith("/admin/scheduler") ? "bg-zinc-900 text-white" : "text-zinc-700 hover:bg-zinc-100"}`}
+                >
+                  Lập lịch
+                </Link>
               </div>
             ) : null}
           </nav>

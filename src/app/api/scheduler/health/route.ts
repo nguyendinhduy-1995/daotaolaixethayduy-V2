@@ -1,0 +1,16 @@
+import { NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-response";
+import { requireRouteAuth } from "@/lib/route-auth";
+import { getSchedulerHealth } from "@/lib/services/scheduler-health";
+
+export async function GET(req: Request) {
+  const authResult = requireRouteAuth(req);
+  if (authResult.error) return authResult.error;
+
+  try {
+    const payload = await getSchedulerHealth(authResult.auth);
+    return NextResponse.json(payload);
+  } catch {
+    return jsonError(500, "INTERNAL_ERROR", "Internal server error");
+  }
+}

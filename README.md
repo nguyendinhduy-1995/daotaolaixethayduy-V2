@@ -154,6 +154,40 @@ If a route file is missing in `src/app/api`, verification prints `SKIP (route mi
   - `npm run worker:outbound:dry`
   - `npm run worker:outbound`
 
+## Scheduler n8n (Outbound Worker)
+
+1. Tạo workflow n8n với node `Cron` chạy mỗi 1 phút hoặc 2 phút.
+2. Thêm node `HTTP Request`:
+   - Method: `POST`
+   - URL: `https://<host>/api/worker/outbound`
+   - Headers:
+     - `x-worker-secret: <WORKER_SECRET>`
+     - `Content-Type: application/json`
+   - Body JSON:
+```json
+{
+  "dryRun": false,
+  "batchSize": 50,
+  "force": false
+}
+```
+3. Gợi ý cảnh báo:
+   - Nếu `failed > 0` thì gửi cảnh báo.
+   - Nếu `queued` tăng cao liên tục thì tăng tần suất hoặc tăng `WORKER_CONCURRENCY`.
+4. Test local bằng curl:
+```bash
+curl -sS -X POST http://localhost:3000/api/worker/outbound \
+  -H "x-worker-secret: $WORKER_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"dryRun":true,"batchSize":20}'
+```
+5. Khuyến nghị biến môi trường:
+   - `WORKER_SECRET`: bắt buộc, secret đủ mạnh.
+   - `WORKER_BATCH_SIZE=50`
+   - `WORKER_CONCURRENCY=5`
+   - `WORKER_RATE_LIMIT_PER_MIN=120`
+   - `WORKER_RATE_LIMIT_PER_OWNER_PER_MIN=30`
+
 ## Troubleshooting
 
 - Prisma client mismatch:
