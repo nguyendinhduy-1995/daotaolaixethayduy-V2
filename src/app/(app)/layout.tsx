@@ -100,6 +100,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             >
               Khóa học
             </Link>
+            <Link
+              href="/notifications"
+              className={`block rounded-lg px-3 py-2 text-sm ${pathname === "/notifications" || pathname.startsWith("/notifications/") ? "bg-zinc-900 text-white" : "text-zinc-700 hover:bg-zinc-100"}`}
+            >
+              Thông báo
+            </Link>
             <div className="pt-2">
               <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-zinc-400">Vận hành</p>
               <Link
@@ -137,6 +143,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                   className={`block rounded-lg px-3 py-2 text-sm ${pathname.startsWith("/admin/tuition-plans") ? "bg-zinc-900 text-white" : "text-zinc-700 hover:bg-zinc-100"}`}
                 >
                   Bảng học phí
+                </Link>
+                <Link
+                  href="/admin/notifications"
+                  className={`block rounded-lg px-3 py-2 text-sm ${pathname.startsWith("/admin/notifications") ? "bg-zinc-900 text-white" : "text-zinc-700 hover:bg-zinc-100"}`}
+                >
+                  Quản trị thông báo
                 </Link>
               </div>
             ) : null}

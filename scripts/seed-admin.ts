@@ -15,6 +15,35 @@ async function main() {
     create: { email, password: hash, role: "admin", isActive: true, name: "Admin" },
   });
 
+  try {
+    await prisma.notificationRule.upsert({
+      where: { name: "finance-default" },
+      update: {
+        scope: "FINANCE",
+        isActive: true,
+        config: {
+          dueInDays: 0,
+          highPriorityAfterDays: 7,
+          mediumPriorityNoReceiptDays: 14,
+          dedupeDays: 3,
+        },
+      },
+      create: {
+        name: "finance-default",
+        scope: "FINANCE",
+        isActive: true,
+        config: {
+          dueInDays: 0,
+          highPriorityAfterDays: 7,
+          mediumPriorityNoReceiptDays: 14,
+          dedupeDays: 3,
+        },
+      },
+    });
+  } catch {
+    // Notification tables may not exist yet in a fresh DB without migration.
+  }
+
   console.log("✅ Seeded admin:", { email, password });
 }
 

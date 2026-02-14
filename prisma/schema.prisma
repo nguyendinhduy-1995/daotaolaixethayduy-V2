@@ -82,6 +82,26 @@ enum AutomationStatus {
   skipped
 }
 
+enum NotificationScope {
+  FINANCE
+  FOLLOWUP
+  SCHEDULE
+  SYSTEM
+}
+
+enum NotificationStatus {
+  NEW
+  DOING
+  DONE
+  SKIPPED
+}
+
+enum NotificationPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -95,6 +115,7 @@ model User {
   leads     Lead[]    @relation("OwnerLeads")
   receipts  Receipt[] @relation("ReceiptCreatedBy")
   events    LeadEvent[] @relation("EventCreatedBy")
+  notifications Notification[] @relation("OwnerNotifications")
 }
 
 model Lead {
@@ -124,6 +145,7 @@ model Lead {
   events        LeadEvent[]
   student       Student?
   automationLogs AutomationLog[]
+  notifications Notification[]
 
   @@index([ownerId, createdAt])
 }
@@ -187,6 +209,7 @@ model Course {
 
   students    Student[]
   scheduleItems CourseScheduleItem[]
+  notifications Notification[]
 }
 
 model CourseScheduleItem {
@@ -231,6 +254,7 @@ model Student {
 
   receipts        Receipt[]
   automationLogs  AutomationLog[]
+  notifications   Notification[]
 
   @@index([courseId])
 }
@@ -268,4 +292,40 @@ model AutomationLog {
 
   @@index([leadId, sentAt])
   @@index([studentId, sentAt])
+}
+
+model Notification {
+  id        String               @id @default(cuid())
+  scope     NotificationScope
+  status    NotificationStatus   @default(NEW)
+  priority  NotificationPriority @default(MEDIUM)
+  title     String
+  message   String
+  payload   Json?
+  leadId    String?
+  studentId String?
+  courseId  String?
+  ownerId   String?
+  dueAt     DateTime?
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  lead      Lead?                @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  student   Student?             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course    Course?              @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  owner     User?                @relation("OwnerNotifications", fields: [ownerId], references: [id], onDelete: SetNull)
+
+  @@index([scope, status, dueAt])
+  @@index([ownerId, createdAt])
+  @@index([studentId, scope, status])
+}
+
+model NotificationRule {
+  id        String            @id @default(cuid())
+  scope     NotificationScope
+  name      String            @unique
+  isActive  Boolean           @default(true)
+  config    Json
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
 }

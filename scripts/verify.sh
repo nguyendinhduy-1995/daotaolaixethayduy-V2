@@ -321,6 +321,35 @@ if [[ -n "$STUDENT_ID" ]]; then
   log "students/[id] HTML route OK"
 fi
 
+if route_exists "notifications/generate" && route_exists "notifications"; then
+  curl -sS -X POST "$BASE_URL/api/notifications/generate" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H 'Content-Type: application/json' \
+    -d '{"scope":"finance","dryRun":true}' \
+  | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!Array.isArray(o.preview)){process.exit(1)}'
+
+  curl -sS -X POST "$BASE_URL/api/notifications/generate" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H 'Content-Type: application/json' \
+    -d '{"scope":"finance","dryRun":false}' \
+  | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(typeof o.created!=="number"){process.exit(1)}'
+
+  FIRST_NOTIFICATION_ID="$(
+    curl -sS "$BASE_URL/api/notifications?scope=FINANCE&page=1&pageSize=20" -H "Authorization: Bearer $TOKEN" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!Array.isArray(o.items)||o.items.length===0){process.exit(1)}; process.stdout.write(o.items[0].id);'
+  )"
+
+  curl -sS -X PATCH "$BASE_URL/api/notifications/$FIRST_NOTIFICATION_ID" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H 'Content-Type: application/json' \
+    -d '{"status":"DONE"}' \
+  | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.notification?.status!=="DONE"){process.exit(1)}'
+
+  log "notifications generate/list/patch OK"
+else
+  log "SKIP (route missing): /api/notifications or /api/notifications/generate"
+fi
+
 if route_exists "automation/run" && route_exists "automation/logs"; then
   curl -sS -X POST "$BASE_URL/api/automation/run" \
     -b "$COOKIE_JAR" -c "$COOKIE_JAR" \

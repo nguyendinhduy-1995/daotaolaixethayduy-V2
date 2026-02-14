@@ -85,6 +85,13 @@ type AutomationLogsResponse = {
   total: number;
 };
 
+type NotificationCountResponse = {
+  items: Array<{ id: string }>;
+  page: number;
+  pageSize: number;
+  total: number;
+};
+
 type MetricStatus = "NEW" | "HAS_PHONE" | "APPOINTED" | "ARRIVED" | "SIGNED" | "LOST";
 
 type DrilldownState = {
@@ -134,6 +141,7 @@ export default function DashboardPage() {
   });
   const [unassignedCount, setUnassignedCount] = useState(0);
   const [automationStats, setAutomationStats] = useState({ sent: 0, failed: 0, skipped: 0 });
+  const [todoCount, setTodoCount] = useState(0);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -214,13 +222,21 @@ export default function DashboardPage() {
         `/api/automation/logs?scope=daily&from=${today}&to=${today}&page=1&pageSize=100`,
         { token }
       ).catch(() => ({ items: [], page: 1, pageSize: 100, total: 0 }));
+      const todoNewPromise = fetchJson<NotificationCountResponse>("/api/notifications?status=NEW&page=1&pageSize=1", {
+        token,
+      }).catch(() => ({ items: [], page: 1, pageSize: 1, total: 0 }));
+      const todoDoingPromise = fetchJson<NotificationCountResponse>("/api/notifications?status=DOING&page=1&pageSize=1", {
+        token,
+      }).catch(() => ({ items: [], page: 1, pageSize: 1, total: 0 }));
 
-      const [me, kpiData, receiptData, statusData, logsData] = await Promise.all([
+      const [me, kpiData, receiptData, statusData, logsData, todoNew, todoDoing] = await Promise.all([
         mePromise,
         kpiPromise,
         receiptsPromise,
         Promise.all(statusPromises),
         logsPromise,
+        todoNewPromise,
+        todoDoingPromise,
       ]);
 
       setUser(me.user);
@@ -244,6 +260,7 @@ export default function DashboardPage() {
         if (log.status === "skipped") skipped += 1;
       });
       setAutomationStats({ sent, failed, skipped });
+      setTodoCount(todoNew.total + todoDoing.total);
 
       if (isAdminRole(me.user.role)) {
         const unassigned = await loadUnassignedCount(today, token);
@@ -464,6 +481,25 @@ export default function DashboardPage() {
               className="inline-flex items-center rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
             >
               Xem lỗi
+            </Link>
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-base font-semibold text-zinc-900">Việc cần làm</h2>
+            <Badge text="Thông báo" />
+          </div>
+          <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+            <p className="text-xs uppercase tracking-wide text-zinc-500">Mới + Đang xử lý</p>
+            <p className="text-2xl font-semibold text-zinc-900">{todoCount}</p>
+          </div>
+          <div className="mt-3">
+            <Link
+              href="/notifications"
+              className="inline-flex items-center rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
+            >
+              Mở hàng đợi thông báo
             </Link>
           </div>
         </section>
