@@ -78,8 +78,16 @@ If a route file is missing in `src/app/api`, verification prints `SKIP (route mi
   - `GET/PATCH /api/users/[id]`
 - Gán telesale cho lead qua `PATCH /api/leads/[id] { ownerId }`
 - Khi đổi owner, hệ thống tự ghi `LeadEvent` loại `OWNER_CHANGED` với payload `fromOwnerId/toOwnerId`
+- Phân lead vận hành:
+  - `POST /api/leads/assign` (gán hàng loạt)
+  - `POST /api/leads/auto-assign` (round robin)
+- RBAC lead:
+  - `admin`: xem/sửa toàn bộ lead
+  - `telesales`: chỉ xem lead có `ownerId = user.id`
+  - role khác: không truy cập API leads
 - UI:
   - Trang quản trị người dùng: `/admin/users`
+  - Trang phân lead: `/admin/assign-leads`
   - Filter/gán owner trên `/leads`, `/leads/board`, `/leads/[id]` (hiển thị theo quyền)
 
 ## Troubleshooting

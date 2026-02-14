@@ -3,6 +3,7 @@ import type { LeadStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireAuth } from "@/lib/auth";
 import { jsonError } from "@/lib/api-response";
+import { isTelesalesRole, requireLeadRole } from "@/lib/admin-auth";
 import { isLeadStatusType, logLeadEvent } from "@/lib/lead-events";
 
 type SortField = "createdAt" | "updatedAt" | "lastContactAt";
@@ -49,6 +50,8 @@ function validateTags(tags: unknown) {
 export async function GET(req: Request) {
   const auth = assertAuth(req);
   if ("error" in auth) return auth.error;
+  const roleError = requireLeadRole(auth.role);
+  if (roleError) return roleError;
 
   try {
     const { searchParams } = new URL(req.url);
@@ -79,12 +82,14 @@ export async function GET(req: Request) {
     if (createdFrom) createdAtFilter.gte = parseDateYmd(createdFrom);
     if (createdTo) createdAtFilter.lte = parseDateYmd(createdTo, true);
 
+    const scopedOwnerId = isTelesalesRole(auth.role) ? auth.sub : ownerId;
+
     const where: Prisma.LeadWhereInput = {
       ...(status ? { status: status as LeadStatus } : {}),
       ...(source ? { source } : {}),
       ...(channel ? { channel } : {}),
       ...(licenseType ? { licenseType } : {}),
-      ...(ownerId ? { ownerId } : {}),
+      ...(scopedOwnerId ? { ownerId: scopedOwnerId } : {}),
       ...(createdFrom || createdTo ? { createdAt: createdAtFilter } : {}),
       ...(q
         ? {
@@ -126,6 +131,8 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const auth = assertAuth(req);
   if ("error" in auth) return auth.error;
+  const roleError = requireLeadRole(auth.role);
+  if (roleError) return roleError;
 
   try {
     const body = await req.json().catch(() => null);
@@ -149,6 +156,7 @@ export async function POST(req: Request) {
           status: phone ? "HAS_PHONE" : "NEW",
           note: typeof body.note === "string" ? body.note : null,
           tags: body.tags ?? [],
+          ...(isTelesalesRole(auth.role) ? { ownerId: auth.sub } : {}),
         },
       });
 

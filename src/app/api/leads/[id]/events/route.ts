@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireAuth } from "@/lib/auth";
 import { jsonError } from "@/lib/api-response";
+import { isTelesalesRole, requireLeadRole } from "@/lib/admin-auth";
 import { isLeadEventType, isStatusTransitionEventType, logLeadEvent } from "@/lib/lead-events";
 
 type RouteContext = { params: Promise<{ id: string }> | { id: string } };
@@ -20,6 +21,8 @@ function assertAuth(req: Request) {
 export async function POST(req: Request, context: RouteContext) {
   const auth = assertAuth(req);
   if ("error" in auth) return auth.error;
+  const roleError = requireLeadRole(auth.role);
+  if (roleError) return roleError;
 
   try {
     const { id } = await Promise.resolve(context.params);
@@ -34,9 +37,10 @@ export async function POST(req: Request, context: RouteContext) {
     const result = await prisma.$transaction(async (tx) => {
       const lead = await tx.lead.findUnique({
         where: { id },
-        select: { id: true, status: true },
+        select: { id: true, status: true, ownerId: true },
       });
       if (!lead) return null;
+      if (isTelesalesRole(auth.role) && lead.ownerId !== auth.sub) throw new Error("FORBIDDEN_LEAD_SCOPE");
 
       const event = await logLeadEvent(
         {
@@ -61,7 +65,10 @@ export async function POST(req: Request, context: RouteContext) {
 
     if (!result) return jsonError(404, "NOT_FOUND", "Lead not found");
     return NextResponse.json(result);
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "FORBIDDEN_LEAD_SCOPE") {
+      return jsonError(403, "AUTH_FORBIDDEN", "Forbidden");
+    }
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }
@@ -69,6 +76,8 @@ export async function POST(req: Request, context: RouteContext) {
 export async function GET(req: Request, context: RouteContext) {
   const auth = assertAuth(req);
   if ("error" in auth) return auth.error;
+  const roleError = requireLeadRole(auth.role);
+  if (roleError) return roleError;
 
   try {
     const { id } = await Promise.resolve(context.params);
@@ -88,8 +97,11 @@ export async function GET(req: Request, context: RouteContext) {
       return jsonError(400, "VALIDATION_ERROR", "Invalid order");
     }
 
-    const lead = await prisma.lead.findUnique({ where: { id }, select: { id: true } });
+    const lead = await prisma.lead.findUnique({ where: { id }, select: { id: true, ownerId: true } });
     if (!lead) return jsonError(404, "NOT_FOUND", "Lead not found");
+    if (isTelesalesRole(auth.role) && lead.ownerId !== auth.sub) {
+      return jsonError(403, "AUTH_FORBIDDEN", "Forbidden");
+    }
 
     const [items, total] = await Promise.all([
       prisma.leadEvent.findMany({

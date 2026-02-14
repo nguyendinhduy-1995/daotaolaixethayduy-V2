@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchJson, type ApiClientError } from "@/lib/api-client";
 import { clearToken, fetchMe, getToken } from "@/lib/auth-client";
-import { isAdminRole } from "@/lib/admin-auth";
+import { isAdminRole, isTelesalesRole } from "@/lib/admin-auth";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -106,6 +106,7 @@ export default function LeadsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [canManageOwner, setCanManageOwner] = useState(false);
+  const [isTelesales, setIsTelesales] = useState(false);
   const [owners, setOwners] = useState<UserOption[]>([]);
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -178,14 +179,12 @@ export default function LeadsPage() {
   useEffect(() => {
     fetchMe()
       .then((data) => {
-        if (isAdminRole(data.user.role)) {
-          setCanManageOwner(true);
-        } else {
-          setCanManageOwner(false);
-        }
+        setCanManageOwner(isAdminRole(data.user.role));
+        setIsTelesales(isTelesalesRole(data.user.role));
       })
       .catch(() => {
         setCanManageOwner(false);
+        setIsTelesales(false);
       });
   }, []);
 
@@ -382,13 +381,13 @@ export default function LeadsPage() {
               </option>
             ))}
           </Select>
-        ) : (
+        ) : !isTelesales ? (
           <Input
             placeholder="Owner ID"
             value={filtersDraft.ownerId}
             onChange={(e) => setFiltersDraft((s) => ({ ...s, ownerId: e.target.value }))}
           />
-        )}
+        ) : null}
         <Input
           type="date"
           value={filtersDraft.createdFrom}

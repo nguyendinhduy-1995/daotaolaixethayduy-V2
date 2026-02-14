@@ -82,9 +82,15 @@ TOKEN="$(get_token)" || fail "Login failed; cannot obtain token"
 log "Login OK"
 
 USER_ID=""
+USER_A_ID=""
+USER_B_ID=""
+USER_A_EMAIL=""
+USER_B_EMAIL=""
 if route_exists "users"; then
   TS="$(date +%s)"
   USER_EMAIL="verify-user-$TS@thayduy.local"
+  USER_A_EMAIL="verify-a-$TS@thayduy.local"
+  USER_B_EMAIL="verify-b-$TS@thayduy.local"
   USER_ID="$(
     curl -sS -X POST "$BASE_URL/api/users" \
       -H "Authorization: Bearer $TOKEN" \
@@ -92,9 +98,23 @@ if route_exists "users"; then
       -d "{\"name\":\"Verify User\",\"email\":\"$USER_EMAIL\",\"password\":\"Verify@123456\",\"role\":\"telesales\",\"isActive\":true}" \
     | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.user?.id){process.exit(1)}; process.stdout.write(o.user.id);'
   )"
-  curl -sS "$BASE_URL/api/users?q=verify-user&page=1&pageSize=20" -H "Authorization: Bearer $TOKEN" \
+  USER_A_ID="$(
+    curl -sS -X POST "$BASE_URL/api/users" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H 'Content-Type: application/json' \
+      -d "{\"name\":\"Verify A\",\"email\":\"$USER_A_EMAIL\",\"password\":\"Verify@123456\",\"role\":\"telesales\",\"isActive\":true}" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.user?.id){process.exit(1)}; process.stdout.write(o.user.id);'
+  )"
+  USER_B_ID="$(
+    curl -sS -X POST "$BASE_URL/api/users" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H 'Content-Type: application/json' \
+      -d "{\"name\":\"Verify B\",\"email\":\"$USER_B_EMAIL\",\"password\":\"Verify@123456\",\"role\":\"telesales\",\"isActive\":true}" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.user?.id){process.exit(1)}; process.stdout.write(o.user.id);'
+  )"
+  curl -sS "$BASE_URL/api/users?role=telesales&isActive=true&page=1&pageSize=20" -H "Authorization: Bearer $TOKEN" \
   | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!Array.isArray(o.items)){process.exit(1)}'
-  log "users create/list OK"
+  log "users create/list telesales OK"
 else
   log "SKIP (route missing): /api/users"
 fi
@@ -124,26 +144,46 @@ else
 fi
 
 LEAD_ID=""
+LEAD_IDS=""
 if route_exists "leads"; then
-  PHONE="09$(date +%s | tail -c 9)"
-  LEAD_ID="$(
-    curl -sS -X POST "$BASE_URL/api/leads" \
-      -H "Authorization: Bearer $TOKEN" \
-      -H 'Content-Type: application/json' \
-      -d "{\"fullName\":\"Verify Lead\",\"phone\":\"$PHONE\",\"source\":\"manual\",\"channel\":\"manual\"}" \
-    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.lead?.id){process.exit(1)}; process.stdout.write(o.lead.id);'
-  )"
+  IDS=()
+  for idx in 1 2 3 4 5; do
+    PHONE="09$(date +%s | tail -c 8)$idx"
+    ID="$(
+      curl -sS -X POST "$BASE_URL/api/leads" \
+        -H "Authorization: Bearer $TOKEN" \
+        -H 'Content-Type: application/json' \
+        -d "{\"fullName\":\"Verify Lead $idx\",\"phone\":\"$PHONE\",\"source\":\"manual\",\"channel\":\"manual\"}" \
+      | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.lead?.id){process.exit(1)}; process.stdout.write(o.lead.id);'
+    )"
+    IDS+=("$ID")
+  done
+  LEAD_ID="${IDS[0]}"
+  LEAD_IDS="$(IFS=,; echo "${IDS[*]}")"
   curl -sS "$BASE_URL/api/leads?q=Verify%20Lead&page=1&pageSize=10" -H "Authorization: Bearer $TOKEN" \
   | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!Array.isArray(o.items)){process.exit(1)}'
-  if [[ -n "$USER_ID" && -f "src/app/api/leads/[id]/route.ts" && -f "src/app/api/leads/[id]/events/route.ts" ]]; then
-    curl -sS -X PATCH "$BASE_URL/api/leads/$LEAD_ID" \
+  if [[ -n "$USER_A_ID" && -n "$USER_B_ID" && -f "src/app/api/leads/assign/route.ts" && -f "src/app/api/leads/auto-assign/route.ts" ]]; then
+    curl -sS -X POST "$BASE_URL/api/leads/assign" \
       -H "Authorization: Bearer $TOKEN" \
       -H 'Content-Type: application/json' \
-      -d "{\"ownerId\":\"$USER_ID\"}" \
-    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.lead?.ownerId===undefined){process.exit(1)}'
+      -d "{\"leadIds\":[\"${IDS[0]}\",\"${IDS[1]}\"],\"ownerId\":\"$USER_A_ID\"}" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(typeof o.updated!=="number"){process.exit(1)}'
+    curl -sS -X POST "$BASE_URL/api/leads/auto-assign" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H 'Content-Type: application/json' \
+      -d "{\"strategy\":\"round_robin\",\"leadIds\":[\"${IDS[2]}\",\"${IDS[3]}\",\"${IDS[4]}\"]}" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(typeof o.updated!=="number"||!Array.isArray(o.assigned)){process.exit(1)}'
+    TOKEN_A="$(
+      curl -sS -X POST "$BASE_URL/api/auth/login" \
+        -H 'Content-Type: application/json' \
+        -d "{\"email\":\"$USER_A_EMAIL\",\"password\":\"Verify@123456\"}" \
+      | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); const t=o.accessToken||o.token; if(!t){process.exit(1)}; process.stdout.write(t);'
+    )"
+    curl -sS "$BASE_URL/api/leads?page=1&pageSize=100" -H "Authorization: Bearer $TOKEN_A" \
+    | node -e "const fs=require('fs'); const o=JSON.parse(fs.readFileSync(0,'utf8')); const aid='$USER_A_ID'; if(!Array.isArray(o.items)||o.items.length===0){process.exit(1)}; if(o.items.some(i=>i.ownerId!==aid)){process.exit(1)}"
     curl -sS "$BASE_URL/api/leads/$LEAD_ID/events?page=1&pageSize=20&sort=createdAt&order=desc" -H "Authorization: Bearer $TOKEN" \
     | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!Array.isArray(o.items)){process.exit(1)}; if(!o.items.some(i=>i.type==="OWNER_CHANGED")){process.exit(1)}'
-    log "leads owner assignment + OWNER_CHANGED event OK"
+    log "leads assign/auto-assign + telesales scope + OWNER_CHANGED event OK"
   fi
   log "leads create/list OK"
 else

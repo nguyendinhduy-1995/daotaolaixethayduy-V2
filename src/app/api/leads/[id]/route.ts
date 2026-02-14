@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireAuth } from "@/lib/auth";
 import { jsonError } from "@/lib/api-response";
+import { isAdminRole, isTelesalesRole, requireLeadRole } from "@/lib/admin-auth";
 import { isLeadStatusType, logLeadEvent } from "@/lib/lead-events";
 
 type RouteContext = { params: Promise<{ id: string }> | { id: string } };
@@ -28,6 +29,8 @@ function validateTags(tags: unknown) {
 export async function GET(req: Request, context: RouteContext) {
   const auth = assertAuth(req);
   if ("error" in auth) return auth.error;
+  const roleError = requireLeadRole(auth.role);
+  if (roleError) return roleError;
 
   try {
     const { id } = await Promise.resolve(context.params);
@@ -37,6 +40,9 @@ export async function GET(req: Request, context: RouteContext) {
         owner: { select: { id: true, name: true, email: true, role: true, isActive: true } },
       },
     });
+    if (lead && isTelesalesRole(auth.role) && lead.ownerId !== auth.sub) {
+      return jsonError(403, "AUTH_FORBIDDEN", "Forbidden");
+    }
     if (!lead) return jsonError(404, "NOT_FOUND", "Lead not found");
     return NextResponse.json({ lead });
   } catch {
@@ -47,6 +53,8 @@ export async function GET(req: Request, context: RouteContext) {
 export async function PATCH(req: Request, context: RouteContext) {
   const auth = assertAuth(req);
   if ("error" in auth) return auth.error;
+  const roleError = requireLeadRole(auth.role);
+  if (roleError) return roleError;
 
   try {
     const { id } = await Promise.resolve(context.params);
@@ -64,6 +72,12 @@ export async function PATCH(req: Request, context: RouteContext) {
     const lead = await prisma.$transaction(async (tx) => {
       const current = await tx.lead.findUnique({ where: { id } });
       if (!current) return null;
+      if (isTelesalesRole(auth.role) && current.ownerId !== auth.sub) {
+        throw new Error("FORBIDDEN_LEAD_SCOPE");
+      }
+      if (isTelesalesRole(auth.role) && body.ownerId !== undefined) {
+        throw new Error("FORBIDDEN_OWNER_CHANGE");
+      }
 
       let nextOwnerId: string | null | undefined;
       if (body.ownerId !== undefined) {
@@ -118,7 +132,7 @@ export async function PATCH(req: Request, context: RouteContext) {
         );
       }
 
-      if (body.ownerId !== undefined && current.ownerId !== updated.ownerId) {
+      if (isAdminRole(auth.role) && body.ownerId !== undefined && current.ownerId !== updated.ownerId) {
         await logLeadEvent(
           {
             leadId: id,
@@ -141,6 +155,12 @@ export async function PATCH(req: Request, context: RouteContext) {
     if (!lead) return jsonError(404, "NOT_FOUND", "Lead not found");
     return NextResponse.json({ lead });
   } catch (error) {
+    if (error instanceof Error && error.message === "FORBIDDEN_LEAD_SCOPE") {
+      return jsonError(403, "AUTH_FORBIDDEN", "Forbidden");
+    }
+    if (error instanceof Error && error.message === "FORBIDDEN_OWNER_CHANGE") {
+      return jsonError(403, "AUTH_FORBIDDEN", "Only admin can assign owner");
+    }
     if (error instanceof Error && error.message === "OWNER_NOT_FOUND") {
       return jsonError(404, "NOT_FOUND", "Owner not found");
     }

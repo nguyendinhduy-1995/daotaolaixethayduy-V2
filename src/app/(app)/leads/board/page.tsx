@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { fetchJson, type ApiClientError } from "@/lib/api-client";
 import { clearToken, fetchMe, getToken } from "@/lib/auth-client";
-import { isAdminRole } from "@/lib/admin-auth";
+import { isAdminRole, isTelesalesRole } from "@/lib/admin-auth";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -89,6 +89,7 @@ export default function LeadsBoardPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [canManageOwner, setCanManageOwner] = useState(false);
+  const [isTelesales, setIsTelesales] = useState(false);
   const [owners, setOwners] = useState<UserOption[]>([]);
   const [byStatus, setByStatus] = useState<Record<string, Lead[]>>({});
   const [draggingLead, setDraggingLead] = useState<Lead | null>(null);
@@ -141,8 +142,14 @@ export default function LeadsBoardPage() {
 
   useEffect(() => {
     fetchMe()
-      .then((data) => setCanManageOwner(isAdminRole(data.user.role)))
-      .catch(() => setCanManageOwner(false));
+      .then((data) => {
+        setCanManageOwner(isAdminRole(data.user.role));
+        setIsTelesales(isTelesalesRole(data.user.role));
+      })
+      .catch(() => {
+        setCanManageOwner(false);
+        setIsTelesales(false);
+      });
   }, []);
 
   const loadOwners = useCallback(async () => {
@@ -323,9 +330,9 @@ export default function LeadsBoardPage() {
               </option>
             ))}
           </Select>
-        ) : (
+        ) : !isTelesales ? (
           <Input value={filters.ownerId} placeholder="Owner ID" onChange={(e) => setFilters((s) => ({ ...s, ownerId: e.target.value }))} />
-        )}
+        ) : null}
         <Input type="date" value={filters.createdFrom} onChange={(e) => setFilters((s) => ({ ...s, createdFrom: e.target.value }))} />
         <Input type="date" value={filters.createdTo} onChange={(e) => setFilters((s) => ({ ...s, createdTo: e.target.value }))} />
         <div className="flex flex-wrap gap-2">
