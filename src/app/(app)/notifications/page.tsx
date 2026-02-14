@@ -40,6 +40,14 @@ type NotificationListResponse = {
   total: number;
 };
 
+type TemplateItem = {
+  id: string;
+  key: string;
+  title: string;
+  channel: "ZALO" | "FB" | "SMS" | "CALL_NOTE";
+  body: string;
+};
+
 function scopeLabel(scope: NotificationItem["scope"]) {
   if (scope === "FINANCE") return "Tài chính";
   if (scope === "FOLLOWUP") return "Chăm sóc";
@@ -78,6 +86,12 @@ export default function NotificationsPage() {
   const [detailItem, setDetailItem] = useState<NotificationItem | null>(null);
   const [rescheduleItem, setRescheduleItem] = useState<NotificationItem | null>(null);
   const [rescheduleDate, setRescheduleDate] = useState("");
+  const [sendItem, setSendItem] = useState<NotificationItem | null>(null);
+  const [sendChannel, setSendChannel] = useState<"ZALO" | "FB" | "SMS" | "CALL_NOTE">("SMS");
+  const [templates, setTemplates] = useState<TemplateItem[]>([]);
+  const [selectedTemplateKey, setSelectedTemplateKey] = useState("");
+  const [variablesText, setVariablesText] = useState("{}");
+  const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
 
   const query = useMemo(() => {
@@ -135,10 +149,86 @@ export default function NotificationsPage() {
     if (!token) return;
     setSaving(true);
     setError("");
+    setSuccess("");
     try {
       await fetchJson(`/api/notifications/${id}`, { method: "PATCH", token, body });
       setRescheduleItem(null);
       setRescheduleDate("");
+      await loadItems();
+    } catch (e) {
+      const err = e as ApiClientError;
+      if (!handleAuthError(err)) setError(`${err.code}: ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function loadTemplates(channel: "ZALO" | "FB" | "SMS" | "CALL_NOTE") {
+    const token = getToken();
+    if (!token) return;
+    try {
+      const data = await fetchJson<{ items: TemplateItem[] }>(`/api/templates?channel=${channel}`, { token });
+      setTemplates(data.items);
+      setSelectedTemplateKey(data.items[0]?.key || "");
+    } catch {
+      setTemplates([]);
+      setSelectedTemplateKey("");
+    }
+  }
+
+  useEffect(() => {
+    if (!sendItem) return;
+    loadTemplates(sendChannel);
+  }, [sendChannel, sendItem]);
+
+  function previewRenderedText() {
+    const template = templates.find((item) => item.key === selectedTemplateKey);
+    if (!template) return "";
+    let vars: Record<string, unknown> = {};
+    try {
+      vars = JSON.parse(variablesText || "{}");
+    } catch {
+      vars = {};
+    }
+    const merged: Record<string, unknown> = {
+      name: sendItem?.student?.lead.fullName || sendItem?.lead?.fullName || "",
+      ...(vars || {}),
+    };
+    return template.body.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key: string) => String(merged[key] ?? ""));
+  }
+
+  async function sendReminder() {
+    if (!sendItem) return;
+    const token = getToken();
+    if (!token) return;
+    if (!selectedTemplateKey) {
+      setError("Vui lòng chọn mẫu tin.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    setSuccess("");
+    try {
+      let variables: Record<string, unknown> = {};
+      try {
+        variables = JSON.parse(variablesText || "{}");
+      } catch {
+        return setError("Biến mẫu không đúng định dạng JSON.");
+      }
+      await fetchJson("/api/outbound/messages", {
+        method: "POST",
+        token,
+        body: {
+          channel: sendChannel,
+          templateKey: selectedTemplateKey,
+          notificationId: sendItem.id,
+          leadId: sendItem.leadId || undefined,
+          studentId: sendItem.studentId || undefined,
+          variables,
+        },
+      });
+      setSuccess("Đã đưa tin nhắn vào hàng đợi.");
+      setSendItem(null);
       await loadItems();
     } catch (e) {
       const err = e as ApiClientError;
@@ -158,6 +248,7 @@ export default function NotificationsPage() {
       </div>
 
       {error ? <Alert type="error" message={error} /> : null}
+      {success ? <Alert type="success" message={success} /> : null}
 
       <div className="grid gap-2 rounded-xl bg-white p-4 shadow-sm md:grid-cols-3 lg:grid-cols-6">
         <Select value={scope} onChange={(e) => { setScope(e.target.value); setPage(1); }}>
@@ -222,6 +313,16 @@ export default function NotificationsPage() {
                     <Button variant="secondary" onClick={() => patchNotification(item.id, { status: "DONE" })} disabled={saving}>
                       Đánh dấu xong
                     </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        setSendItem(item);
+                        setSendChannel("SMS");
+                        setVariablesText("{}");
+                      }}
+                    >
+                      Gửi nhắc
+                    </Button>
                     <Button variant="secondary" onClick={() => { setRescheduleItem(item); setRescheduleDate(item.dueAt ? item.dueAt.slice(0, 10) : ""); }}>
                       Hẹn lại
                     </Button>
@@ -263,6 +364,38 @@ export default function NotificationsPage() {
               disabled={saving}
             >
               {saving ? "Đang lưu..." : "Lưu"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={Boolean(sendItem)} title="Gửi nhắc khách hàng" onClose={() => setSendItem(null)}>
+        <div className="space-y-3">
+          <Select value={sendChannel} onChange={(e) => setSendChannel(e.target.value as "ZALO" | "FB" | "SMS" | "CALL_NOTE")}>
+            <option value="SMS">SMS</option>
+            <option value="ZALO">Zalo</option>
+            <option value="FB">Facebook</option>
+            <option value="CALL_NOTE">Ghi chú gọi</option>
+          </Select>
+          <Select value={selectedTemplateKey} onChange={(e) => setSelectedTemplateKey(e.target.value)}>
+            <option value="">Chọn mẫu tin</option>
+            {templates.map((tpl) => (
+              <option key={tpl.id} value={tpl.key}>
+                {tpl.title} ({tpl.key})
+              </option>
+            ))}
+          </Select>
+          <Input value={variablesText} onChange={(e) => setVariablesText(e.target.value)} placeholder='{"remaining": 1000000}' />
+          <div className="rounded bg-zinc-50 p-3 text-sm text-zinc-700">
+            <p className="mb-1 font-medium text-zinc-900">Xem trước nội dung</p>
+            <p>{previewRenderedText() || "-"}</p>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setSendItem(null)}>
+              Hủy
+            </Button>
+            <Button onClick={sendReminder} disabled={saving}>
+              {saving ? "Đang gửi..." : "Xác nhận gửi"}
             </Button>
           </div>
         </div>

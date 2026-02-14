@@ -128,6 +128,17 @@ type StudentFinance = {
   paidRatio: number;
   paid50: boolean;
 };
+type OutboundMessageItem = {
+  id: string;
+  channel: "ZALO" | "FB" | "SMS" | "CALL_NOTE";
+  templateKey: string;
+  renderedText: string;
+  status: "QUEUED" | "SENT" | "FAILED" | "SKIPPED";
+  error: string | null;
+  to: string | null;
+  createdAt: string;
+  sentAt: string | null;
+};
 
 function formatMethod(value: ReceiptItem["method"]) {
   if (value === "cash") return "Tiền mặt";
@@ -155,16 +166,32 @@ function studyStatusLabel(value: string) {
   return value;
 }
 
+function outboundChannelLabel(channel: OutboundMessageItem["channel"]) {
+  if (channel === "ZALO") return "Zalo";
+  if (channel === "FB") return "Facebook";
+  if (channel === "SMS") return "SMS";
+  return "Ghi chú gọi";
+}
+
+function outboundStatusLabel(status: OutboundMessageItem["status"]) {
+  if (status === "QUEUED") return "Đang chờ";
+  if (status === "SENT") return "Đã gửi";
+  if (status === "FAILED") return "Thất bại";
+  return "Bỏ qua";
+}
+
 export default function StudentDetailPage() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const [tab, setTab] = useState<"overview" | "receipts" | "timeline">(
+  const [tab, setTab] = useState<"overview" | "receipts" | "timeline" | "messages">(
     searchParams.get("tab") === "receipts"
       ? "receipts"
       : searchParams.get("tab") === "timeline"
         ? "timeline"
+        : searchParams.get("tab") === "messages"
+          ? "messages"
         : "overview"
   );
   const [student, setStudent] = useState<StudentDetail | null>(null);
@@ -193,6 +220,9 @@ export default function StudentDetailPage() {
   const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([]);
   const [timelineError, setTimelineError] = useState("");
   const [timelineDetail, setTimelineDetail] = useState<TimelineItem | null>(null);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [messagesError, setMessagesError] = useState("");
+  const [messages, setMessages] = useState<OutboundMessageItem[]>([]);
   const [tuitionProvince, setTuitionProvince] = useState("");
   const [tuitionLicenseType, setTuitionLicenseType] = useState<"B" | "C1">("B");
   const [tuitionPlans, setTuitionPlans] = useState<TuitionPlan[]>([]);
@@ -372,6 +402,25 @@ export default function StudentDetailPage() {
     }
   }, [handleAuthError, student]);
 
+  const loadMessages = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+    setMessagesLoading(true);
+    setMessagesError("");
+    try {
+      const data = await fetchJson<{ items: OutboundMessageItem[] }>(
+        `/api/outbound/messages?studentId=${studentId}&page=1&pageSize=50`,
+        { token }
+      );
+      setMessages(data.items);
+    } catch (e) {
+      const err = e as ApiClientError;
+      if (!handleAuthError(err)) setMessagesError(`Có lỗi xảy ra: ${err.code}: ${err.message}`);
+    } finally {
+      setMessagesLoading(false);
+    }
+  }, [handleAuthError, studentId]);
+
   useEffect(() => {
     fetchMe()
       .then((data) => setIsAdmin(isAdminRole(data.user.role)))
@@ -395,6 +444,11 @@ export default function StudentDetailPage() {
     if (tab !== "timeline") return;
     loadTimeline();
   }, [loadTimeline, tab]);
+
+  useEffect(() => {
+    if (tab !== "messages") return;
+    loadMessages();
+  }, [loadMessages, tab]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -428,6 +482,7 @@ export default function StudentDetailPage() {
       setCreateForm({ amount: "", method: "cash", receivedAt: todayInHoChiMinh(), note: "" });
       await loadReceipts();
       await loadFinance();
+      if (tab === "messages") await loadMessages();
     } catch (e) {
       const err = e as ApiClientError;
       if (!handleAuthError(err)) setError(`Có lỗi xảy ra: ${err.code}: ${err.message}`);
@@ -452,6 +507,7 @@ export default function StudentDetailPage() {
       });
       await loadStudent();
       await loadFinance();
+      if (tab === "messages") await loadMessages();
     } catch (e) {
       const err = e as ApiClientError;
       if (!handleAuthError(err)) setError(`Có lỗi xảy ra: ${err.code}: ${err.message}`);
@@ -478,6 +534,7 @@ export default function StudentDetailPage() {
       });
       await loadStudent();
       await loadFinance();
+      if (tab === "messages") await loadMessages();
     } catch (e) {
       const err = e as ApiClientError;
       if (!handleAuthError(err)) setError(`Có lỗi xảy ra: ${err.code}: ${err.message}`);
@@ -531,6 +588,9 @@ export default function StudentDetailPage() {
         </Button>
         <Button variant={tab === "timeline" ? "primary" : "secondary"} onClick={() => setTab("timeline")}>
           Nhật ký
+        </Button>
+        <Button variant={tab === "messages" ? "primary" : "secondary"} onClick={() => setTab("messages")}>
+          Tin nhắn
         </Button>
       </div>
 
@@ -740,6 +800,38 @@ export default function StudentDetailPage() {
                     <p className="mt-1 text-sm text-zinc-700">{item.summary}</p>
                   </button>
                 ))}
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      {tab === "messages" ? (
+        <div className="space-y-3 rounded-xl bg-white p-4 shadow-sm">
+          {messagesError ? <Alert type="error" message={messagesError} /> : null}
+          {messagesLoading ? (
+            <div className="flex items-center gap-2 text-sm text-zinc-600">
+              <Spinner /> Đang tải tin nhắn...
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="rounded-lg bg-zinc-50 p-4 text-sm text-zinc-600">Không có dữ liệu</div>
+          ) : (
+            <div className="space-y-2">
+              {messages.map((msg) => (
+                <div key={msg.id} className="rounded-lg border border-zinc-200 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Badge text={outboundChannelLabel(msg.channel)} />
+                      <Badge text={outboundStatusLabel(msg.status)} />
+                    </div>
+                    <span className="text-xs text-zinc-500">{formatDateTimeVi(msg.createdAt)}</span>
+                  </div>
+                  <p className="mt-1 text-sm text-zinc-700">{msg.renderedText}</p>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    Template: {msg.templateKey} • Đích: {msg.to || "-"} • Gửi lúc: {msg.sentAt ? formatDateTimeVi(msg.sentAt) : "-"}
+                  </p>
+                  {msg.error ? <p className="mt-1 text-xs text-red-600">{msg.error}</p> : null}
+                </div>
+              ))}
             </div>
           )}
         </div>

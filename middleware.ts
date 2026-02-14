@@ -11,6 +11,7 @@ function isProtectedPath(pathname: string) {
     pathname.startsWith("/courses") ||
     pathname.startsWith("/receipts") ||
     pathname.startsWith("/notifications") ||
+    pathname.startsWith("/outbound") ||
     pathname.startsWith("/automation") ||
     pathname.startsWith("/admin")
   );

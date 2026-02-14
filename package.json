@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "seed:admin": "ts-node --transpile-only scripts/seed-admin.ts",
+    "seed:templates": "ts-node --transpile-only scripts/seed-templates.ts",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -11,7 +12,7 @@
     "db:up": "docker compose up -d postgres redis",
     "db:down": "docker compose down",
     "db:migrate": "prisma migrate deploy",
-    "db:seed": "npm run seed:admin",
+    "db:seed": "npm run seed:admin && npm run seed:templates",
     "prisma:generate": "prisma generate",
     "prisma:validate": "prisma validate",
     "verify": "bash scripts/verify.sh"

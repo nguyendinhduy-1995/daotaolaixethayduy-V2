@@ -102,6 +102,20 @@ enum NotificationPriority {
   LOW
 }
 
+enum OutboundChannel {
+  ZALO
+  FB
+  SMS
+  CALL_NOTE
+}
+
+enum OutboundStatus {
+  QUEUED
+  SENT
+  FAILED
+  SKIPPED
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -142,6 +156,7 @@ model Lead {
   updatedAt    DateTime   @updatedAt
 
   messages      LeadMessage[]
+  outboundMessages OutboundMessage[]
   events        LeadEvent[]
   student       Student?
   automationLogs AutomationLog[]
@@ -253,6 +268,7 @@ model Student {
   course          Course?      @relation(fields: [courseId], references: [id])
 
   receipts        Receipt[]
+  outboundMessages OutboundMessage[]
   automationLogs  AutomationLog[]
   notifications   Notification[]
 
@@ -314,6 +330,7 @@ model Notification {
   student   Student?             @relation(fields: [studentId], references: [id], onDelete: Cascade)
   course    Course?              @relation(fields: [courseId], references: [id], onDelete: SetNull)
   owner     User?                @relation("OwnerNotifications", fields: [ownerId], references: [id], onDelete: SetNull)
+  outboundMessages OutboundMessage[]
 
   @@index([scope, status, dueAt])
   @@index([ownerId, createdAt])
@@ -328,4 +345,39 @@ model NotificationRule {
   config    Json
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
+}
+
+model MessageTemplate {
+  id        String          @id @default(cuid())
+  key       String          @unique
+  title     String
+  channel   OutboundChannel
+  body      String
+  isActive  Boolean         @default(true)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+model OutboundMessage {
+  id             String          @id @default(cuid())
+  channel        OutboundChannel
+  to             String?
+  templateKey    String
+  renderedText   String
+  status         OutboundStatus  @default(QUEUED)
+  error          String?
+  leadId         String?
+  studentId      String?
+  notificationId String?
+  retryCount     Int             @default(0)
+  createdAt      DateTime        @default(now())
+  sentAt         DateTime?
+
+  lead           Lead?           @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  student        Student?        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  notification   Notification?   @relation(fields: [notificationId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([studentId, createdAt])
+  @@index([leadId, createdAt])
 }

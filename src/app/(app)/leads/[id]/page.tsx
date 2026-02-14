@@ -90,11 +90,22 @@ type UserOption = {
   isActive: boolean;
 };
 type UsersResponse = { items: UserOption[] };
+type OutboundMessageItem = {
+  id: string;
+  channel: "ZALO" | "FB" | "SMS" | "CALL_NOTE";
+  templateKey: string;
+  renderedText: string;
+  status: "QUEUED" | "SENT" | "FAILED" | "SKIPPED";
+  error: string | null;
+  to: string | null;
+  createdAt: string;
+  sentAt: string | null;
+};
 
 const STATUS_OPTIONS = ["NEW", "HAS_PHONE", "APPOINTED", "ARRIVED", "SIGNED", "STUDYING", "EXAMED", "RESULT", "LOST"];
 const EVENT_OPTIONS = [...STATUS_OPTIONS, "CALLED"];
 
-type TabType = "overview" | "events" | "timeline" | "activity";
+type TabType = "overview" | "events" | "timeline" | "messages" | "activity";
 
 function mapReceiptMethodLabel(value: string) {
   if (value === "cash") return "Tiền mặt";
@@ -113,6 +124,20 @@ function getRuntimeStatus(payload: unknown, fallback: string) {
     return (payload as { runtimeStatus: string }).runtimeStatus;
   }
   return fallback === "failed" ? "failed" : "success";
+}
+
+function outboundChannelLabel(channel: OutboundMessageItem["channel"]) {
+  if (channel === "ZALO") return "Zalo";
+  if (channel === "FB") return "Facebook";
+  if (channel === "SMS") return "SMS";
+  return "Ghi chú gọi";
+}
+
+function outboundStatusLabel(status: OutboundMessageItem["status"]) {
+  if (status === "QUEUED") return "Đang chờ";
+  if (status === "SENT") return "Đã gửi";
+  if (status === "FAILED") return "Thất bại";
+  return "Bỏ qua";
 }
 
 export default function LeadDetailPage() {
@@ -152,6 +177,9 @@ export default function LeadDetailPage() {
   const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([]);
   const [timelineError, setTimelineError] = useState("");
   const [timelineDetail, setTimelineDetail] = useState<TimelineItem | null>(null);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [messagesError, setMessagesError] = useState("");
+  const [messages, setMessages] = useState<OutboundMessageItem[]>([]);
 
   const milestones = useMemo(() => {
     const map: Record<string, LeadEvent | null> = {};
@@ -202,6 +230,25 @@ export default function LeadDetailPage() {
       if (!handleAuthError(err)) setError(`${err.code}: ${err.message}`);
     } finally {
       setLoading(false);
+    }
+  }, [handleAuthError, id]);
+
+  const loadMessages = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+    setMessagesLoading(true);
+    setMessagesError("");
+    try {
+      const data = await fetchJson<{ items: OutboundMessageItem[] }>(
+        `/api/outbound/messages?leadId=${id}&page=1&pageSize=50`,
+        { token }
+      );
+      setMessages(data.items);
+    } catch (e) {
+      const err = e as ApiClientError;
+      if (!handleAuthError(err)) setMessagesError(`${err.code}: ${err.message}`);
+    } finally {
+      setMessagesLoading(false);
     }
   }, [handleAuthError, id]);
 
@@ -346,6 +393,11 @@ export default function LeadDetailPage() {
     loadTimeline();
   }, [loadTimeline, tab]);
 
+  useEffect(() => {
+    if (tab !== "messages") return;
+    loadMessages();
+  }, [loadMessages, tab]);
+
   async function saveOverview() {
     const token = getToken();
     if (!token) return;
@@ -369,6 +421,7 @@ export default function LeadDetailPage() {
       await loadLead();
       await loadEvents();
       if (tab === "timeline") await loadTimeline();
+      if (tab === "messages") await loadMessages();
     } catch (e) {
       const err = e as ApiClientError;
       if (!handleAuthError(err)) setError(`${err.code}: ${err.message}`);
@@ -391,6 +444,7 @@ export default function LeadDetailPage() {
       await loadLead();
       await loadEvents();
       if (tab === "timeline") await loadTimeline();
+      if (tab === "messages") await loadMessages();
     } catch (e) {
       const err = e as ApiClientError;
       if (!handleAuthError(err)) setError(`${err.code}: ${err.message}`);
@@ -418,6 +472,7 @@ export default function LeadDetailPage() {
       await loadLead();
       await loadEvents();
       if (tab === "timeline") await loadTimeline();
+      if (tab === "messages") await loadMessages();
     } catch (e) {
       const err = e as ApiClientError;
       if (!handleAuthError(err)) setError(`${err.code}: ${err.message}`);
@@ -440,6 +495,7 @@ export default function LeadDetailPage() {
       await loadLead();
       await loadEvents();
       if (tab === "timeline") await loadTimeline();
+      if (tab === "messages") await loadMessages();
     } catch (e) {
       const err = e as ApiClientError;
       if (!handleAuthError(err)) setError(`${err.code}: ${err.message}`);
@@ -493,6 +549,9 @@ export default function LeadDetailPage() {
         </Button>
         <Button variant={tab === "timeline" ? "primary" : "secondary"} onClick={() => setTab("timeline")}>
           Nhật ký
+        </Button>
+        <Button variant={tab === "messages" ? "primary" : "secondary"} onClick={() => setTab("messages")}>
+          Tin nhắn
         </Button>
         <Button variant={tab === "activity" ? "primary" : "secondary"} onClick={() => setTab("activity")}>
           Hoạt động
@@ -667,6 +726,38 @@ export default function LeadDetailPage() {
                     <p className="mt-1 text-sm text-zinc-700">{item.summary}</p>
                   </button>
                 ))}
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      {tab === "messages" ? (
+        <div className="space-y-3 rounded-xl bg-white p-4 shadow-sm">
+          {messagesError ? <Alert type="error" message={messagesError} /> : null}
+          {messagesLoading ? (
+            <div className="flex items-center gap-2 text-sm text-zinc-600">
+              <Spinner /> Đang tải tin nhắn...
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="rounded-lg bg-zinc-50 p-4 text-sm text-zinc-600">Không có dữ liệu</div>
+          ) : (
+            <div className="space-y-2">
+              {messages.map((msg) => (
+                <div key={msg.id} className="rounded-lg border border-zinc-200 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Badge text={outboundChannelLabel(msg.channel)} />
+                      <Badge text={outboundStatusLabel(msg.status)} />
+                    </div>
+                    <span className="text-xs text-zinc-500">{formatDateTimeVi(msg.createdAt)}</span>
+                  </div>
+                  <p className="mt-1 text-sm text-zinc-700">{msg.renderedText}</p>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    Template: {msg.templateKey} • Đích: {msg.to || "-"} • Gửi lúc: {msg.sentAt ? formatDateTimeVi(msg.sentAt) : "-"}
+                  </p>
+                  {msg.error ? <p className="mt-1 text-xs text-red-600">{msg.error}</p> : null}
+                </div>
+              ))}
             </div>
           )}
         </div>

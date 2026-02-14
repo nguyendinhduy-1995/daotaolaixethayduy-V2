@@ -116,11 +116,17 @@ else
   log "SKIP (route missing): /api/auth/logout"
 fi
 
+if [[ -f "scripts/seed-templates.ts" ]]; then
+  npm run seed:templates
+  log "seed templates script OK"
+fi
+
 USER_ID=""
 USER_A_ID=""
 USER_B_ID=""
 USER_A_EMAIL=""
 USER_B_EMAIL=""
+FIRST_NOTIFICATION_ID=""
 if route_exists "users"; then
   TS="$(date +%s)"
   USER_EMAIL="verify-user-$TS@thayduy.local"
@@ -348,6 +354,32 @@ if route_exists "notifications/generate" && route_exists "notifications"; then
   log "notifications generate/list/patch OK"
 else
   log "SKIP (route missing): /api/notifications or /api/notifications/generate"
+fi
+
+if route_exists "outbound/messages"; then
+  OUTBOUND_MESSAGE_ID="$(
+    curl -sS -X POST "$BASE_URL/api/outbound/messages" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H 'Content-Type: application/json' \
+      -d "{\"channel\":\"SMS\",\"templateKey\":\"remind_remaining\"${STUDENT_ID:+,\"studentId\":\"$STUDENT_ID\"}${LEAD_ID:+,\"leadId\":\"$LEAD_ID\"}${FIRST_NOTIFICATION_ID:+,\"notificationId\":\"$FIRST_NOTIFICATION_ID\"},\"variables\":{\"remaining\":\"1000000\"}}" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.outboundMessage?.id){process.exit(1)}; process.stdout.write(o.outboundMessage.id);'
+  )"
+  curl -sS "$BASE_URL/api/outbound/messages?page=1&pageSize=20" -H "Authorization: Bearer $TOKEN" \
+  | node -e "const fs=require('fs'); const o=JSON.parse(fs.readFileSync(0,'utf8')); const id='$OUTBOUND_MESSAGE_ID'; if(!Array.isArray(o.items)||!o.items.some(i=>i.id===id)){process.exit(1)}"
+  log "outbound create/list OK"
+
+  if route_exists "outbound/dispatch"; then
+    curl -sS -X POST "$BASE_URL/api/outbound/dispatch" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H 'Content-Type: application/json' \
+      -d '{"limit":20}' \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(typeof o.sent!=="number"){process.exit(1)}'
+    curl -sS "$BASE_URL/api/outbound/messages?status=SENT&page=1&pageSize=50" -H "Authorization: Bearer $TOKEN" \
+    | node -e "const fs=require('fs'); const o=JSON.parse(fs.readFileSync(0,'utf8')); const id='$OUTBOUND_MESSAGE_ID'; if(!Array.isArray(o.items)||!o.items.some(i=>i.id===id)){process.exit(1)}"
+    log "outbound dispatch OK"
+  fi
+else
+  log "SKIP (route missing): /api/outbound/messages"
 fi
 
 if route_exists "automation/run" && route_exists "automation/logs"; then
