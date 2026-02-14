@@ -101,6 +101,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               Khóa học
             </Link>
             <Link
+              href="/schedule"
+              className={`block rounded-lg px-3 py-2 text-sm ${pathname === "/schedule" || pathname.startsWith("/schedule/") ? "bg-zinc-900 text-white" : "text-zinc-700 hover:bg-zinc-100"}`}
+            >
+              Lịch học
+            </Link>
+            <Link
               href="/notifications"
               className={`block rounded-lg px-3 py-2 text-sm ${pathname === "/notifications" || pathname.startsWith("/notifications/") ? "bg-zinc-900 text-white" : "text-zinc-700 hover:bg-zinc-100"}`}
             >

@@ -281,6 +281,42 @@ else
   log "SKIP (route missing): /api/students"
 fi
 
+SCHEDULE_ID=""
+if route_exists "schedule" && [[ -n "$COURSE_ID" ]]; then
+  SCHEDULE_ID="$(
+    curl -sS -X POST "$BASE_URL/api/courses/$COURSE_ID/schedule" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H 'Content-Type: application/json' \
+      -d "{\"type\":\"study\",\"title\":\"Buoi hoc verify\",\"startAt\":\"${DATE_HCM}T08:00:00+07:00\",\"endAt\":\"${DATE_HCM}T10:00:00+07:00\",\"rule\":{\"location\":\"Phong A\"}}" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.item?.id){process.exit(1)}; process.stdout.write(o.item.id);'
+  )"
+
+  if [[ -n "$STUDENT_ID" && -f "src/app/api/schedule/[id]/attendance/route.ts" ]]; then
+    curl -sS -X POST "$BASE_URL/api/schedule/$SCHEDULE_ID/attendance" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H 'Content-Type: application/json' \
+      -d "{\"records\":[{\"studentId\":\"$STUDENT_ID\",\"status\":\"PRESENT\",\"note\":\"co mat\"}]}" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.ok!==true){process.exit(1)}'
+  fi
+
+  curl -sS "$BASE_URL/api/schedule?page=1&pageSize=20&courseId=$COURSE_ID" -H "Authorization: Bearer $TOKEN" \
+  | node -e "const fs=require('fs'); const o=JSON.parse(fs.readFileSync(0,'utf8')); const id='$SCHEDULE_ID'; if(!Array.isArray(o.items)||!o.items.some(i=>i.id===id)){process.exit(1)}; const row=o.items.find(i=>i.id===id); if(!row?.attendance||typeof row.attendance.present!=='number'){process.exit(1)}"
+
+  if route_exists "schedule/[id]"; then
+    curl -sS "$BASE_URL/api/schedule/$SCHEDULE_ID" -H "Authorization: Bearer $TOKEN" \
+    | node -e "const fs=require('fs'); const o=JSON.parse(fs.readFileSync(0,'utf8')); if(!o.item?.id||!Array.isArray(o.attendance)){process.exit(1)}"
+  fi
+
+  if [[ -n "${TOKEN_A:-}" ]]; then
+    curl -sS "$BASE_URL/api/schedule?page=1&pageSize=50" -H "Authorization: Bearer $TOKEN_A" \
+    | node -e "const fs=require('fs'); const o=JSON.parse(fs.readFileSync(0,'utf8')); const id='$SCHEDULE_ID'; if(!Array.isArray(o.items)||!o.items.some(i=>i.id===id)){process.exit(1)}"
+  fi
+
+  log "schedule list/detail/attendance + telesales scope OK"
+else
+  log "SKIP (route missing): /api/schedule"
+fi
+
 if route_exists "tuition-plans"; then
   TUITION_PLAN_ID="$(
     curl -sS -X POST "$BASE_URL/api/tuition-plans" \

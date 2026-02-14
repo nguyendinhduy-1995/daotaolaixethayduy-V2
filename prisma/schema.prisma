@@ -76,6 +76,12 @@ enum ScheduleType {
   reminder
 }
 
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+}
+
 enum AutomationStatus {
   sent
   failed
@@ -136,6 +142,9 @@ model User {
   receipts  Receipt[] @relation("ReceiptCreatedBy")
   events    LeadEvent[] @relation("EventCreatedBy")
   notifications Notification[] @relation("OwnerNotifications")
+  attendanceSessions AttendanceSession[] @relation("AttendanceSessionCreatedBy")
+  attendanceRecords AttendanceRecord[] @relation("AttendanceRecordUpdatedBy")
+  attendanceAudits AttendanceAudit[] @relation("AttendanceAuditActor")
 }
 
 model Lead {
@@ -246,6 +255,9 @@ model CourseScheduleItem {
   updatedAt DateTime     @updatedAt
 
   course    Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  attendanceSession AttendanceSession?
+  attendanceRecords AttendanceRecord[]
+  attendanceAudits AttendanceAudit[]
 
   @@index([courseId, startAt])
 }
@@ -277,8 +289,56 @@ model Student {
   outboundMessages OutboundMessage[]
   automationLogs  AutomationLog[]
   notifications   Notification[]
+  attendanceRecords AttendanceRecord[]
 
   @@index([courseId])
+}
+
+model AttendanceSession {
+  id            String   @id @default(cuid())
+  scheduleItemId String  @unique
+  note          String?
+  createdById   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  scheduleItem  CourseScheduleItem @relation(fields: [scheduleItemId], references: [id], onDelete: Cascade)
+  createdBy     User?   @relation("AttendanceSessionCreatedBy", fields: [createdById], references: [id])
+  records       AttendanceRecord[]
+}
+
+model AttendanceRecord {
+  id            String           @id @default(cuid())
+  sessionId     String
+  scheduleItemId String
+  studentId     String
+  status        AttendanceStatus
+  note          String?
+  updatedById   String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  session       AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  scheduleItem  CourseScheduleItem @relation(fields: [scheduleItemId], references: [id], onDelete: Cascade)
+  student       Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  updatedBy     User?              @relation("AttendanceRecordUpdatedBy", fields: [updatedById], references: [id])
+
+  @@unique([studentId, scheduleItemId])
+  @@index([scheduleItemId, createdAt])
+}
+
+model AttendanceAudit {
+  id            String   @id @default(cuid())
+  scheduleItemId String
+  actorId       String?
+  action        String
+  diff          Json?
+  createdAt     DateTime @default(now())
+
+  scheduleItem  CourseScheduleItem @relation(fields: [scheduleItemId], references: [id], onDelete: Cascade)
+  actor         User?   @relation("AttendanceAuditActor", fields: [actorId], references: [id])
+
+  @@index([scheduleItemId, createdAt])
 }
 
 model Receipt {

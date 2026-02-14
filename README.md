@@ -182,11 +182,25 @@ curl -sS -X POST http://localhost:3000/api/worker/outbound \
   -d '{"dryRun":true,"batchSize":20}'
 ```
 5. Khuyến nghị biến môi trường:
-   - `WORKER_SECRET`: bắt buộc, secret đủ mạnh.
-   - `WORKER_BATCH_SIZE=50`
-   - `WORKER_CONCURRENCY=5`
-   - `WORKER_RATE_LIMIT_PER_MIN=120`
-   - `WORKER_RATE_LIMIT_PER_OWNER_PER_MIN=30`
+  - `WORKER_SECRET`: bắt buộc, secret đủ mạnh.
+  - `WORKER_BATCH_SIZE=50`
+  - `WORKER_CONCURRENCY=5`
+  - `WORKER_RATE_LIMIT_PER_MIN=120`
+  - `WORKER_RATE_LIMIT_PER_OWNER_PER_MIN=30`
+
+## Vận hành lịch & điểm danh
+
+- API:
+  - `GET /api/schedule`: danh sách buổi học + số liệu điểm danh.
+  - `GET /api/schedule/[id]`: chi tiết buổi học, học viên, điểm danh, nhật ký.
+  - `PATCH /api/schedule/[id]`: cập nhật thông tin buổi.
+  - `POST /api/schedule/[id]/attendance`: lưu điểm danh (upsert idempotent) + ghi audit.
+- UI:
+  - `/schedule`: lọc theo ngày/khóa học/trạng thái/địa điểm/tìm tên-SĐT.
+  - `/schedule/[id]`: tab Học viên, Điểm danh, Nhật ký.
+- RBAC:
+  - `admin`: xem toàn bộ.
+  - `telesales`: chỉ xem buổi có học viên thuộc lead owner của mình.
 
 ## Troubleshooting
 
