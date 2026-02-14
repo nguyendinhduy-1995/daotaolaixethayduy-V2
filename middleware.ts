@@ -4,6 +4,7 @@ import { ACCESS_TOKEN_COOKIE } from "@/lib/jwt";
 
 function isProtectedPath(pathname: string) {
   return (
+    pathname.startsWith("/dashboard") ||
     pathname.startsWith("/leads") ||
     pathname.startsWith("/kpi") ||
     pathname.startsWith("/students") ||

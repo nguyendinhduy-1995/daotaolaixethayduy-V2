@@ -84,6 +84,10 @@ wait_for_health || fail "Health check failed at $BASE_URL/api/health/db"
 TOKEN="$(get_token)" || fail "Login failed; cannot obtain token"
 log "Login OK"
 
+DASHBOARD_HTTP_CODE="$(curl -sS -o /tmp/thayduy-crm-verify-dashboard.html -w '%{http_code}' "$BASE_URL/dashboard" -b "$COOKIE_JAR")"
+[[ "$DASHBOARD_HTTP_CODE" == "200" ]] || fail "Dashboard route failed with status $DASHBOARD_HTTP_CODE"
+log "dashboard HTML route OK"
+
 if route_exists "auth/me"; then
   curl -sS "$BASE_URL/api/auth/me" -b "$COOKIE_JAR" \
   | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.user?.id){process.exit(1)}'

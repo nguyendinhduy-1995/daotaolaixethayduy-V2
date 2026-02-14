@@ -10,7 +10,7 @@ export default function HomePage() {
 
   useEffect(() => {
     fetchMe()
-      .then(() => router.replace("/leads"))
+      .then(() => router.replace("/dashboard"))
       .catch(() => router.replace("/login"));
   }, [router]);
 

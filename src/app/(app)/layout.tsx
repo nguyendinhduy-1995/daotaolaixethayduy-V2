@@ -59,6 +59,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <h1 className="mb-6 text-lg font-semibold text-zinc-900">ThayDuy CRM</h1>
           <nav className="space-y-2">
             <Link
+              href="/dashboard"
+              className={`block rounded-lg px-3 py-2 text-sm ${pathname.startsWith("/dashboard") ? "bg-zinc-900 text-white" : "text-zinc-700 hover:bg-zinc-100"}`}
+            >
+              Tổng quan
+            </Link>
+            <Link
               href="/leads"
               className={`block rounded-lg px-3 py-2 text-sm ${pathname === "/leads" || pathname.startsWith("/leads/") && !pathname.startsWith("/leads/board") ? "bg-zinc-900 text-white" : "text-zinc-700 hover:bg-zinc-100"}`}
             >
@@ -134,7 +140,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-3">
             <div className="lg:hidden">
-              <Link href="/leads" className="text-sm font-semibold text-zinc-900">
+              <Link href="/dashboard" className="text-sm font-semibold text-zinc-900">
                 ThayDuy CRM
               </Link>
             </div>
