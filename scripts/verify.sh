@@ -8,6 +8,7 @@ BASE_URL="http://localhost:3000"
 STARTED_SERVER=0
 DEV_PID=""
 COOKIE_JAR="/tmp/thayduy-crm-verify-cookie.txt"
+STUDENT_COOKIE_JAR="/tmp/thayduy-crm-verify-student-cookie.txt"
 CALLBACK_SECRET="${N8N_CALLBACK_SECRET:-verify-callback-secret}"
 export N8N_CALLBACK_SECRET="$CALLBACK_SECRET"
 CRON_SECRET_VALUE="${CRON_SECRET:-}"
@@ -29,6 +30,7 @@ cleanup() {
     wait "$DEV_PID" >/dev/null 2>&1 || true
   fi
   rm -f "$COOKIE_JAR" >/dev/null 2>&1 || true
+  rm -f "$STUDENT_COOKIE_JAR" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
@@ -279,6 +281,30 @@ elif route_exists "students"; then
   log "SKIP (students create): missing lead id"
 else
   log "SKIP (route missing): /api/students"
+fi
+
+if route_exists "student/auth/register" && [[ -n "$STUDENT_ID" ]]; then
+  STUDENT_PHONE="0977$(date +%s | tail -c 7)"
+  curl -sS -X POST "$BASE_URL/api/student/auth/register" \
+    -c "$STUDENT_COOKIE_JAR" \
+    -H 'Content-Type: application/json' \
+    -d "{\"studentId\":\"$STUDENT_ID\",\"phone\":\"$STUDENT_PHONE\",\"password\":\"Student@123\"}" \
+  | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.ok!==true||!o.student?.id){process.exit(1)}'
+
+  curl -sS -X POST "$BASE_URL/api/student/auth/login" \
+    -c "$STUDENT_COOKIE_JAR" \
+    -H 'Content-Type: application/json' \
+    -d "{\"phone\":\"$STUDENT_PHONE\",\"password\":\"Student@123\"}" \
+  | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.ok!==true||!o.student?.id){process.exit(1)}'
+
+  curl -sS "$BASE_URL/api/student/me" -b "$STUDENT_COOKIE_JAR" \
+  | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.student||!o.finance||!Array.isArray(o.schedule)){process.exit(1)}'
+
+  STUDENT_PORTAL_HTTP="$(curl -sS -o /tmp/thayduy-crm-verify-student-portal.html -w '%{http_code}' "$BASE_URL/student" -b "$STUDENT_COOKIE_JAR")"
+  [[ "$STUDENT_PORTAL_HTTP" == "200" ]] || fail "Student portal route failed with status $STUDENT_PORTAL_HTTP"
+  log "student portal register/login/me OK"
+else
+  log "SKIP (route missing): /api/student/auth/register"
 fi
 
 SCHEDULE_ID=""

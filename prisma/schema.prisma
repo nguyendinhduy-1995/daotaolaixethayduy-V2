@@ -82,6 +82,13 @@ enum AttendanceStatus {
   LATE
 }
 
+enum StudentContentCategory {
+  HUONG_DAN
+  MEO_HOC
+  HO_SO
+  THI
+}
+
 enum AutomationStatus {
   sent
   failed
@@ -290,8 +297,32 @@ model Student {
   automationLogs  AutomationLog[]
   notifications   Notification[]
   attendanceRecords AttendanceRecord[]
+  account       StudentAccount?
 
   @@index([courseId])
+}
+
+model StudentAccount {
+  id           String   @id @default(cuid())
+  phone        String   @unique
+  passwordHash String
+  studentId    String   @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model StudentContent {
+  id          String                 @id @default(cuid())
+  category    StudentContentCategory
+  title       String
+  body        String
+  isPublished Boolean                @default(false)
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+
+  @@index([category, isPublished, createdAt])
 }
 
 model AttendanceSession {

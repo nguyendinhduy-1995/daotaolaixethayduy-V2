@@ -180,6 +180,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 >
                   Lập lịch
                 </Link>
+                <Link
+                  href="/admin/student-content"
+                  className={`block rounded-lg px-3 py-2 text-sm ${pathname.startsWith("/admin/student-content") ? "bg-zinc-900 text-white" : "text-zinc-700 hover:bg-zinc-100"}`}
+                >
+                  Nội dung học viên
+                </Link>
               </div>
             ) : null}
           </nav>

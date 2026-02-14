@@ -202,6 +202,24 @@ curl -sS -X POST http://localhost:3000/api/worker/outbound \
   - `admin`: xem toàn bộ.
   - `telesales`: chỉ xem buổi có học viên thuộc lead owner của mình.
 
+## Student Portal (Cổng học viên)
+
+- Routes:
+  - `GET /student/login`, `GET /student/register`
+  - `GET /student`, `GET /student/schedule`, `GET /student/content`, `GET /student/finance`
+- API học viên:
+  - `POST /api/student/auth/register`
+  - `POST /api/student/auth/login`
+  - `POST /api/student/auth/logout`
+  - `GET /api/student/me`
+  - `GET /api/student/content`
+- Auth:
+  - Cookie riêng `student_access_token` (httpOnly), không dùng localStorage.
+  - Middleware bảo vệ `/student/*` (trừ login/register).
+- Admin quản trị nội dung học viên:
+  - UI: `/admin/student-content`
+  - API: `GET/POST /api/admin/student-content`, `PATCH /api/admin/student-content/[id]`
+
 ## Troubleshooting
 
 - Prisma client mismatch:

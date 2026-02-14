@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { ACCESS_TOKEN_COOKIE } from "@/lib/jwt";
+import { ACCESS_TOKEN_COOKIE, STUDENT_ACCESS_TOKEN_COOKIE } from "@/lib/jwt";
 
 function isProtectedPath(pathname: string) {
   return (
@@ -16,6 +16,12 @@ function isProtectedPath(pathname: string) {
     pathname.startsWith("/automation") ||
     pathname.startsWith("/admin")
   );
+}
+
+function isStudentProtectedPath(pathname: string) {
+  if (!pathname.startsWith("/student")) return false;
+  if (pathname === "/student/login" || pathname === "/student/register") return false;
+  return true;
 }
 
 function decodeJwtPayload(token: string) {
@@ -34,7 +40,22 @@ function decodeJwtPayload(token: string) {
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  if (!isProtectedPath(pathname)) {
+  if (!isProtectedPath(pathname) && !isStudentProtectedPath(pathname)) {
+    return NextResponse.next();
+  }
+
+  if (isStudentProtectedPath(pathname)) {
+    const token = req.cookies.get(STUDENT_ACCESS_TOKEN_COOKIE)?.value || "";
+    if (!token) {
+      const loginUrl = new URL("/student/login", req.url);
+      return NextResponse.redirect(loginUrl);
+    }
+    const payload = decodeJwtPayload(token);
+    const nowSec = Math.floor(Date.now() / 1000);
+    if (!payload?.exp || payload.exp <= nowSec) {
+      const loginUrl = new URL("/student/login", req.url);
+      return NextResponse.redirect(loginUrl);
+    }
     return NextResponse.next();
   }
 
