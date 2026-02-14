@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { fetchJson, type ApiClientError } from "@/lib/api-client";
-import { clearToken, getToken } from "@/lib/auth-client";
+import { clearToken, fetchMe, getToken } from "@/lib/auth-client";
+import { isAdminRole } from "@/lib/admin-auth";
 import { todayInHoChiMinh } from "@/lib/date-utils";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +42,10 @@ type StudentDetail = {
     province: string;
     licenseType: string;
     tuition: number;
+    totalAmount?: number;
+    paid50Amount?: number;
+    note?: string | null;
+    isActive?: boolean;
   } | null;
 };
 
@@ -99,6 +104,31 @@ type TimelineItem = {
   raw: unknown;
 };
 
+type TuitionPlan = {
+  id: string;
+  province: string;
+  licenseType: "B" | "C1";
+  totalAmount: number;
+  paid50Amount: number;
+  tuition: number;
+  isActive: boolean;
+};
+
+type TuitionPlansResponse = {
+  items: TuitionPlan[];
+  page: number;
+  pageSize: number;
+  total: number;
+};
+
+type StudentFinance = {
+  tuitionTotal: number;
+  paidTotal: number;
+  remaining: number;
+  paidRatio: number;
+  paid50: boolean;
+};
+
 function formatMethod(value: ReceiptItem["method"]) {
   if (value === "cash") return "Tiền mặt";
   if (value === "bank_transfer") return "Chuyển khoản";
@@ -138,8 +168,11 @@ export default function StudentDetailPage() {
         : "overview"
   );
   const [student, setStudent] = useState<StudentDetail | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [finance, setFinance] = useState<StudentFinance | null>(null);
+  const [financeLoading, setFinanceLoading] = useState(false);
 
   const [receiptItems, setReceiptItems] = useState<ReceiptItem[]>([]);
   const [receiptPage, setReceiptPage] = useState(1);
@@ -160,6 +193,12 @@ export default function StudentDetailPage() {
   const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([]);
   const [timelineError, setTimelineError] = useState("");
   const [timelineDetail, setTimelineDetail] = useState<TimelineItem | null>(null);
+  const [tuitionProvince, setTuitionProvince] = useState("");
+  const [tuitionLicenseType, setTuitionLicenseType] = useState<"B" | "C1">("B");
+  const [tuitionPlans, setTuitionPlans] = useState<TuitionPlan[]>([]);
+  const [selectedTuitionPlanId, setSelectedTuitionPlanId] = useState("");
+  const [tuitionTotalOverride, setTuitionTotalOverride] = useState("");
+  const [tuitionSaving, setTuitionSaving] = useState(false);
 
   const handleAuthError = useCallback(
     (err: ApiClientError) => {
@@ -188,6 +227,10 @@ export default function StudentDetailPage() {
     try {
       const data = await fetchJson<{ student: StudentDetail }>(`/api/students/${studentId}`, { token });
       setStudent(data.student);
+      setTuitionProvince(data.student.tuitionPlan?.province || "");
+      setTuitionLicenseType((data.student.tuitionPlan?.licenseType as "B" | "C1") || "B");
+      setSelectedTuitionPlanId(data.student.tuitionPlanId || "");
+      setTuitionTotalOverride(data.student.tuitionSnapshot !== null ? String(data.student.tuitionSnapshot) : "");
     } catch (e) {
       const err = e as ApiClientError;
       if (!handleAuthError(err)) setError(`Có lỗi xảy ra: ${err.code}: ${err.message}`);
@@ -195,6 +238,42 @@ export default function StudentDetailPage() {
       setLoading(false);
     }
   }, [handleAuthError, studentId]);
+
+  const loadFinance = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+    setFinanceLoading(true);
+    try {
+      const data = await fetchJson<StudentFinance>(`/api/students/${studentId}/finance`, { token });
+      setFinance(data);
+    } catch (e) {
+      const err = e as ApiClientError;
+      if (!handleAuthError(err)) setError(`Có lỗi xảy ra: ${err.code}: ${err.message}`);
+    } finally {
+      setFinanceLoading(false);
+    }
+  }, [handleAuthError, studentId]);
+
+  const loadTuitionPlans = useCallback(async () => {
+    const token = getToken();
+    if (!token || !isAdmin || !tuitionProvince.trim()) {
+      setTuitionPlans([]);
+      return;
+    }
+    try {
+      const params = new URLSearchParams({
+        province: tuitionProvince.trim(),
+        licenseType: tuitionLicenseType,
+        isActive: "true",
+        page: "1",
+        pageSize: "100",
+      });
+      const data = await fetchJson<TuitionPlansResponse>(`/api/tuition-plans?${params.toString()}`, { token });
+      setTuitionPlans(data.items);
+    } catch {
+      setTuitionPlans([]);
+    }
+  }, [isAdmin, tuitionLicenseType, tuitionProvince]);
 
   const loadReceipts = useCallback(async () => {
     const token = getToken();
@@ -294,8 +373,18 @@ export default function StudentDetailPage() {
   }, [handleAuthError, student]);
 
   useEffect(() => {
+    fetchMe()
+      .then((data) => setIsAdmin(isAdminRole(data.user.role)))
+      .catch(() => setIsAdmin(false));
+  }, []);
+
+  useEffect(() => {
     loadStudent();
   }, [loadStudent]);
+
+  useEffect(() => {
+    loadFinance();
+  }, [loadFinance]);
 
   useEffect(() => {
     if (tab !== "receipts") return;
@@ -306,6 +395,11 @@ export default function StudentDetailPage() {
     if (tab !== "timeline") return;
     loadTimeline();
   }, [loadTimeline, tab]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    loadTuitionPlans();
+  }, [isAdmin, loadTuitionPlans]);
 
   async function createReceipt() {
     const token = getToken();
@@ -333,11 +427,62 @@ export default function StudentDetailPage() {
       setCreateOpen(false);
       setCreateForm({ amount: "", method: "cash", receivedAt: todayInHoChiMinh(), note: "" });
       await loadReceipts();
+      await loadFinance();
     } catch (e) {
       const err = e as ApiClientError;
       if (!handleAuthError(err)) setError(`Có lỗi xảy ra: ${err.code}: ${err.message}`);
     } finally {
       setCreateSaving(false);
+    }
+  }
+
+  async function applyTuitionPlan() {
+    const token = getToken();
+    if (!token || !selectedTuitionPlanId) {
+      setError("Vui lòng chọn bảng học phí.");
+      return;
+    }
+    setTuitionSaving(true);
+    setError("");
+    try {
+      await fetchJson(`/api/students/${studentId}`, {
+        method: "PATCH",
+        token,
+        body: { tuitionPlanId: selectedTuitionPlanId },
+      });
+      await loadStudent();
+      await loadFinance();
+    } catch (e) {
+      const err = e as ApiClientError;
+      if (!handleAuthError(err)) setError(`Có lỗi xảy ra: ${err.code}: ${err.message}`);
+    } finally {
+      setTuitionSaving(false);
+    }
+  }
+
+  async function saveTuitionOverride() {
+    const token = getToken();
+    if (!token) return;
+    const tuitionTotal = Number(tuitionTotalOverride);
+    if (!Number.isInteger(tuitionTotal) || tuitionTotal < 0) {
+      setError("Tổng học phí phải là số nguyên không âm.");
+      return;
+    }
+    setTuitionSaving(true);
+    setError("");
+    try {
+      await fetchJson(`/api/students/${studentId}`, {
+        method: "PATCH",
+        token,
+        body: { tuitionTotal },
+      });
+      await loadStudent();
+      await loadFinance();
+    } catch (e) {
+      const err = e as ApiClientError;
+      if (!handleAuthError(err)) setError(`Có lỗi xảy ra: ${err.code}: ${err.message}`);
+    } finally {
+      setTuitionSaving(false);
     }
   }
 
@@ -390,7 +535,7 @@ export default function StudentDetailPage() {
       </div>
 
       {tab === "overview" ? (
-        <div className="rounded-xl bg-white p-4 shadow-sm">
+        <div className="space-y-4 rounded-xl bg-white p-4 shadow-sm">
           <div className="grid gap-3 md:grid-cols-2">
             <div>
               <p className="text-sm text-zinc-500">Trạng thái khách hàng</p>
@@ -417,6 +562,97 @@ export default function StudentDetailPage() {
             <div>
               <p className="text-sm text-zinc-500">Cập nhật</p>
               <p className="text-zinc-900">{formatDateTimeVi(student.updatedAt)}</p>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold text-zinc-900">Tài chính học viên</h3>
+              {finance ? (
+                <Badge text={finance.paid50 ? "Đã đóng >= 50%" : "Chưa đủ 50%"} />
+              ) : null}
+            </div>
+
+            {financeLoading ? (
+              <div className="flex items-center gap-2 text-sm text-zinc-600">
+                <Spinner /> Đang tải tài chính...
+              </div>
+            ) : finance ? (
+              <div className="grid gap-3 md:grid-cols-4">
+                <div>
+                  <p className="text-xs text-zinc-500">Tổng học phí</p>
+                  <p className="font-semibold text-zinc-900">{formatCurrencyVnd(finance.tuitionTotal)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-zinc-500">Đã thu</p>
+                  <p className="font-semibold text-zinc-900">{formatCurrencyVnd(finance.paidTotal)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-zinc-500">Còn phải thu</p>
+                  <p className="font-semibold text-zinc-900">{formatCurrencyVnd(finance.remaining)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-zinc-500">Tỷ lệ đã thu</p>
+                  <p className="font-semibold text-zinc-900">{(finance.paidRatio * 100).toFixed(1)}%</p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-zinc-600">Không có dữ liệu tài chính</p>
+            )}
+          </div>
+
+          <div className="rounded-lg border border-zinc-200 p-4">
+            <h3 className="mb-3 text-sm font-semibold text-zinc-900">Thiết lập học phí</h3>
+            {isAdmin ? (
+              <div className="space-y-3">
+                <div className="grid gap-2 md:grid-cols-3">
+                  <Input
+                    placeholder="Tỉnh"
+                    value={tuitionProvince}
+                    onChange={(e) => setTuitionProvince(e.target.value)}
+                  />
+                  <Select
+                    value={tuitionLicenseType}
+                    onChange={(e) => setTuitionLicenseType(e.target.value as "B" | "C1")}
+                  >
+                    <option value="B">B</option>
+                    <option value="C1">C1</option>
+                  </Select>
+                  <Select
+                    value={selectedTuitionPlanId}
+                    onChange={(e) => setSelectedTuitionPlanId(e.target.value)}
+                  >
+                    <option value="">Chọn bảng học phí</option>
+                    {tuitionPlans.map((plan) => (
+                      <option key={plan.id} value={plan.id}>
+                        {plan.province} - {plan.licenseType} - {formatCurrencyVnd(plan.totalAmount || plan.tuition)}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="flex justify-end">
+                  <Button onClick={applyTuitionPlan} disabled={tuitionSaving}>
+                    {tuitionSaving ? "Đang lưu..." : "Áp dụng bảng học phí"}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-zinc-600">Bạn không có quyền quản lý bảng học phí.</p>
+            )}
+
+            <div className="mt-3 grid gap-2 md:grid-cols-3">
+              <Input
+                type="number"
+                min={0}
+                placeholder="Override tổng học phí"
+                value={tuitionTotalOverride}
+                onChange={(e) => setTuitionTotalOverride(e.target.value)}
+              />
+              <div className="md:col-span-2 flex justify-end">
+                <Button onClick={saveTuitionOverride} disabled={tuitionSaving}>
+                  {tuitionSaving ? "Đang lưu..." : "Lưu tổng học phí"}
+                </Button>
+              </div>
             </div>
           </div>
         </div>

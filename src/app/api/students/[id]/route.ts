@@ -3,7 +3,7 @@ import type { ExamResult, StudyStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-response";
 import { requireRouteAuth } from "@/lib/route-auth";
-import { isTelesalesRole } from "@/lib/admin-auth";
+import { isAdminRole, isTelesalesRole } from "@/lib/admin-auth";
 
 type RouteContext = { params: Promise<{ id: string }> | { id: string } };
 
@@ -38,7 +38,9 @@ export async function GET(req: Request, context: RouteContext) {
       include: {
         lead: { select: { id: true, fullName: true, phone: true, status: true, ownerId: true } },
         course: { select: { id: true, code: true } },
-        tuitionPlan: { select: { id: true, province: true, licenseType: true, tuition: true } },
+        tuitionPlan: {
+          select: { id: true, province: true, licenseType: true, tuition: true, isActive: true },
+        },
       },
     });
 
@@ -74,7 +76,7 @@ export async function PATCH(req: Request, context: RouteContext) {
       select: { id: true, lead: { select: { ownerId: true } } },
     });
     if (!exists) return jsonError(404, "NOT_FOUND", "Student not found");
-    if (isTelesalesRole(authResult.auth.role) && exists.lead.ownerId !== authResult.auth.sub) {
+    if (!isAdminRole(authResult.auth.role) && exists.lead.ownerId !== authResult.auth.sub) {
       return jsonError(403, "AUTH_FORBIDDEN", "Forbidden");
     }
 
@@ -85,10 +87,24 @@ export async function PATCH(req: Request, context: RouteContext) {
     if (body.tuitionPlanId) {
       const plan = await prisma.tuitionPlan.findUnique({
         where: { id: body.tuitionPlanId },
-        select: { id: true },
+        select: { id: true, tuition: true },
       });
       if (!plan) return jsonError(404, "NOT_FOUND", "Tuition plan not found");
     }
+
+    if (body.tuitionTotal !== undefined) {
+      if (typeof body.tuitionTotal !== "number" || !Number.isInteger(body.tuitionTotal) || body.tuitionTotal < 0) {
+        return jsonError(400, "VALIDATION_ERROR", "Invalid tuitionTotal");
+      }
+    }
+
+    const planForSnapshot =
+      typeof body.tuitionPlanId === "string" && body.tuitionPlanId
+        ? await prisma.tuitionPlan.findUnique({
+            where: { id: body.tuitionPlanId },
+            select: { tuition: true },
+          })
+        : null;
 
     const student = await prisma.student.update({
       where: { id },
@@ -99,6 +115,10 @@ export async function PATCH(req: Request, context: RouteContext) {
           : {}),
         ...(body.tuitionSnapshot !== undefined
           ? { tuitionSnapshot: typeof body.tuitionSnapshot === "number" ? body.tuitionSnapshot : null }
+          : {}),
+        ...(body.tuitionTotal !== undefined ? { tuitionSnapshot: body.tuitionTotal } : {}),
+        ...(body.tuitionPlanId !== undefined && body.tuitionTotal === undefined
+          ? { tuitionSnapshot: planForSnapshot ? planForSnapshot.tuition : null }
           : {}),
         ...(body.signedAt !== undefined ? { signedAt: parseDate(body.signedAt) } : {}),
         ...(body.arrivedAt !== undefined ? { arrivedAt: parseDate(body.arrivedAt) } : {}),

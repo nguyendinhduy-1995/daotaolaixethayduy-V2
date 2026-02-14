@@ -241,6 +241,7 @@ else
 fi
 
 STUDENT_ID=""
+TUITION_PLAN_ID=""
 if route_exists "students" && [[ -n "$LEAD_ID" ]]; then
   STUDENT_ID="$(
     curl -sS -X POST "$BASE_URL/api/students" \
@@ -254,6 +255,28 @@ elif route_exists "students"; then
   log "SKIP (students create): missing lead id"
 else
   log "SKIP (route missing): /api/students"
+fi
+
+if route_exists "tuition-plans"; then
+  TUITION_PLAN_ID="$(
+    curl -sS -X POST "$BASE_URL/api/tuition-plans" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H 'Content-Type: application/json' \
+      -d "{\"province\":\"HCM Verify $(date +%s)\",\"licenseType\":\"B\",\"totalAmount\":12000000,\"paid50Amount\":6000000,\"note\":\"verify\"}" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.tuitionPlan?.id){process.exit(1)}; process.stdout.write(o.tuitionPlan.id);'
+  )"
+  log "tuition-plans create OK"
+else
+  log "SKIP (route missing): /api/tuition-plans"
+fi
+
+if [[ -n "$STUDENT_ID" && -n "$TUITION_PLAN_ID" ]]; then
+  curl -sS -X PATCH "$BASE_URL/api/students/$STUDENT_ID" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H 'Content-Type: application/json' \
+    -d "{\"tuitionPlanId\":\"$TUITION_PLAN_ID\"}" \
+  | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.student?.id){process.exit(1)}'
+  log "student attach tuition plan OK"
 fi
 
 if [[ -n "$LEAD_ID" ]]; then
@@ -279,6 +302,11 @@ if route_exists "receipts" && [[ -n "$STUDENT_ID" ]]; then
   if route_exists "receipts/[id]"; then
     curl -sS "$BASE_URL/api/receipts/$RECEIPT_ID" -H "Authorization: Bearer $TOKEN" \
     | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.receipt?.id){process.exit(1)}'
+  fi
+  if route_exists "students/[id]/finance"; then
+    curl -sS "$BASE_URL/api/students/$STUDENT_ID/finance" -H "Authorization: Bearer $TOKEN" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(typeof o.paidTotal!=="number"||typeof o.remaining!=="number"||o.remaining<0||o.paidTotal!==1000000){process.exit(1)}'
+    log "students finance OK"
   fi
   log "receipts create/list/summary/get OK"
 elif route_exists "receipts"; then

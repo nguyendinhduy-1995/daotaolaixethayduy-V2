@@ -132,6 +132,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 >
                   Phân khách hàng
                 </Link>
+                <Link
+                  href="/admin/tuition-plans"
+                  className={`block rounded-lg px-3 py-2 text-sm ${pathname.startsWith("/admin/tuition-plans") ? "bg-zinc-900 text-white" : "text-zinc-700 hover:bg-zinc-100"}`}
+                >
+                  Bảng học phí
+                </Link>
               </div>
             ) : null}
           </nav>
