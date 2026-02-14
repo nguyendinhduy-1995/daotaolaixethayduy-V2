@@ -45,6 +45,10 @@ function todayRangeInHoChiMinh() {
   return dayRangeInHoChiMinh(`${y}-${m}-${d}`);
 }
 
+function nowUtc() {
+  return new Date();
+}
+
 function toVariables(input: unknown) {
   if (!input || typeof input !== "object" || Array.isArray(input)) return {};
   return Object.fromEntries(
@@ -273,6 +277,7 @@ export async function POST(req: Request) {
             leadId: lead?.id ?? null,
             studentId: student.id,
             notificationId: typeof body.notificationId === "string" ? body.notificationId : null,
+            nextAttemptAt: null,
           },
         });
         return NextResponse.json({ outboundMessage: skipped, skipped: true, reason: "DUPLICATE_TODAY" });
@@ -289,6 +294,7 @@ export async function POST(req: Request) {
         leadId: lead?.id ?? null,
         studentId: student?.id ?? null,
         notificationId: typeof body.notificationId === "string" ? body.notificationId : null,
+        nextAttemptAt: nowUtc(),
       },
     });
 

@@ -24,6 +24,9 @@ type OutboundItem = {
   renderedText: string;
   status: "QUEUED" | "SENT" | "FAILED" | "SKIPPED";
   error: string | null;
+  retryCount: number;
+  nextAttemptAt: string | null;
+  providerMessageId: string | null;
   leadId: string | null;
   studentId: string | null;
   createdAt: string;
@@ -68,6 +71,7 @@ export default function OutboundPage() {
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(false);
   const [dispatching, setDispatching] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -134,18 +138,42 @@ export default function OutboundPage() {
     setError("");
     setSuccess("");
     try {
-      const data = await fetchJson<{ total: number; sent: number; failed: number }>("/api/outbound/dispatch", {
+      const data = await fetchJson<{ total: number; accepted: number; failed: number; webhookEnabled: boolean }>("/api/outbound/dispatch", {
         method: "POST",
         token,
         body: { limit: 20 },
       });
-      setSuccess(`Đã xử lý ${data.total} tin, gửi thành công ${data.sent}, lỗi ${data.failed}.`);
+      const modeText = data.webhookEnabled ? "đẩy webhook" : "mock local";
+      setSuccess(`Đã xử lý ${data.total} tin (${modeText}), nhận xử lý ${data.accepted}, lỗi ${data.failed}.`);
       await loadItems();
     } catch (e) {
       const err = e as ApiClientError;
       if (!handleAuthError(err)) setError(`${err.code}: ${err.message}`);
     } finally {
       setDispatching(false);
+    }
+  }
+
+  async function retryFailed() {
+    const token = getToken();
+    if (!token) return;
+    setRetrying(true);
+    setError("");
+    setSuccess("");
+    try {
+      const data = await fetchJson<{ total: number; accepted: number; failed: number; webhookEnabled: boolean }>("/api/outbound/dispatch", {
+        method: "POST",
+        token,
+        body: { limit: 20, retryFailedOnly: true },
+      });
+      const modeText = data.webhookEnabled ? "đẩy webhook" : "mock local";
+      setSuccess(`Đã thử gửi lại ${data.total} tin lỗi (${modeText}), nhận xử lý ${data.accepted}, lỗi ${data.failed}.`);
+      await loadItems();
+    } catch (e) {
+      const err = e as ApiClientError;
+      if (!handleAuthError(err)) setError(`${err.code}: ${err.message}`);
+    } finally {
+      setRetrying(false);
     }
   }
 
@@ -158,12 +186,20 @@ export default function OutboundPage() {
             {loading ? "Đang tải..." : "Làm mới"}
           </Button>
           {isAdmin ? (
-            <Button onClick={dispatchQueue} disabled={dispatching}>
-              {dispatching ? "Đang gửi..." : "Gửi hàng đợi"}
-            </Button>
+            <>
+              <Button onClick={dispatchQueue} disabled={dispatching}>
+                {dispatching ? "Đang gửi..." : "Gửi hàng đợi"}
+              </Button>
+              <Button variant="secondary" onClick={retryFailed} disabled={retrying}>
+                {retrying ? "Đang thử lại..." : "Gửi lại lỗi"}
+              </Button>
+            </>
           ) : null}
         </div>
       </div>
+      <p className="text-xs text-zinc-500">
+        Nếu chưa cấu hình `N8N_WEBHOOK_URL`, hệ thống sẽ gửi mock local và tự đánh dấu thành công.
+      </p>
 
       {error ? <Alert type="error" message={error} /> : null}
       {success ? <Alert type="success" message={success} /> : null}
@@ -201,7 +237,7 @@ export default function OutboundPage() {
         <div className="rounded-xl bg-white p-6 text-sm text-zinc-600 shadow-sm">Không có dữ liệu</div>
       ) : (
         <div className="space-y-3">
-          <Table headers={["Kênh", "Template", "Người nhận", "Trạng thái", "Liên quan", "Nội dung", "Thời gian"]}>
+          <Table headers={["Kênh", "Template", "Người nhận", "Trạng thái", "Lần thử", "Lần gửi", "Mã nhà cung cấp", "Liên quan", "Nội dung", "Lỗi", "Thời gian"]}>
             {items.map((item) => (
               <tr key={item.id} className="border-t border-zinc-100">
                 <td className="px-3 py-2"><Badge text={channelLabel(item.channel)} /></td>
@@ -209,8 +245,10 @@ export default function OutboundPage() {
                 <td className="px-3 py-2 text-sm text-zinc-700">{item.to || "-"}</td>
                 <td className="px-3 py-2">
                   <Badge text={statusLabel(item.status)} />
-                  {item.error ? <p className="mt-1 text-xs text-red-600">{item.error}</p> : null}
                 </td>
+                <td className="px-3 py-2 text-sm text-zinc-700">{item.retryCount}</td>
+                <td className="px-3 py-2 text-xs text-zinc-600">{item.nextAttemptAt ? formatDateTimeVi(item.nextAttemptAt) : "-"}</td>
+                <td className="px-3 py-2 text-xs text-zinc-600">{item.providerMessageId || "-"}</td>
                 <td className="px-3 py-2 text-sm">
                   {item.studentId ? (
                     <Link href={`/students/${item.studentId}`} className="text-blue-700 hover:underline">
@@ -225,6 +263,7 @@ export default function OutboundPage() {
                   )}
                 </td>
                 <td className="px-3 py-2 text-sm text-zinc-700">{item.renderedText}</td>
+                <td className="px-3 py-2 text-xs text-red-600">{item.error || "-"}</td>
                 <td className="px-3 py-2 text-xs text-zinc-600">
                   <div>Tạo: {formatDateTimeVi(item.createdAt)}</div>
                   <div>Gửi: {item.sentAt ? formatDateTimeVi(item.sentAt) : "-"}</div>

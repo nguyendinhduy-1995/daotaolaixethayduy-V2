@@ -370,6 +370,8 @@ model OutboundMessage {
   studentId      String?
   notificationId String?
   retryCount     Int             @default(0)
+  nextAttemptAt  DateTime?
+  providerMessageId String?
   createdAt      DateTime        @default(now())
   sentAt         DateTime?
 
@@ -377,7 +379,7 @@ model OutboundMessage {
   student        Student?        @relation(fields: [studentId], references: [id], onDelete: Cascade)
   notification   Notification?   @relation(fields: [notificationId], references: [id], onDelete: SetNull)
 
-  @@index([status, createdAt])
+  @@index([status, nextAttemptAt])
   @@index([studentId, createdAt])
   @@index([leadId, createdAt])
 }

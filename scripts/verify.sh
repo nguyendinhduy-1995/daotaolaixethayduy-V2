@@ -8,6 +8,8 @@ BASE_URL="http://localhost:3000"
 STARTED_SERVER=0
 DEV_PID=""
 COOKIE_JAR="/tmp/thayduy-crm-verify-cookie.txt"
+CALLBACK_SECRET="${N8N_CALLBACK_SECRET:-verify-callback-secret}"
+export N8N_CALLBACK_SECRET="$CALLBACK_SECRET"
 
 log() {
   printf '[verify] %s\n' "$1"
@@ -373,10 +375,19 @@ if route_exists "outbound/messages"; then
       -H "Authorization: Bearer $TOKEN" \
       -H 'Content-Type: application/json' \
       -d '{"limit":20}' \
-    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(typeof o.sent!=="number"){process.exit(1)}'
-    curl -sS "$BASE_URL/api/outbound/messages?status=SENT&page=1&pageSize=50" -H "Authorization: Bearer $TOKEN" \
-    | node -e "const fs=require('fs'); const o=JSON.parse(fs.readFileSync(0,'utf8')); const id='$OUTBOUND_MESSAGE_ID'; if(!Array.isArray(o.items)||!o.items.some(i=>i.id===id)){process.exit(1)}"
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(typeof o.total!=="number"||typeof o.accepted!=="number"){process.exit(1)}'
     log "outbound dispatch OK"
+  fi
+
+  if route_exists "outbound/callback"; then
+    curl -sS -X POST "$BASE_URL/api/outbound/callback" \
+      -H "x-callback-secret: $CALLBACK_SECRET" \
+      -H 'Content-Type: application/json' \
+      -d "{\"messageId\":\"$OUTBOUND_MESSAGE_ID\",\"status\":\"SENT\",\"providerMessageId\":\"verify-provider-$(date +%s)\"}" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.ok!==true){process.exit(1)}'
+    curl -sS "$BASE_URL/api/outbound/messages?page=1&pageSize=50" -H "Authorization: Bearer $TOKEN" \
+    | node -e "const fs=require('fs'); const o=JSON.parse(fs.readFileSync(0,'utf8')); const id='$OUTBOUND_MESSAGE_ID'; const msg=Array.isArray(o.items)?o.items.find(i=>i.id===id):null; if(!msg||msg.status!=='SENT'||!msg.providerMessageId){process.exit(1)}"
+    log "outbound callback cập nhật trạng thái OK"
   fi
 else
   log "SKIP (route missing): /api/outbound/messages"

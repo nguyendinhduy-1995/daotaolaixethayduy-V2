@@ -64,6 +64,7 @@ If a route file is missing in `src/app/api`, verification prints `SKIP (route mi
 ## Production-Ready Local Checklist
 
 - [ ] `.env` uses strong `JWT_SECRET`
+- [ ] `.env` sets `N8N_CALLBACK_SECRET` and (optional) `N8N_WEBHOOK_URL`
 - [ ] `DATABASE_URL` and `REDIS_URL` point to intended environment
 - [ ] `npm run prisma:validate` passes
 - [ ] `npm run prisma:generate` passes
@@ -89,6 +90,27 @@ If a route file is missing in `src/app/api`, verification prints `SKIP (route mi
   - Trang quản trị người dùng: `/admin/users`
   - Trang phân lead: `/admin/assign-leads`
   - Filter/gán owner trên `/leads`, `/leads/board`, `/leads/[id]` (hiển thị theo quyền)
+
+## Outbound n8n callback
+
+- Biến môi trường:
+  - `N8N_WEBHOOK_URL`: webhook nhận outbound payload.
+  - `N8N_CALLBACK_SECRET`: secret xác thực callback `POST /api/outbound/callback`.
+- Dispatch outbound (`POST /api/outbound/dispatch`) gửi payload:
+  - `messageId`, `channel`, `to`, `text`, `leadId`, `studentId`, `notificationId`, `templateKey`, `createdAt`.
+- Callback từ n8n:
+  - Header: `x-callback-secret: <N8N_CALLBACK_SECRET>`
+  - Body mẫu:
+```json
+{
+  "messageId": "msg_xxx",
+  "status": "SENT",
+  "providerMessageId": "provider_123",
+  "sentAt": "2026-02-14T10:15:00.000Z"
+}
+```
+- Retry/backoff:
+  - Khi gửi lỗi hoặc callback `FAILED`, hệ thống tăng `retryCount` và hẹn `nextAttemptAt` theo 2 phút, 10 phút, 60 phút (tối đa 3 lần).
 
 ## Troubleshooting
 
