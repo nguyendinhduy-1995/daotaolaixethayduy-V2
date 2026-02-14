@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-response";
 import { requireRouteAuth } from "@/lib/route-auth";
+import { isAdminRole, isTelesalesRole } from "@/lib/admin-auth";
 import { KpiDateError, resolveKpiDateParam } from "@/lib/services/kpi-daily";
 
 type RuntimeStatus = "queued" | "running" | "success" | "failed";
@@ -51,10 +52,16 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const scope = searchParams.get("scope");
     const status = searchParams.get("status");
+    const leadId = searchParams.get("leadId");
+    const studentId = searchParams.get("studentId");
     const from = searchParams.get("from");
     const to = searchParams.get("to");
     const page = parsePositiveInt(searchParams.get("page"), 1);
     const pageSize = parsePositiveInt(searchParams.get("pageSize"), 20);
+
+    if (!isAdminRole(authResult.auth.role) && !isTelesalesRole(authResult.auth.role)) {
+      return jsonError(403, "AUTH_FORBIDDEN", "Forbidden");
+    }
 
     if (status !== null && !isRuntimeStatus(status) && !isDeliveryStatus(status)) {
       return jsonError(400, "VALIDATION_ERROR", "Invalid status filter");
@@ -66,7 +73,17 @@ export async function GET(req: Request) {
 
     const where: Prisma.AutomationLogWhereInput = {
       ...(scope ? { milestone: scope } : {}),
+      ...(leadId ? { leadId } : {}),
+      ...(studentId ? { studentId } : {}),
       ...(from || to ? { sentAt: sentAtFilter } : {}),
+      ...(isTelesalesRole(authResult.auth.role)
+        ? {
+            OR: [
+              { lead: { ownerId: authResult.auth.sub } },
+              { student: { lead: { ownerId: authResult.auth.sub } } },
+            ],
+          }
+        : {}),
     };
 
     const logs = await prisma.automationLog.findMany({

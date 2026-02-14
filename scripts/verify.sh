@@ -256,6 +256,12 @@ else
   log "SKIP (route missing): /api/students"
 fi
 
+if [[ -n "$LEAD_ID" ]]; then
+  LEAD_PAGE_HTTP="$(curl -sS -o /tmp/thayduy-crm-verify-lead-page.html -w '%{http_code}' "$BASE_URL/leads/$LEAD_ID" -b "$COOKIE_JAR")"
+  [[ "$LEAD_PAGE_HTTP" == "200" ]] || fail "Lead detail page failed with status $LEAD_PAGE_HTTP"
+  log "leads/[id] HTML route OK"
+fi
+
 if route_exists "receipts" && [[ -n "$STUDENT_ID" ]]; then
   RECEIPT_ID="$(
     curl -sS -X POST "$BASE_URL/api/receipts" \
@@ -281,12 +287,32 @@ else
   log "SKIP (route missing): /api/receipts"
 fi
 
+if [[ -n "$STUDENT_ID" ]]; then
+  STUDENT_PAGE_HTTP="$(curl -sS -o /tmp/thayduy-crm-verify-student-page.html -w '%{http_code}' "$BASE_URL/students/$STUDENT_ID" -b "$COOKIE_JAR")"
+  [[ "$STUDENT_PAGE_HTTP" == "200" ]] || fail "Student detail page failed with status $STUDENT_PAGE_HTTP"
+  log "students/[id] HTML route OK"
+fi
+
 if route_exists "automation/run" && route_exists "automation/logs"; then
   curl -sS -X POST "$BASE_URL/api/automation/run" \
     -b "$COOKIE_JAR" -c "$COOKIE_JAR" \
     -H 'Content-Type: application/json' \
     -d '{"scope":"daily","dryRun":true}' \
   | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.log?.id){process.exit(1)}'
+
+  if [[ -n "$LEAD_ID" ]]; then
+    LEAD_AUTOMATION_LOG_ID="$(
+      curl -sS -X POST "$BASE_URL/api/automation/run" \
+        -b "$COOKIE_JAR" -c "$COOKIE_JAR" \
+        -H 'Content-Type: application/json' \
+        -d "{\"scope\":\"manual\",\"leadId\":\"$LEAD_ID\",\"dryRun\":true}" \
+      | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.log?.id){process.exit(1)}; process.stdout.write(o.log.id);'
+    )"
+    curl -sS "$BASE_URL/api/automation/logs?leadId=$LEAD_ID&page=1&pageSize=20" -b "$COOKIE_JAR" \
+    | node -e "const fs=require('fs'); const o=JSON.parse(fs.readFileSync(0,'utf8')); const id='$LEAD_AUTOMATION_LOG_ID'; if(!Array.isArray(o.items)||!o.items.some(i=>i.id===id)){process.exit(1)}"
+    log "automation logs filter leadId OK"
+  fi
+
   curl -sS "$BASE_URL/api/automation/logs?scope=daily&page=1&pageSize=10" \
     -b "$COOKIE_JAR" \
   | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!Array.isArray(o.items)||o.items.length===0){process.exit(1)}'

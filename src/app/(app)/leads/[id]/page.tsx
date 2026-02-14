@@ -10,10 +10,11 @@ import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Modal } from "@/components/ui/modal";
 import { Pagination } from "@/components/ui/pagination";
 import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
-import { formatDateTimeVi } from "@/lib/date-utils";
+import { formatCurrencyVnd, formatDateTimeVi } from "@/lib/date-utils";
 
 type Lead = {
   id: string;
@@ -43,9 +44,43 @@ type LeadEvent = {
   id: string;
   leadId: string;
   type: string;
+  note?: string | null;
   payload?: unknown;
   createdAt: string;
   createdById?: string | null;
+};
+type ReceiptItem = {
+  id: string;
+  studentId: string;
+  amount: number;
+  method: string;
+  note: string | null;
+  receivedAt: string;
+};
+type StudentItem = {
+  id: string;
+  leadId: string;
+};
+type AutomationLog = {
+  id: string;
+  leadId: string | null;
+  studentId: string | null;
+  milestone: string | null;
+  status: string;
+  sentAt: string;
+  payload?: unknown;
+};
+type TimelineSource = "event" | "receipt" | "automation";
+type TimelineFilter = "all" | TimelineSource;
+type TimelineItem = {
+  id: string;
+  source: TimelineSource;
+  time: string;
+  title: string;
+  summary: string;
+  badgeMain: string;
+  badgeSub?: string;
+  raw: unknown;
 };
 type UserOption = {
   id: string;
@@ -59,7 +94,26 @@ type UsersResponse = { items: UserOption[] };
 const STATUS_OPTIONS = ["NEW", "HAS_PHONE", "APPOINTED", "ARRIVED", "SIGNED", "STUDYING", "EXAMED", "RESULT", "LOST"];
 const EVENT_OPTIONS = [...STATUS_OPTIONS, "CALLED"];
 
-type TabType = "overview" | "events" | "activity";
+type TabType = "overview" | "events" | "timeline" | "activity";
+
+function mapReceiptMethodLabel(value: string) {
+  if (value === "cash") return "Tiền mặt";
+  if (value === "bank_transfer" || value === "bank") return "Chuyển khoản";
+  if (value === "card") return "Thẻ";
+  return "Momo/Khác";
+}
+
+function getRuntimeStatus(payload: unknown, fallback: string) {
+  if (
+    payload &&
+    typeof payload === "object" &&
+    "runtimeStatus" in payload &&
+    typeof (payload as { runtimeStatus?: unknown }).runtimeStatus === "string"
+  ) {
+    return (payload as { runtimeStatus: string }).runtimeStatus;
+  }
+  return fallback === "failed" ? "failed" : "success";
+}
 
 export default function LeadDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -93,6 +147,11 @@ export default function LeadDetailPage() {
   const [eventType, setEventType] = useState("CALLED");
   const [eventNote, setEventNote] = useState("");
   const [eventMeta, setEventMeta] = useState("");
+  const [timelineFilter, setTimelineFilter] = useState<TimelineFilter>("all");
+  const [timelineLoading, setTimelineLoading] = useState(false);
+  const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([]);
+  const [timelineError, setTimelineError] = useState("");
+  const [timelineDetail, setTimelineDetail] = useState<TimelineItem | null>(null);
 
   const milestones = useMemo(() => {
     const map: Record<string, LeadEvent | null> = {};
@@ -166,6 +225,87 @@ export default function LeadDetailPage() {
     }
   }, [eventPage, eventPageSize, handleAuthError, id]);
 
+  const loadTimeline = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+    setTimelineLoading(true);
+    setTimelineError("");
+    try {
+      const eventPromise = fetchJson<{ items: LeadEvent[] }>(
+        `/api/leads/${id}/events?page=1&pageSize=50&sort=createdAt&order=desc`,
+        { token }
+      );
+      const studentPromise = fetchJson<{ items: StudentItem[] }>(
+        `/api/students?leadId=${id}&page=1&pageSize=1`,
+        { token }
+      ).catch(() => ({ items: [] }));
+      const leadLogsPromise = fetchJson<{ items: AutomationLog[] }>(
+        `/api/automation/logs?leadId=${id}&page=1&pageSize=50`,
+        { token }
+      ).catch(() => ({ items: [] }));
+
+      const [eventData, studentData, leadLogs] = await Promise.all([eventPromise, studentPromise, leadLogsPromise]);
+      const student = studentData.items[0];
+
+      const [receiptData, studentLogs] = student
+        ? await Promise.all([
+            fetchJson<{ items: ReceiptItem[] }>(`/api/receipts?studentId=${student.id}&page=1&pageSize=50`, { token }).catch(
+              () => ({ items: [] })
+            ),
+            fetchJson<{ items: AutomationLog[] }>(`/api/automation/logs?studentId=${student.id}&page=1&pageSize=50`, {
+              token,
+            }).catch(() => ({ items: [] })),
+          ])
+        : [{ items: [] as ReceiptItem[] }, { items: [] as AutomationLog[] }];
+
+      const eventItems: TimelineItem[] = eventData.items.map((event) => ({
+        id: `event-${event.id}`,
+        source: "event",
+        time: event.createdAt,
+        title: "Sự kiện khách hàng",
+        summary: event.note || `Sự kiện ${event.type}`,
+        badgeMain: event.type,
+        raw: event,
+      }));
+
+      const receiptItems: TimelineItem[] = receiptData.items.map((receipt) => ({
+        id: `receipt-${receipt.id}`,
+        source: "receipt",
+        time: receipt.receivedAt,
+        title: "Phiếu thu",
+        summary: `${formatCurrencyVnd(receipt.amount)} • ${mapReceiptMethodLabel(receipt.method)}`,
+        badgeMain: "THU_TIEN",
+        badgeSub: mapReceiptMethodLabel(receipt.method),
+        raw: receipt,
+      }));
+
+      const logMap = new Map<string, AutomationLog>();
+      [...leadLogs.items, ...studentLogs.items].forEach((log) => {
+        logMap.set(log.id, log);
+      });
+      const automationItems: TimelineItem[] = Array.from(logMap.values()).map((log) => ({
+        id: `automation-${log.id}`,
+        source: "automation",
+        time: log.sentAt,
+        title: "Automation",
+        summary: `Phạm vi ${log.milestone || "-"} • ${log.status}`,
+        badgeMain: log.status.toUpperCase(),
+        badgeSub: getRuntimeStatus(log.payload, log.status),
+        raw: log,
+      }));
+
+      const merged = [...eventItems, ...receiptItems, ...automationItems].sort(
+        (a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()
+      );
+      setTimelineItems(merged);
+    } catch (e) {
+      const err = e as ApiClientError;
+      if (!handleAuthError(err)) setTimelineError(`${err.code}: ${err.message}`);
+    } finally {
+      setTimelineLoading(false);
+    }
+  }, [handleAuthError, id]);
+
   useEffect(() => {
     loadLead();
   }, [loadLead]);
@@ -201,6 +341,11 @@ export default function LeadDetailPage() {
     loadOwners();
   }, [loadOwners]);
 
+  useEffect(() => {
+    if (tab !== "timeline") return;
+    loadTimeline();
+  }, [loadTimeline, tab]);
+
   async function saveOverview() {
     const token = getToken();
     if (!token) return;
@@ -223,6 +368,7 @@ export default function LeadDetailPage() {
       });
       await loadLead();
       await loadEvents();
+      if (tab === "timeline") await loadTimeline();
     } catch (e) {
       const err = e as ApiClientError;
       if (!handleAuthError(err)) setError(`${err.code}: ${err.message}`);
@@ -244,6 +390,7 @@ export default function LeadDetailPage() {
       });
       await loadLead();
       await loadEvents();
+      if (tab === "timeline") await loadTimeline();
     } catch (e) {
       const err = e as ApiClientError;
       if (!handleAuthError(err)) setError(`${err.code}: ${err.message}`);
@@ -270,6 +417,7 @@ export default function LeadDetailPage() {
       setEventPage(1);
       await loadLead();
       await loadEvents();
+      if (tab === "timeline") await loadTimeline();
     } catch (e) {
       const err = e as ApiClientError;
       if (!handleAuthError(err)) setError(`${err.code}: ${err.message}`);
@@ -291,6 +439,7 @@ export default function LeadDetailPage() {
       });
       await loadLead();
       await loadEvents();
+      if (tab === "timeline") await loadTimeline();
     } catch (e) {
       const err = e as ApiClientError;
       if (!handleAuthError(err)) setError(`${err.code}: ${err.message}`);
@@ -341,6 +490,9 @@ export default function LeadDetailPage() {
         </Button>
         <Button variant={tab === "events" ? "primary" : "secondary"} onClick={() => setTab("events")}>
           Nhật ký sự kiện
+        </Button>
+        <Button variant={tab === "timeline" ? "primary" : "secondary"} onClick={() => setTab("timeline")}>
+          Nhật ký
         </Button>
         <Button variant={tab === "activity" ? "primary" : "secondary"} onClick={() => setTab("activity")}>
           Hoạt động
@@ -465,6 +617,61 @@ export default function LeadDetailPage() {
         </div>
       ) : null}
 
+      {tab === "timeline" ? (
+        <div className="space-y-3 rounded-xl bg-white p-4 shadow-sm">
+          <div className="flex flex-wrap items-center gap-2">
+            {(
+              [
+                ["all", "Tất cả"],
+                ["event", "Sự kiện"],
+                ["receipt", "Thu tiền"],
+                ["automation", "Automation"],
+              ] as Array<[TimelineFilter, string]>
+            ).map(([value, label]) => (
+              <Button key={value} variant={timelineFilter === value ? "primary" : "secondary"} onClick={() => setTimelineFilter(value)}>
+                {label}
+              </Button>
+            ))}
+            <Button variant="secondary" onClick={loadTimeline} disabled={timelineLoading}>
+              {timelineLoading ? "Đang tải..." : "Làm mới"}
+            </Button>
+          </div>
+
+          {timelineError ? <Alert type="error" message={timelineError} /> : null}
+
+          {timelineLoading ? (
+            <div className="flex items-center gap-2 text-sm text-zinc-600">
+              <Spinner /> Đang tải nhật ký...
+            </div>
+          ) : timelineItems.filter((item) => timelineFilter === "all" || item.source === timelineFilter).length === 0 ? (
+            <div className="rounded-lg bg-zinc-50 p-4 text-sm text-zinc-600">Không có dữ liệu</div>
+          ) : (
+            <div className="space-y-2">
+              {timelineItems
+                .filter((item) => timelineFilter === "all" || item.source === timelineFilter)
+                .map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setTimelineDetail(item)}
+                    className="w-full rounded-lg border border-zinc-200 p-3 text-left hover:bg-zinc-50"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Badge text={item.badgeMain} />
+                        {item.badgeSub ? <Badge text={item.badgeSub} /> : null}
+                        <span className="text-sm font-medium text-zinc-900">{item.title}</span>
+                      </div>
+                      <span className="text-xs text-zinc-500">{formatDateTimeVi(item.time)}</span>
+                    </div>
+                    <p className="mt-1 text-sm text-zinc-700">{item.summary}</p>
+                  </button>
+                ))}
+            </div>
+          )}
+        </div>
+      ) : null}
+
       {tab === "activity" ? (
         <div className="space-y-2 rounded-xl bg-white p-4 shadow-sm">
           <h2 className="text-sm font-semibold text-zinc-900">Mốc tiến trình (sự kiện đầu tiên)</h2>
@@ -478,6 +685,24 @@ export default function LeadDetailPage() {
           ))}
         </div>
       ) : null}
+
+      <Modal open={Boolean(timelineDetail)} title="Chi tiết nhật ký" onClose={() => setTimelineDetail(null)}>
+        {timelineDetail ? (
+          <div className="space-y-2">
+            <div className="text-sm text-zinc-700">
+              <span className="font-semibold">Thời gian: </span>
+              {formatDateTimeVi(timelineDetail.time)}
+            </div>
+            <div className="text-sm text-zinc-700">
+              <span className="font-semibold">Tiêu đề: </span>
+              {timelineDetail.title}
+            </div>
+            <pre className="overflow-auto rounded-lg bg-zinc-50 p-3 text-xs text-zinc-700">
+              {JSON.stringify(timelineDetail.raw, null, 2)}
+            </pre>
+          </div>
+        ) : null}
+      </Modal>
     </div>
   );
 }

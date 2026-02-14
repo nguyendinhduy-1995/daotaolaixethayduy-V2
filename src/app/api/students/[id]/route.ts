@@ -3,6 +3,7 @@ import type { ExamResult, StudyStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-response";
 import { requireRouteAuth } from "@/lib/route-auth";
+import { isTelesalesRole } from "@/lib/admin-auth";
 
 type RouteContext = { params: Promise<{ id: string }> | { id: string } };
 
@@ -35,13 +36,16 @@ export async function GET(req: Request, context: RouteContext) {
     const student = await prisma.student.findUnique({
       where: { id },
       include: {
-        lead: { select: { id: true, fullName: true, phone: true, status: true } },
+        lead: { select: { id: true, fullName: true, phone: true, status: true, ownerId: true } },
         course: { select: { id: true, code: true } },
         tuitionPlan: { select: { id: true, province: true, licenseType: true, tuition: true } },
       },
     });
 
     if (!student) return jsonError(404, "NOT_FOUND", "Student not found");
+    if (isTelesalesRole(authResult.auth.role) && student.lead.ownerId !== authResult.auth.sub) {
+      return jsonError(403, "AUTH_FORBIDDEN", "Forbidden");
+    }
     return NextResponse.json({ student });
   } catch {
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
@@ -65,8 +69,14 @@ export async function PATCH(req: Request, context: RouteContext) {
       return jsonError(400, "VALIDATION_ERROR", "Invalid examResult");
     }
 
-    const exists = await prisma.student.findUnique({ where: { id }, select: { id: true } });
+    const exists = await prisma.student.findUnique({
+      where: { id },
+      select: { id: true, lead: { select: { ownerId: true } } },
+    });
     if (!exists) return jsonError(404, "NOT_FOUND", "Student not found");
+    if (isTelesalesRole(authResult.auth.role) && exists.lead.ownerId !== authResult.auth.sub) {
+      return jsonError(403, "AUTH_FORBIDDEN", "Forbidden");
+    }
 
     if (body.courseId) {
       const course = await prisma.course.findUnique({ where: { id: body.courseId }, select: { id: true } });

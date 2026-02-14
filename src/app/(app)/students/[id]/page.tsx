@@ -33,6 +33,7 @@ type StudentDetail = {
     fullName: string | null;
     phone: string | null;
     status: string;
+    ownerId: string | null;
   };
   course: { id: string; code: string } | null;
   tuitionPlan: {
@@ -66,11 +67,55 @@ type FormState = {
   note: string;
 };
 
+type LeadEvent = {
+  id: string;
+  leadId: string;
+  type: string;
+  note?: string | null;
+  payload?: unknown;
+  createdAt: string;
+};
+
+type AutomationLog = {
+  id: string;
+  leadId: string | null;
+  studentId: string | null;
+  milestone: string | null;
+  status: string;
+  sentAt: string;
+  payload?: unknown;
+};
+
+type TimelineSource = "event" | "receipt" | "automation";
+type TimelineFilter = "all" | TimelineSource;
+type TimelineItem = {
+  id: string;
+  source: TimelineSource;
+  time: string;
+  title: string;
+  summary: string;
+  badgeMain: string;
+  badgeSub?: string;
+  raw: unknown;
+};
+
 function formatMethod(value: ReceiptItem["method"]) {
   if (value === "cash") return "Tiền mặt";
   if (value === "bank_transfer") return "Chuyển khoản";
   if (value === "card") return "Thẻ";
   return "Momo/Khác";
+}
+
+function getRuntimeStatus(payload: unknown, fallback: string) {
+  if (
+    payload &&
+    typeof payload === "object" &&
+    "runtimeStatus" in payload &&
+    typeof (payload as { runtimeStatus?: unknown }).runtimeStatus === "string"
+  ) {
+    return (payload as { runtimeStatus: string }).runtimeStatus;
+  }
+  return fallback === "failed" ? "failed" : "success";
 }
 
 function studyStatusLabel(value: string) {
@@ -85,8 +130,12 @@ export default function StudentDetailPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const [tab, setTab] = useState<"overview" | "receipts">(
-    searchParams.get("tab") === "receipts" ? "receipts" : "overview"
+  const [tab, setTab] = useState<"overview" | "receipts" | "timeline">(
+    searchParams.get("tab") === "receipts"
+      ? "receipts"
+      : searchParams.get("tab") === "timeline"
+        ? "timeline"
+        : "overview"
   );
   const [student, setStudent] = useState<StudentDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -106,6 +155,11 @@ export default function StudentDetailPage() {
     receivedAt: todayInHoChiMinh(),
     note: "",
   });
+  const [timelineFilter, setTimelineFilter] = useState<TimelineFilter>("all");
+  const [timelineLoading, setTimelineLoading] = useState(false);
+  const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([]);
+  const [timelineError, setTimelineError] = useState("");
+  const [timelineDetail, setTimelineDetail] = useState<TimelineItem | null>(null);
 
   const handleAuthError = useCallback(
     (err: ApiClientError) => {
@@ -164,6 +218,81 @@ export default function StudentDetailPage() {
     }
   }, [handleAuthError, receiptPage, receiptPageSize, studentId]);
 
+  const loadTimeline = useCallback(async () => {
+    const token = getToken();
+    if (!token || !student) return;
+    setTimelineLoading(true);
+    setTimelineError("");
+    try {
+      const receiptPromise = fetchJson<ReceiptListResponse>(`/api/receipts?studentId=${student.id}&page=1&pageSize=50`, { token });
+      const studentLogsPromise = fetchJson<{ items: AutomationLog[] }>(
+        `/api/automation/logs?studentId=${student.id}&page=1&pageSize=50`,
+        { token }
+      ).catch(() => ({ items: [] }));
+      const leadEventsPromise = fetchJson<{ items: LeadEvent[] }>(
+        `/api/leads/${student.leadId}/events?page=1&pageSize=50&sort=createdAt&order=desc`,
+        { token }
+      ).catch(() => ({ items: [] }));
+      const leadLogsPromise = fetchJson<{ items: AutomationLog[] }>(
+        `/api/automation/logs?leadId=${student.leadId}&page=1&pageSize=50`,
+        { token }
+      ).catch(() => ({ items: [] }));
+
+      const [receiptData, studentLogs, leadEvents, leadLogs] = await Promise.all([
+        receiptPromise,
+        studentLogsPromise,
+        leadEventsPromise,
+        leadLogsPromise,
+      ]);
+
+      const eventItems: TimelineItem[] = leadEvents.items.map((event) => ({
+        id: `event-${event.id}`,
+        source: "event",
+        time: event.createdAt,
+        title: "Sự kiện khách hàng",
+        summary: event.note || `Sự kiện ${event.type}`,
+        badgeMain: event.type,
+        raw: event,
+      }));
+
+      const receiptItems: TimelineItem[] = receiptData.items.map((receipt) => ({
+        id: `receipt-${receipt.id}`,
+        source: "receipt",
+        time: receipt.receivedAt,
+        title: "Phiếu thu",
+        summary: `${formatCurrencyVnd(receipt.amount)} • ${formatMethod(receipt.method)}`,
+        badgeMain: "THU_TIEN",
+        badgeSub: formatMethod(receipt.method),
+        raw: receipt,
+      }));
+
+      const logMap = new Map<string, AutomationLog>();
+      [...studentLogs.items, ...leadLogs.items].forEach((log) => {
+        logMap.set(log.id, log);
+      });
+      const automationItems: TimelineItem[] = Array.from(logMap.values()).map((log) => ({
+        id: `automation-${log.id}`,
+        source: "automation",
+        time: log.sentAt,
+        title: "Automation",
+        summary: `Phạm vi ${log.milestone || "-"} • ${log.status}`,
+        badgeMain: log.status.toUpperCase(),
+        badgeSub: getRuntimeStatus(log.payload, log.status),
+        raw: log,
+      }));
+
+      const merged = [...eventItems, ...receiptItems, ...automationItems].sort(
+        (a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()
+      );
+      setTimelineItems(merged);
+    } catch (e) {
+      const err = e as ApiClientError;
+      if (!handleAuthError(err)) setTimelineError(`Có lỗi xảy ra: ${err.code}: ${err.message}`);
+    } finally {
+      setTimelineLoading(false);
+    }
+  }, [handleAuthError, student]);
+
   useEffect(() => {
     loadStudent();
   }, [loadStudent]);
@@ -172,6 +301,11 @@ export default function StudentDetailPage() {
     if (tab !== "receipts") return;
     loadReceipts();
   }, [loadReceipts, tab]);
+
+  useEffect(() => {
+    if (tab !== "timeline") return;
+    loadTimeline();
+  }, [loadTimeline, tab]);
 
   async function createReceipt() {
     const token = getToken();
@@ -216,6 +350,16 @@ export default function StudentDetailPage() {
   }
 
   if (!student) {
+    if (error.includes("AUTH_FORBIDDEN")) {
+      return (
+        <div className="space-y-3">
+          <Alert type="error" message="Bạn không có quyền truy cập học viên này." />
+          <Link href="/leads" className="inline-flex rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-700">
+            Quay lại danh sách khách hàng
+          </Link>
+        </div>
+      );
+    }
     return <Alert type="error" message={error || "Không tìm thấy học viên"} />;
   }
 
@@ -239,6 +383,9 @@ export default function StudentDetailPage() {
         </Button>
         <Button variant={tab === "receipts" ? "primary" : "secondary"} onClick={() => setTab("receipts")}>
           Thu tiền
+        </Button>
+        <Button variant={tab === "timeline" ? "primary" : "secondary"} onClick={() => setTab("timeline")}>
+          Nhật ký
         </Button>
       </div>
 
@@ -307,6 +454,61 @@ export default function StudentDetailPage() {
         </div>
       ) : null}
 
+      {tab === "timeline" ? (
+        <div className="space-y-3 rounded-xl bg-white p-4 shadow-sm">
+          <div className="flex flex-wrap items-center gap-2">
+            {(
+              [
+                ["all", "Tất cả"],
+                ["event", "Sự kiện"],
+                ["receipt", "Thu tiền"],
+                ["automation", "Automation"],
+              ] as Array<[TimelineFilter, string]>
+            ).map(([value, label]) => (
+              <Button key={value} variant={timelineFilter === value ? "primary" : "secondary"} onClick={() => setTimelineFilter(value)}>
+                {label}
+              </Button>
+            ))}
+            <Button variant="secondary" onClick={loadTimeline} disabled={timelineLoading}>
+              {timelineLoading ? "Đang tải..." : "Làm mới"}
+            </Button>
+          </div>
+
+          {timelineError ? <Alert type="error" message={timelineError} /> : null}
+
+          {timelineLoading ? (
+            <div className="flex items-center gap-2 text-sm text-zinc-600">
+              <Spinner /> Đang tải nhật ký...
+            </div>
+          ) : timelineItems.filter((item) => timelineFilter === "all" || item.source === timelineFilter).length === 0 ? (
+            <div className="rounded-lg bg-zinc-50 p-4 text-sm text-zinc-600">Không có dữ liệu</div>
+          ) : (
+            <div className="space-y-2">
+              {timelineItems
+                .filter((item) => timelineFilter === "all" || item.source === timelineFilter)
+                .map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setTimelineDetail(item)}
+                    className="w-full rounded-lg border border-zinc-200 p-3 text-left hover:bg-zinc-50"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Badge text={item.badgeMain} />
+                        {item.badgeSub ? <Badge text={item.badgeSub} /> : null}
+                        <span className="text-sm font-medium text-zinc-900">{item.title}</span>
+                      </div>
+                      <span className="text-xs text-zinc-500">{formatDateTimeVi(item.time)}</span>
+                    </div>
+                    <p className="mt-1 text-sm text-zinc-700">{item.summary}</p>
+                  </button>
+                ))}
+            </div>
+          )}
+        </div>
+      ) : null}
+
       <Modal open={createOpen} title="Tạo phiếu thu" onClose={() => setCreateOpen(false)}>
         <div className="space-y-3">
           <div>
@@ -351,6 +553,24 @@ export default function StudentDetailPage() {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      <Modal open={Boolean(timelineDetail)} title="Chi tiết nhật ký" onClose={() => setTimelineDetail(null)}>
+        {timelineDetail ? (
+          <div className="space-y-2">
+            <div className="text-sm text-zinc-700">
+              <span className="font-semibold">Thời gian: </span>
+              {formatDateTimeVi(timelineDetail.time)}
+            </div>
+            <div className="text-sm text-zinc-700">
+              <span className="font-semibold">Tiêu đề: </span>
+              {timelineDetail.title}
+            </div>
+            <pre className="overflow-auto rounded-lg bg-zinc-50 p-3 text-xs text-zinc-700">
+              {JSON.stringify(timelineDetail.raw, null, 2)}
+            </pre>
+          </div>
+        ) : null}
       </Modal>
     </div>
   );
