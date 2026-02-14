@@ -23,6 +23,7 @@ type OutboundItem = {
   templateKey: string;
   renderedText: string;
   status: "QUEUED" | "SENT" | "FAILED" | "SKIPPED";
+  priority: "HIGH" | "MEDIUM" | "LOW";
   error: string | null;
   retryCount: number;
   nextAttemptAt: string | null;
@@ -54,6 +55,12 @@ function statusLabel(status: OutboundItem["status"]) {
   if (status === "SENT") return "Đã gửi";
   if (status === "FAILED") return "Thất bại";
   return "Bỏ qua";
+}
+
+function priorityLabel(priority: OutboundItem["priority"]) {
+  if (priority === "HIGH") return "Cao";
+  if (priority === "MEDIUM") return "Trung bình";
+  return "Thấp";
 }
 
 export default function OutboundPage() {
@@ -237,12 +244,13 @@ export default function OutboundPage() {
         <div className="rounded-xl bg-white p-6 text-sm text-zinc-600 shadow-sm">Không có dữ liệu</div>
       ) : (
         <div className="space-y-3">
-          <Table headers={["Kênh", "Template", "Người nhận", "Trạng thái", "Lần thử", "Lần gửi", "Mã nhà cung cấp", "Liên quan", "Nội dung", "Lỗi", "Thời gian"]}>
+          <Table headers={["Kênh", "Template", "Người nhận", "Ưu tiên", "Trạng thái", "Lần thử", "Lần gửi", "Mã nhà cung cấp", "Liên quan", "Nội dung", "Lỗi", "Thời gian"]}>
             {items.map((item) => (
               <tr key={item.id} className="border-t border-zinc-100">
                 <td className="px-3 py-2"><Badge text={channelLabel(item.channel)} /></td>
                 <td className="px-3 py-2 text-sm text-zinc-700">{item.templateKey}</td>
                 <td className="px-3 py-2 text-sm text-zinc-700">{item.to || "-"}</td>
+                <td className="px-3 py-2"><Badge text={priorityLabel(item.priority)} /></td>
                 <td className="px-3 py-2">
                   <Badge text={statusLabel(item.status)} />
                 </td>

@@ -119,13 +119,23 @@ If a route file is missing in `src/app/api`, verification prints `SKIP (route mi
 - Bảo vệ bằng header: `x-cron-secret: <CRON_SECRET>` (không dùng session người dùng)
 - Body:
 ```json
-{ "dryRun": true }
+{ "dryRun": true, "force": false }
 ```
 - Tác vụ:
   - Sinh thông báo tài chính theo rule hiện có.
   - Khi chạy thật, tự xếp hàng outbound từ thông báo `NEW/DOING` (có dedupe theo ngày).
   - Ghi `AutomationLog` scope `daily` với thống kê đầu ra.
 - Trang admin chạy tay: `/admin/cron`.
+- Cấu hình vận hành:
+  - `OPS_TZ=Asia/Ho_Chi_Minh`
+  - `OPS_QUIET_HOURS=21:00-08:00`
+  - `OPS_MAX_PER_RUN=200`
+  - `OPS_MAX_PER_OWNER=50`
+  - `OPS_DEDUPE_WINDOW_DAYS=1`
+- Gợi ý schedule n8n local:
+  - Trigger theo cron mỗi 30 phút.
+  - Gọi `POST /api/cron/daily` với header `x-cron-secret`.
+  - Ban ngày gọi bình thường, cần chạy ngoài giờ yên tĩnh thì gửi `force=true`.
 
 ## Troubleshooting
 

@@ -21,6 +21,14 @@ END $$;
 `);
 
   await prisma.$executeRawUnsafe(`
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'OutboundPriority') THEN
+    CREATE TYPE "OutboundPriority" AS ENUM ('HIGH','MEDIUM','LOW');
+  END IF;
+END $$;
+`);
+
+  await prisma.$executeRawUnsafe(`
 CREATE TABLE IF NOT EXISTS "MessageTemplate" (
   "id" TEXT PRIMARY KEY,
   "key" TEXT NOT NULL UNIQUE,
@@ -41,6 +49,7 @@ CREATE TABLE IF NOT EXISTS "OutboundMessage" (
   "templateKey" TEXT NOT NULL,
   "renderedText" TEXT NOT NULL,
   "status" "OutboundStatus" NOT NULL DEFAULT 'QUEUED',
+  "priority" "OutboundPriority" NOT NULL DEFAULT 'MEDIUM',
   "error" TEXT,
   "leadId" TEXT,
   "studentId" TEXT,
@@ -59,7 +68,8 @@ CREATE TABLE IF NOT EXISTS "OutboundMessage" (
   await prisma.$executeRawUnsafe(`
 ALTER TABLE "OutboundMessage"
   ADD COLUMN IF NOT EXISTS "nextAttemptAt" TIMESTAMP(3),
-  ADD COLUMN IF NOT EXISTS "providerMessageId" TEXT;
+  ADD COLUMN IF NOT EXISTS "providerMessageId" TEXT,
+  ADD COLUMN IF NOT EXISTS "priority" "OutboundPriority" NOT NULL DEFAULT 'MEDIUM';
 `);
 
   await prisma.$executeRawUnsafe(`

@@ -367,18 +367,18 @@ if route_exists "cron/daily"; then
       -H "x-cron-secret: $CRON_SECRET_VALUE" \
       -H 'Content-Type: application/json' \
       -d '{"dryRun":true}' \
-    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.ok!==true){process.exit(1)}; const keys=["notificationsCreated","notificationsSkipped","outboundQueued","outboundSkipped","errors"]; if(keys.some(k=>typeof o[k]!=="number")) process.exit(1);'
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.ok!==true){process.exit(1)}; if(typeof o.quietHoursBlocked!=="boolean"){process.exit(1)}; if(typeof o.counts!=="object"||typeof o.breakdowns!=="object"){process.exit(1)}; if(typeof o.breakdowns.countsByPriority!=="object"||typeof o.breakdowns.skippedReasons!=="object"){process.exit(1)}'
 
     curl -sS -X POST "$BASE_URL/api/cron/daily" \
       -H "x-cron-secret: $CRON_SECRET_VALUE" \
       -H 'Content-Type: application/json' \
-      -d '{"dryRun":false}' \
-    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.ok!==true){process.exit(1)}; const keys=["notificationsCreated","notificationsSkipped","outboundQueued","outboundSkipped","errors"]; if(keys.some(k=>typeof o[k]!=="number")) process.exit(1);'
+      -d '{"dryRun":false,"force":true}' \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.ok!==true){process.exit(1)}; if(typeof o.quietHoursBlocked!=="boolean"){process.exit(1)}; if(typeof o.counts!=="object"||typeof o.breakdowns!=="object"){process.exit(1)}; if(typeof o.breakdowns.countsByPriority!=="object"||typeof o.breakdowns.skippedReasons!=="object"){process.exit(1)}'
 
     curl -sS "$BASE_URL/api/notifications?page=1&pageSize=20" -H "Authorization: Bearer $TOKEN" \
     | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!Array.isArray(o.items)||o.items.length===0){process.exit(1)}'
     curl -sS "$BASE_URL/api/outbound/messages?page=1&pageSize=20" -H "Authorization: Bearer $TOKEN" \
-    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!Array.isArray(o.items)||o.items.length===0){process.exit(1)}'
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!Array.isArray(o.items)||o.items.length===0){process.exit(1)}; if(o.items[0]&&typeof o.items[0].priority==="undefined"){process.exit(1)}'
 
     log "cron daily dry-run + execute OK"
   fi

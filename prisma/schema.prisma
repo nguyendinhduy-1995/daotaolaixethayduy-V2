@@ -116,6 +116,12 @@ enum OutboundStatus {
   SKIPPED
 }
 
+enum OutboundPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -365,6 +371,7 @@ model OutboundMessage {
   templateKey    String
   renderedText   String
   status         OutboundStatus  @default(QUEUED)
+  priority       OutboundPriority @default(MEDIUM)
   error          String?
   leadId         String?
   studentId      String?
