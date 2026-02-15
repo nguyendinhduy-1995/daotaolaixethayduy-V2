@@ -61,6 +61,29 @@ npm run db:seed
 
 If a route file is missing in `src/app/api`, verification prints `SKIP (route missing)` and continues.
 
+## Chuẩn lỗi API (UI tiếng Việt)
+
+- API lỗi chuẩn:
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "..."
+  }
+}
+```
+- UI hiển thị theo `error.code` (không phụ thuộc raw message từ backend).
+- Mã lỗi chuẩn đang dùng:
+  - `AUTH_MISSING_BEARER`
+  - `AUTH_INVALID_TOKEN`
+  - `AUTH_UNAUTHORIZED`
+  - `AUTH_FORBIDDEN`
+  - `VALIDATION_ERROR`
+  - `NOT_FOUND`
+  - `RATE_LIMIT`
+  - `INTERNAL_ERROR`
+
 ## Production-Ready Local Checklist
 
 - [ ] `.env` uses strong `JWT_SECRET`

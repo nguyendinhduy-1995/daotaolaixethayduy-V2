@@ -9,16 +9,16 @@ export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => null);
     if (!body?.email || !body?.password) {
-      return jsonError(400, "BAD_REQUEST", "Missing email/password");
+      return jsonError(400, "VALIDATION_ERROR", "Missing email/password");
     }
 
     const user = await prisma.user.findUnique({ where: { email: body.email } });
     if (!user || !user.isActive) {
-      return jsonError(401, "INVALID_CREDENTIALS", "Invalid credentials");
+      return jsonError(401, "AUTH_UNAUTHORIZED", "Invalid credentials");
     }
 
     const ok = await bcrypt.compare(body.password, user.password);
-    if (!ok) return jsonError(401, "INVALID_CREDENTIALS", "Invalid credentials");
+    if (!ok) return jsonError(401, "AUTH_UNAUTHORIZED", "Invalid credentials");
 
     const payload = { sub: user.id, role: user.role, email: user.email };
     const accessToken = signAccessToken(payload);

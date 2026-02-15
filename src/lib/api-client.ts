@@ -1,5 +1,7 @@
 "use client";
 
+import { getErrorMessageVi } from "@/lib/error-messages-vi";
+
 export type ApiClientError = {
   code: string;
   message: string;
@@ -40,9 +42,11 @@ export async function fetchJson<T>(
 
   if (!res.ok) {
     const errorData = data as { error?: { code?: string; message?: string } } | null;
+    const code = errorData?.error?.code || "INTERNAL_ERROR";
+    const mapped = getErrorMessageVi(code);
     const error: ApiClientError = {
-      code: errorData?.error?.code || "INTERNAL_ERROR",
-      message: errorData?.error?.message || "Lỗi không xác định",
+      code,
+      message: mapped.message,
       status: res.status,
     };
     throw error;
