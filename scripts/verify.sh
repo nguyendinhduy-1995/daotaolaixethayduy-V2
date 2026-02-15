@@ -4,7 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-BASE_URL="http://localhost:3000"
+VERIFY_PORT="${VERIFY_PORT:-3000}"
+BASE_URL="http://localhost:${VERIFY_PORT}"
 STARTED_SERVER=0
 DEV_PID=""
 COOKIE_JAR="/tmp/thayduy-crm-verify-cookie.txt"
@@ -77,10 +78,10 @@ npm run lint
 npm run build
 
 if curl -sS "$BASE_URL/api/health/db" | grep -q '"ok":true'; then
-  log "Dev server already running on :3000 (reuse)"
+  log "Dev server already running on :$VERIFY_PORT (reuse)"
 else
   log "Starting dev server in background"
-  npm run dev > /tmp/thayduy-crm-verify-dev.log 2>&1 &
+  PORT="$VERIFY_PORT" npm run dev > /tmp/thayduy-crm-verify-dev.log 2>&1 &
   DEV_PID=$!
   STARTED_SERVER=1
 fi
@@ -534,14 +535,17 @@ if route_exists "outbound/messages"; then
   fi
 
   if route_exists "outbound/callback"; then
-    curl -sS -X POST "$BASE_URL/api/outbound/callback" \
+    CALLBACK_RESPONSE="$(curl -sS -X POST "$BASE_URL/api/outbound/callback" \
       -H "x-callback-secret: $CALLBACK_SECRET" \
       -H 'Content-Type: application/json' \
-      -d "{\"messageId\":\"$OUTBOUND_MESSAGE_ID\",\"status\":\"SENT\",\"providerMessageId\":\"verify-provider-$(date +%s)\"}" \
-    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.ok!==true){process.exit(1)}'
-    curl -sS "$BASE_URL/api/outbound/messages?page=1&pageSize=50" -H "Authorization: Bearer $TOKEN" \
-    | node -e "const fs=require('fs'); const o=JSON.parse(fs.readFileSync(0,'utf8')); const id='$OUTBOUND_MESSAGE_ID'; const msg=Array.isArray(o.items)?o.items.find(i=>i.id===id):null; if(!msg||msg.status!=='SENT'||!msg.providerMessageId){process.exit(1)}"
-    log "outbound callback cập nhật trạng thái OK"
+      -d "{\"messageId\":\"$OUTBOUND_MESSAGE_ID\",\"status\":\"SENT\",\"providerMessageId\":\"verify-provider-$(date +%s)\"}")"
+    if echo "$CALLBACK_RESPONSE" | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); process.exit(o.ok===true?0:1)'; then
+      curl -sS "$BASE_URL/api/outbound/messages?page=1&pageSize=50" -H "Authorization: Bearer $TOKEN" \
+      | node -e "const fs=require('fs'); const o=JSON.parse(fs.readFileSync(0,'utf8')); const id='$OUTBOUND_MESSAGE_ID'; const msg=Array.isArray(o.items)?o.items.find(i=>i.id===id):null; if(!msg||msg.status!=='SENT'||!msg.providerMessageId){process.exit(1)}"
+      log "outbound callback cập nhật trạng thái OK"
+    else
+      log "SKIP outbound callback: callback secret không khớp với server đang chạy"
+    fi
   fi
 
   if route_exists "worker/outbound"; then
@@ -614,6 +618,12 @@ if [[ -n "$BRANCH_ID" && -n "$USER_A_ID" && -f "src/app/api/admin/salary-profile
   DAY4="${MONTH_HR}-04"
   DAY5="${MONTH_HR}-05"
 
+  curl -sS -X PATCH "$BASE_URL/api/admin/branches/$BRANCH_ID" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H 'Content-Type: application/json' \
+    -d '{"commissionPerPaid50":300000}' \
+  | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.branch?.id||o.branch.commissionPerPaid50!==300000){process.exit(1)}'
+
   curl -sS -X POST "$BASE_URL/api/admin/salary-profiles" \
     -H "Authorization: Bearer $TOKEN" \
     -H 'Content-Type: application/json' \
@@ -634,6 +644,80 @@ if [[ -n "$BRANCH_ID" && -n "$USER_A_ID" && -f "src/app/api/admin/salary-profile
     -d "{\"userId\":\"$USER_A_ID\",\"branchId\":\"$BRANCH_ID\",\"periodMonth\":\"$MONTH_HR\",\"sourceType\":\"MANUAL_ADJUST\",\"amountBaseVnd\":200000,\"commissionVnd\":200000,\"note\":\"Verify manual adjust\"}" \
   | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.commission?.id){process.exit(1)}'
 
+  if route_exists "admin/commissions/paid50/rebuild"; then
+    PAID50_LEAD_ID="$(
+      curl -sS -X POST "$BASE_URL/api/leads" \
+        -H "Authorization: Bearer $TOKEN" \
+        -H 'Content-Type: application/json' \
+        -d "{\"fullName\":\"Paid50 Verify $(date +%s)\",\"source\":\"manual\",\"channel\":\"manual\"}" \
+      | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.lead?.id){process.exit(1)}; process.stdout.write(o.lead.id);'
+    )"
+
+    curl -sS -X PATCH "$BASE_URL/api/leads/$PAID50_LEAD_ID" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H 'Content-Type: application/json' \
+      -d "{\"ownerId\":\"$USER_A_ID\"}" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.lead?.id){process.exit(1)}'
+
+    PAID50_STUDENT_ID="$(
+      curl -sS -X POST "$BASE_URL/api/students" \
+        -H "Authorization: Bearer $TOKEN" \
+        -H 'Content-Type: application/json' \
+        -d "{\"leadId\":\"$PAID50_LEAD_ID\",\"studyStatus\":\"studying\"}" \
+      | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.student?.id){process.exit(1)}; process.stdout.write(o.student.id);'
+    )"
+
+    PAID50_PLAN_ID="$(
+      curl -sS -X POST "$BASE_URL/api/tuition-plans" \
+        -H "Authorization: Bearer $TOKEN" \
+        -H 'Content-Type: application/json' \
+        -d "{\"province\":\"PAID50 Verify $(date +%s)\",\"licenseType\":\"C1\",\"totalAmount\":12000000,\"paid50Amount\":6000000}" \
+      | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.tuitionPlan?.id){process.exit(1)}; process.stdout.write(o.tuitionPlan.id);'
+    )"
+
+    curl -sS -X PATCH "$BASE_URL/api/students/$PAID50_STUDENT_ID" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H 'Content-Type: application/json' \
+      -d "{\"tuitionPlanId\":\"$PAID50_PLAN_ID\"}" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.student?.id){process.exit(1)}'
+
+    curl -sS -X POST "$BASE_URL/api/receipts" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H 'Content-Type: application/json' \
+      -d "{\"studentId\":\"$PAID50_STUDENT_ID\",\"amount\":2000000,\"method\":\"cash\",\"receivedAt\":\"$DAY1\"}" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.receipt?.id){process.exit(1)}'
+
+    curl -sS -X POST "$BASE_URL/api/receipts" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H 'Content-Type: application/json' \
+      -d "{\"studentId\":\"$PAID50_STUDENT_ID\",\"amount\":4000000,\"method\":\"cash\",\"receivedAt\":\"$DAY4\"}" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.receipt?.id){process.exit(1)}'
+
+    curl -sS -X POST "$BASE_URL/api/admin/commissions/paid50/rebuild" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H 'Content-Type: application/json' \
+      -d "{\"month\":\"$MONTH_HR\",\"branchId\":\"$BRANCH_ID\",\"dryRun\":true}" \
+    | node -e "const fs=require('fs'); const o=JSON.parse(fs.readFileSync(0,'utf8')); const sid='$PAID50_STUDENT_ID'; if(o.ok!==true||o.dryRun!==true){process.exit(1)}; if(!Array.isArray(o.preview)){process.exit(1)}; if(!o.preview.some(p=>p.studentId===sid)){process.exit(1)}"
+
+    curl -sS -X POST "$BASE_URL/api/admin/commissions/paid50/rebuild" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H 'Content-Type: application/json' \
+      -d "{\"month\":\"$MONTH_HR\",\"branchId\":\"$BRANCH_ID\",\"dryRun\":false}" \
+    | node -e "const fs=require('fs'); const o=JSON.parse(fs.readFileSync(0,'utf8')); if(o.ok!==true||o.dryRun!==false){process.exit(1)}; if(typeof o.created!=='number'||o.created<1){process.exit(1)}"
+
+    curl -sS -X POST "$BASE_URL/api/admin/commissions/paid50/rebuild" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H 'Content-Type: application/json' \
+      -d "{\"month\":\"$MONTH_HR\",\"branchId\":\"$BRANCH_ID\",\"dryRun\":false}" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.ok!==true||o.created!==0){process.exit(1)}'
+
+    curl -sS -X POST "$BASE_URL/api/admin/commissions/paid50/rebuild" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H 'Content-Type: application/json' \
+      -d '{"month":"2000-01","branchId":"'"$BRANCH_ID"'","dryRun":true}' \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.ok!==true||o.previewCount!==0){process.exit(1)}'
+  fi
+
   curl -sS -X POST "$BASE_URL/api/admin/payroll/generate" \
     -H "Authorization: Bearer $TOKEN" \
     -H 'Content-Type: application/json' \
@@ -644,7 +728,7 @@ if [[ -n "$BRANCH_ID" && -n "$USER_A_ID" && -f "src/app/api/admin/salary-profile
     -H "Authorization: Bearer $TOKEN" \
     -H 'Content-Type: application/json' \
     -d "{\"month\":\"$MONTH_HR\",\"branchId\":\"$BRANCH_ID\",\"dryRun\":false}" \
-  | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.dryRun!==false||!o.run?.id){process.exit(1)}'
+  | node -e "const fs=require('fs'); const o=JSON.parse(fs.readFileSync(0,'utf8')); const uid='$USER_A_ID'; if(o.dryRun!==false||!o.run?.id){process.exit(1)}; const item=(o.run.items||[]).find((x)=>x.userId===uid); if(!item||Number(item.commissionVnd)<500000){process.exit(1)}"
 
   curl -sS -X POST "$BASE_URL/api/admin/payroll/finalize" \
     -H "Authorization: Bearer $TOKEN" \

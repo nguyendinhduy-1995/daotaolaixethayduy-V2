@@ -268,12 +268,27 @@ curl -sS -X POST http://localhost:3000/api/worker/outbound \
   - Hồ sơ lương: `GET/POST /api/admin/salary-profiles`, `GET/PATCH /api/admin/salary-profiles/[id]`
   - Chấm công: `GET/POST /api/admin/attendance`, `PATCH /api/admin/attendance/[id]`
   - Sổ cái hoa hồng: `GET/POST /api/admin/commissions`
+  - Rebuild hoa hồng PAID50 theo tháng: `POST /api/admin/commissions/paid50/rebuild`
   - Rebuild hoa hồng từ receipt: `POST /api/admin/commissions/rebuild`
   - Chạy lương: `POST /api/admin/payroll/generate`, `POST /api/admin/payroll/finalize`, `GET /api/admin/payroll`
 - API nhân sự tự xem:
   - `GET /api/me/payroll?month=YYYY-MM`
 - Verify:
   - `npm run verify` đã bao gồm flow tạo hồ sơ lương, chấm công, commission manual, chạy/chốt lương.
+
+### Quy tắc hoa hồng PAID50
+
+- Mỗi học viên chỉ được tính **1 lần duy nhất** khi lần đầu chạm mốc 50% học phí.
+- Cách xác định mốc:
+  - Lấy receipt theo `createdAt` tăng dần.
+  - Cộng dồn `amount` đến khi `>= paid50Amount` (mặc định `50%` học phí snapshot/tuition plan).
+  - `periodMonth` là tháng `YYYY-MM` của timestamp chạm mốc.
+- Rebuild tháng X:
+  - Chỉ tạo ledger `sourceType=PAID50` cho học viên có `periodMonth=X`.
+  - Idempotent qua unique key `(sourceType, studentId)`, rebuild lại không tạo trùng.
+- Mức hoa hồng:
+  - `hoa hồng = số học viên first-reached50 trong tháng * branch.commissionPerPaid50`.
+  - Cấu hình tại `PATCH /api/admin/branches/[id]` với field `commissionPerPaid50`.
 - Auth:
   - Cookie riêng `student_access_token` (httpOnly), không dùng localStorage.
   - Middleware bảo vệ `/student/*` (trừ login/register).

@@ -162,6 +162,7 @@ enum CommissionSourceType {
   LEAD
   STUDENT
   MANUAL_ADJUST
+  PAID50
 }
 
 enum PayrollStatus {
@@ -333,6 +334,7 @@ model Student {
   course          Course?      @relation(fields: [courseId], references: [id])
 
   receipts        Receipt[]
+  commissionLedgers CommissionLedger[]
   outboundMessages OutboundMessage[]
   automationLogs  AutomationLog[]
   notifications   Notification[]
@@ -547,6 +549,7 @@ model Branch {
   id        String   @id @default(cuid())
   name      String
   isActive  Boolean  @default(true)
+  commissionPerPaid50 Int?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -616,16 +619,20 @@ model CommissionLedger {
   periodMonth   String
   sourceType    CommissionSourceType
   sourceId      String?
+  studentId     String?
   amountBaseVnd Int
   commissionVnd Int
   note          String?
+  metaJson      Json?
   createdAt     DateTime             @default(now())
 
   user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   branch        Branch               @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  student       Student?             @relation(fields: [studentId], references: [id], onDelete: SetNull)
 
   @@index([periodMonth, userId])
   @@index([branchId, periodMonth])
+  @@unique([sourceType, studentId])
 }
 
 model PayrollRun {

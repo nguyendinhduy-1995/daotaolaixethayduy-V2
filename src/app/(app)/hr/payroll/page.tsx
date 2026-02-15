@@ -16,7 +16,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Table } from "@/components/ui/table";
 import { formatCurrencyVnd, formatDateTimeVi } from "@/lib/date-utils";
 
-type Branch = { id: string; name: string };
+type Branch = { id: string; name: string; commissionPerPaid50: number | null };
 
 type PayrollItem = {
   id: string;
@@ -53,6 +53,34 @@ type DryRunResult = {
   totals: { totalVnd: number; commissionVnd: number };
 };
 
+type Paid50RebuildResult = {
+  ok: boolean;
+  dryRun: boolean;
+  month: string;
+  branchId: string | null;
+  created: number;
+  previewCount: number;
+  totalCommissionVnd: number;
+  summary: {
+    skipNoThreshold: number;
+    skipWrongMonth: number;
+    skipAlreadyCounted: number;
+    skipMissingOwner: number;
+    skipMissingBranch: number;
+    skipMissingRate: number;
+    skippedByBranchScope: number;
+  };
+  preview: Array<{
+    studentId: string;
+    studentName: string;
+    ownerName: string;
+    amountVnd: number;
+    reachedAt: string;
+    paid50Amount: number;
+    totalPaidAllTime: number;
+  }>;
+};
+
 function currentMonth() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -73,6 +101,9 @@ export default function PayrollPage() {
   const [run, setRun] = useState<PayrollRun | null>(null);
   const [dryRun, setDryRun] = useState<DryRunResult | null>(null);
   const [detail, setDetail] = useState<PayrollItem | null>(null);
+  const [commissionPerPaid50Input, setCommissionPerPaid50Input] = useState("");
+  const [paid50Preview, setPaid50Preview] = useState<Paid50RebuildResult | null>(null);
+  const [paid50ModalOpen, setPaid50ModalOpen] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -106,6 +137,16 @@ export default function PayrollPage() {
       setBranches(branchRes.items);
       if (!branchId && branchRes.items[0]) {
         setBranchId(branchRes.items[0].id);
+        setCommissionPerPaid50Input(
+          branchRes.items[0].commissionPerPaid50 !== null ? String(branchRes.items[0].commissionPerPaid50) : ""
+        );
+      } else if (branchId) {
+        const selected = branchRes.items.find((branch) => branch.id === branchId);
+        setCommissionPerPaid50Input(
+          selected?.commissionPerPaid50 !== null && selected?.commissionPerPaid50 !== undefined
+            ? String(selected.commissionPerPaid50)
+            : ""
+        );
       }
       setRun(payrollRes.items[0] || null);
       setDryRun(null);
@@ -160,6 +201,79 @@ export default function PayrollPage() {
     }
   }
 
+  async function saveBranchCommission() {
+    const token = getToken();
+    if (!token || !branchId) return;
+    setActionLoading(true);
+    setError("");
+    setSuccess("");
+    try {
+      const normalized =
+        commissionPerPaid50Input.trim() === "" ? null : Number(commissionPerPaid50Input.trim());
+      if (normalized !== null && (!Number.isInteger(normalized) || normalized < 0)) {
+        setError("VALIDATION_ERROR: Hoa hồng phải là số nguyên không âm.");
+        return;
+      }
+      await fetchJson<{ branch: Branch }>(`/api/admin/branches/${branchId}`, {
+        method: "PATCH",
+        token,
+        body: { commissionPerPaid50: normalized },
+      });
+      setSuccess("Đã lưu mức hoa hồng theo chi nhánh.");
+      await load();
+    } catch (e) {
+      const err = e as ApiClientError;
+      if (!handleAuthError(err)) setError(formatApiError(err));
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function previewPaid50Commission() {
+    const token = getToken();
+    if (!token || !branchId) return;
+    setActionLoading(true);
+    setError("");
+    setSuccess("");
+    try {
+      const res = await fetchJson<Paid50RebuildResult>("/api/admin/commissions/paid50/rebuild", {
+        method: "POST",
+        token,
+        body: { month, branchId, dryRun: true },
+      });
+      setPaid50Preview(res);
+      setPaid50ModalOpen(true);
+    } catch (e) {
+      const err = e as ApiClientError;
+      if (!handleAuthError(err)) setError(formatApiError(err));
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function runPaid50Commission() {
+    const token = getToken();
+    if (!token || !branchId) return;
+    setActionLoading(true);
+    setError("");
+    setSuccess("");
+    try {
+      const res = await fetchJson<Paid50RebuildResult>("/api/admin/commissions/paid50/rebuild", {
+        method: "POST",
+        token,
+        body: { month, branchId, dryRun: false },
+      });
+      setPaid50Preview(res);
+      setSuccess(`Đã tạo ${res.created} ledger hoa hồng PAID50.`);
+      await load();
+    } catch (e) {
+      const err = e as ApiClientError;
+      if (!handleAuthError(err)) setError(formatApiError(err));
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
   async function finalizePayroll() {
     const token = getToken();
     if (!token || !branchId) return;
@@ -205,7 +319,15 @@ export default function PayrollPage() {
           </label>
           <label className="space-y-1 text-sm text-zinc-700 md:col-span-2">
             <span>Chi nhánh</span>
-            <Select value={branchId} onChange={(e) => setBranchId(e.target.value)}>
+            <Select value={branchId} onChange={(e) => {
+              setBranchId(e.target.value);
+              const selected = branches.find((branch) => branch.id === e.target.value);
+              setCommissionPerPaid50Input(
+                selected?.commissionPerPaid50 !== null && selected?.commissionPerPaid50 !== undefined
+                  ? String(selected.commissionPerPaid50)
+                  : ""
+              );
+            }}>
               {branches.map((branch) => (
                 <option key={branch.id} value={branch.id}>{branch.name}</option>
               ))}
@@ -215,6 +337,26 @@ export default function PayrollPage() {
             <Button variant="secondary" onClick={() => void runPayroll(true)} disabled={actionLoading || !branchId}>Chạy thử</Button>
             <Button onClick={() => void runPayroll(false)} disabled={actionLoading || !branchId}>Chạy bảng lương</Button>
             <Button variant="secondary" onClick={finalizePayroll} disabled={actionLoading || !run || run.status === "FINAL"}>Chốt lương</Button>
+          </div>
+        </div>
+        <div className="grid gap-3 md:grid-cols-4">
+          <label className="space-y-1 text-sm text-zinc-700 md:col-span-2">
+            <span>Hoa hồng/HS đạt 50% (VND)</span>
+            <Input
+              type="number"
+              min={0}
+              value={commissionPerPaid50Input}
+              onChange={(e) => setCommissionPerPaid50Input(e.target.value)}
+              placeholder="Ví dụ: 300000"
+            />
+          </label>
+          <div className="flex items-end gap-2 md:col-span-2">
+            <Button variant="secondary" onClick={saveBranchCommission} disabled={actionLoading || !branchId}>
+              Lưu mức hoa hồng
+            </Button>
+            <Button variant="secondary" onClick={previewPaid50Commission} disabled={actionLoading || !branchId}>
+              Tính hoa hồng HS đạt 50%
+            </Button>
           </div>
         </div>
       </FilterCard>
@@ -251,6 +393,52 @@ export default function PayrollPage() {
         <pre className="max-h-[420px] overflow-auto rounded-xl bg-zinc-900 p-3 text-xs text-zinc-100">
           {JSON.stringify(detail?.breakdownJson || {}, null, 2)}
         </pre>
+      </Modal>
+
+      <Modal
+        open={paid50ModalOpen}
+        title="Preview hoa hồng HS đạt 50%"
+        onClose={() => setPaid50ModalOpen(false)}
+      >
+        {paid50Preview ? (
+          <div className="space-y-3 text-sm text-zinc-700">
+            <p>
+              Tháng: <span className="font-semibold text-zinc-900">{paid50Preview.month}</span> - Số bản ghi dự kiến:{" "}
+              <span className="font-semibold text-zinc-900">{paid50Preview.previewCount}</span>
+            </p>
+            <p>
+              Tổng tiền hoa hồng:{" "}
+              <span className="font-semibold text-zinc-900">{formatCurrencyVnd(paid50Preview.totalCommissionVnd)}</span>
+            </p>
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs">
+              Bỏ qua: chưa đạt mốc {paid50Preview.summary.skipNoThreshold}, sai tháng {paid50Preview.summary.skipWrongMonth}, đã tính trước đó{" "}
+              {paid50Preview.summary.skipAlreadyCounted}, thiếu owner {paid50Preview.summary.skipMissingOwner}, thiếu chi nhánh{" "}
+              {paid50Preview.summary.skipMissingBranch}, thiếu rate {paid50Preview.summary.skipMissingRate}.
+            </div>
+            {paid50Preview.preview.length === 0 ? (
+              <p>Không có học viên đủ điều kiện trong tháng này.</p>
+            ) : (
+              <Table headers={["Học viên", "Telesale", "Mốc 50%", "Mức hoa hồng"]}>
+                {paid50Preview.preview.map((row) => (
+                  <tr key={row.studentId} className="border-t border-zinc-100">
+                    <td className="px-3 py-2 text-sm text-zinc-900">{row.studentName}</td>
+                    <td className="px-3 py-2 text-sm text-zinc-700">{row.ownerName}</td>
+                    <td className="px-3 py-2 text-sm text-zinc-700">{formatDateTimeVi(row.reachedAt)}</td>
+                    <td className="px-3 py-2 text-sm font-semibold text-zinc-900">{formatCurrencyVnd(row.amountVnd)}</td>
+                  </tr>
+                ))}
+              </Table>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setPaid50ModalOpen(false)}>Đóng</Button>
+              <Button onClick={runPaid50Commission} disabled={actionLoading}>
+                Chạy thật
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-zinc-700"><Spinner /> Đang tải preview...</div>
+        )}
       </Modal>
     </div>
   );

@@ -4,6 +4,8 @@ import { jsonError } from "@/lib/api-response";
 import { requireRouteAuth } from "@/lib/route-auth";
 import { requireAdminRole } from "@/lib/admin-auth";
 
+const ALLOWED_SOURCE_TYPES = new Set(["RECEIPT", "LEAD", "STUDENT", "MANUAL_ADJUST", "PAID50"]);
+
 function parsePositiveInt(value: string | null, fallback: number, max = 100) {
   if (value === null) return fallback;
   const n = Number(value);
@@ -68,7 +70,14 @@ export async function POST(req: Request) {
     const amountBaseVnd = Number(body.amountBaseVnd);
     const commissionVnd = Number(body.commissionVnd);
 
-    if (!userId || !branchId || !/^\d{4}-\d{2}$/.test(periodMonth) || !Number.isInteger(amountBaseVnd) || !Number.isInteger(commissionVnd)) {
+    if (
+      !userId ||
+      !branchId ||
+      !/^\d{4}-\d{2}$/.test(periodMonth) ||
+      !Number.isInteger(amountBaseVnd) ||
+      !Number.isInteger(commissionVnd) ||
+      !ALLOWED_SOURCE_TYPES.has(sourceType)
+    ) {
       return jsonError(400, "VALIDATION_ERROR", "Invalid payload");
     }
 
@@ -79,9 +88,11 @@ export async function POST(req: Request) {
         periodMonth,
         sourceType: sourceType as never,
         sourceId: typeof body.sourceId === "string" ? body.sourceId : null,
+        studentId: typeof body.studentId === "string" ? body.studentId : null,
         amountBaseVnd,
         commissionVnd,
         note: typeof body.note === "string" ? body.note : null,
+        metaJson: body.metaJson && typeof body.metaJson === "object" ? body.metaJson : null,
       },
     });
 

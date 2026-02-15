@@ -33,6 +33,10 @@ export async function POST(req: Request) {
       data: {
         name,
         isActive: typeof body?.isActive === "boolean" ? body.isActive : true,
+        commissionPerPaid50:
+          Number.isInteger(body?.commissionPerPaid50) && body.commissionPerPaid50 >= 0
+            ? body.commissionPerPaid50
+            : null,
       },
     });
     return NextResponse.json({ branch });
