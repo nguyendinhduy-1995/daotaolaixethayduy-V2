@@ -22,6 +22,7 @@ type PulseTargets = Record<string, number>;
 type OpsPulseInput = {
   role: OpsPulseRole;
   ownerId?: string;
+  adminScope?: boolean;
   branchId?: string;
   dateKey: string;
   windowMinutes: number;
@@ -119,9 +120,9 @@ function parseWindowMinutes(input: unknown) {
   return input;
 }
 
-function toNonNegativeNumber(value: unknown, field: string) {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
-    throw new OpsPulseValidationError(`${field} must be a non-negative number`);
+function toNonNegativeInt(value: unknown, field: string) {
+  if (typeof value !== "number" || !Number.isFinite(value) || !Number.isInteger(value) || value < 0) {
+    throw new OpsPulseValidationError(`${field} must be an integer >= 0`);
   }
   return value;
 }
@@ -145,24 +146,35 @@ function parseMetrics(role: OpsPulseRole, metrics: unknown) {
     throw new OpsPulseValidationError("metrics is required");
   }
 
+  const source = metrics as Record<string, unknown>;
   if (role === "PAGE") {
-    const source = metrics as Record<string, unknown>;
+    if (source.messagesToday === undefined || source.dataToday === undefined) {
+      throw new OpsPulseValidationError("PAGE requires metrics.messagesToday and metrics.dataToday");
+    }
     return {
-      messagesToday: toNonNegativeNumber(
-        source.messagesToday ?? source.openMessages ?? 0,
-        "metrics.messagesToday"
-      ),
-      dataToday: toNonNegativeNumber(source.dataToday ?? source.newData ?? 0, "metrics.dataToday"),
+      messagesToday: toNonNegativeInt(source.messagesToday, "metrics.messagesToday"),
+      dataToday: toNonNegativeInt(source.dataToday, "metrics.dataToday"),
     } satisfies PageMetrics;
   }
 
-  const source = metrics as Record<string, unknown>;
+  if (
+    source.dataToday === undefined ||
+    source.calledToday === undefined ||
+    source.appointedToday === undefined ||
+    source.arrivedToday === undefined ||
+    source.signedToday === undefined
+  ) {
+    throw new OpsPulseValidationError(
+      "TELESALES requires metrics.dataToday/calledToday/appointedToday/arrivedToday/signedToday"
+    );
+  }
+
   return {
-    data: toNonNegativeNumber(source.data ?? 0, "metrics.data"),
-    called: toNonNegativeNumber(source.called ?? 0, "metrics.called"),
-    appointed: toNonNegativeNumber(source.appointed ?? 0, "metrics.appointed"),
-    arrived: toNonNegativeNumber(source.arrived ?? 0, "metrics.arrived"),
-    signed: toNonNegativeNumber(source.signed ?? 0, "metrics.signed"),
+    data: toNonNegativeInt(source.dataToday, "metrics.dataToday"),
+    called: toNonNegativeInt(source.calledToday, "metrics.calledToday"),
+    appointed: toNonNegativeInt(source.appointedToday, "metrics.appointedToday"),
+    arrived: toNonNegativeInt(source.arrivedToday, "metrics.arrivedToday"),
+    signed: toNonNegativeInt(source.signedToday, "metrics.signedToday"),
   } satisfies TelesalesMetrics;
 }
 
@@ -465,14 +477,19 @@ export function normalizeOpsPulseInput(raw: unknown): OpsPulseInput {
   }
 
   const ownerId = typeof payload.ownerId === "string" && payload.ownerId.trim() ? payload.ownerId.trim() : undefined;
+  const adminScope = payload.adminScope === true;
   const branchId = typeof payload.branchId === "string" && payload.branchId.trim() ? payload.branchId.trim() : undefined;
-  if (role === "TELESALES" && !ownerId) {
-    throw new OpsPulseValidationError("ownerId is required for TELESALES role");
+  if (!ownerId && !adminScope) {
+    throw new OpsPulseValidationError("ownerId is required unless adminScope=true");
+  }
+  if (role === "TELESALES" && !ownerId && adminScope) {
+    throw new OpsPulseValidationError("TELESALES requires ownerId");
   }
 
   return {
     role,
     ownerId,
+    adminScope,
     branchId,
     dateKey: parseDateKey(payload.dateKey),
     windowMinutes: parseWindowMinutes(payload.windowMinutes),

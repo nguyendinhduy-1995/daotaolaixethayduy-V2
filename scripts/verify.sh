@@ -91,6 +91,10 @@ log "Waiting for health endpoint"
 wait_for_health || fail "Health check failed at $BASE_URL/api/health/db"
 
 TOKEN="$(get_token)" || fail "Login failed; cannot obtain token"
+ADMIN_ID="$(
+  curl -sS "$BASE_URL/api/auth/me" -H "Authorization: Bearer $TOKEN" \
+  | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.user?.id){process.exit(1)}; process.stdout.write(o.user.id);'
+)"
 log "Login OK"
 
 DASHBOARD_HTTP_CODE="$(curl -sS -o /tmp/thayduy-crm-verify-dashboard.html -w '%{http_code}' "$BASE_URL/dashboard" -b "$COOKIE_JAR")"
@@ -291,14 +295,14 @@ if route_exists "ops/pulse" && route_exists "admin/ops/pulse"; then
     curl -sS -X POST "$BASE_URL/api/ops/pulse" \
       -H "x-ops-secret: $OPS_SECRET_VALUE" \
       -H 'Content-Type: application/json' \
-      -d "{\"role\":\"PAGE\",\"dateKey\":\"$DATE_HCM\",\"windowMinutes\":10,\"metrics\":{\"messagesToday\":100,\"dataToday\":10},\"targets\":{\"dataRatePctTarget\":20}}" \
-    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.ok!==true||!o.id||!o.status||!o.computedJson){process.exit(1)}; if(o.computedJson?.daily?.dataRatePctDaily!==10){process.exit(1)}'
+      -d "{\"role\":\"PAGE\",\"ownerId\":\"$ADMIN_ID\",\"dateKey\":\"$DATE_HCM\",\"windowMinutes\":10,\"metrics\":{\"messagesToday\":100,\"dataToday\":10,\"calledToday\":0,\"appointedToday\":0,\"arrivedToday\":0,\"signedToday\":0},\"targets\":{\"dataRatePctTarget\":20}}" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.ok!==true||!o.id||!o.status||!o.computedJson){process.exit(1)}; if(o.computedJson?.daily?.dataRatePctDaily!==10){process.exit(1)}; if(!Array.isArray(o.computedJson?.suggestions)||o.computedJson.suggestions.length===0){process.exit(1)}'
 
     if [[ -n "$USER_A_ID" ]]; then
       curl -sS -X POST "$BASE_URL/api/ops/pulse" \
         -H "x-ops-secret: $OPS_SECRET_VALUE" \
         -H 'Content-Type: application/json' \
-        -d "{\"role\":\"TELESALES\",\"ownerId\":\"$USER_A_ID\",\"dateKey\":\"$DATE_HCM\",\"windowMinutes\":10,\"metrics\":{\"data\":4,\"called\":3,\"appointed\":1,\"arrived\":0,\"signed\":0},\"targets\":{\"calledPctGlobal\":1,\"appointedPctGlobal\":1}}" \
+        -d "{\"role\":\"TELESALES\",\"ownerId\":\"$USER_A_ID\",\"dateKey\":\"$DATE_HCM\",\"windowMinutes\":10,\"metrics\":{\"messagesToday\":0,\"dataToday\":4,\"calledToday\":3,\"appointedToday\":1,\"arrivedToday\":0,\"signedToday\":0},\"targets\":{\"calledPctGlobal\":1,\"appointedPctGlobal\":1}}" \
       | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.ok!==true||!o.id||!o.status||!o.computedJson){process.exit(1)}; const tgt=o.computedJson?.ratesGlobalTarget||{}; const act=o.computedJson?.ratesGlobalActual||{}; if(tgt.calledPctGlobal!==100){process.exit(1)}; if(typeof act.calledPctGlobalActual!=="number" && act.calledPctGlobalActual!==null){process.exit(1)}'
     fi
 

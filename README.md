@@ -197,6 +197,22 @@ curl -sS -X POST http://localhost:3000/api/worker/outbound \
 - Endpoint ingest (không cần session):
   - `POST /api/ops/pulse`
   - Header: `x-ops-secret: <OPS_SECRET>`
+- Contract payload chuẩn:
+  - `dateKey`: `YYYY-MM-DD` theo `Asia/Ho_Chi_Minh`
+  - `role`: `PAGE | TELESALES`
+  - `ownerId`: bắt buộc, chỉ được để trống khi `adminScope=true` (không áp dụng cho `TELESALES`)
+  - `windowMinutes`: mặc định `10`
+  - `metrics`:
+    - `messagesToday` (int >= 0)
+    - `dataToday` (int >= 0)
+    - `calledToday` (int >= 0)
+    - `appointedToday` (int >= 0)
+    - `arrivedToday` (int >= 0)
+    - `signedToday` (int >= 0)
+- n8n mapping guide:
+  - `messagesToday` = tổng inbound messages trong ngày.
+  - `dataToday` = số event `HAS_PHONE` trong ngày theo owner.
+  - `calledToday/appointedToday/arrivedToday/signedToday` = số event cùng tên trong ngày theo owner.
 - Idempotency:
   - Snapshot được upsert theo bucket thời gian (`windowMinutes`) + role + dateKey + scope owner/branch.
   - Retry từ n8n trong cùng bucket sẽ cập nhật bản ghi hiện có, không tạo trùng.
@@ -204,11 +220,16 @@ curl -sS -X POST http://localhost:3000/api/worker/outbound \
 ```json
 {
   "role": "PAGE",
+  "ownerId": "user_cuid",
   "dateKey": "2026-02-15",
   "windowMinutes": 10,
   "metrics": {
     "messagesToday": 100,
-    "dataToday": 10
+    "dataToday": 10,
+    "calledToday": 0,
+    "appointedToday": 0,
+    "arrivedToday": 0,
+    "signedToday": 0
   },
   "targets": {
     "dataRatePctTarget": 20
@@ -223,11 +244,12 @@ curl -sS -X POST http://localhost:3000/api/worker/outbound \
   "dateKey": "2026-02-15",
   "windowMinutes": 10,
   "metrics": {
-    "data": 4,
-    "called": 3,
-    "appointed": 1,
-    "arrived": 0,
-    "signed": 0
+    "messagesToday": 0,
+    "dataToday": 4,
+    "calledToday": 3,
+    "appointedToday": 1,
+    "arrivedToday": 0,
+    "signedToday": 0
   },
   "targets": {
     "appointed": 4
