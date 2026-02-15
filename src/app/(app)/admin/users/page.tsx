@@ -15,15 +15,29 @@ import { Pagination } from "@/components/ui/pagination";
 import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Table } from "@/components/ui/table";
+import { DataCard } from "@/components/mobile/DataCard";
+import { EmptyState } from "@/components/mobile/EmptyState";
+import { MobileHeader } from "@/components/app/mobile-header";
+import { MobileToolbar } from "@/components/app/mobile-toolbar";
+import { MobileFiltersSheet } from "@/components/mobile/MobileFiltersSheet";
 import { formatDateTimeVi } from "@/lib/date-utils";
 
 type Role = "admin" | "manager" | "telesales" | "direct_page" | "viewer";
+type BranchOption = {
+  id: string;
+  name: string;
+  code: string | null;
+  isActive: boolean;
+};
+
 type UserItem = {
   id: string;
   name: string | null;
   email: string;
   role: Role;
   isActive: boolean;
+  branchId: string | null;
+  branch?: BranchOption | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -33,6 +47,10 @@ type UserListResponse = {
   page: number;
   pageSize: number;
   total: number;
+};
+
+type BranchListResponse = {
+  items: BranchOption[];
 };
 
 const ROLE_OPTIONS: Array<{ value: Role; label: string }> = [
@@ -51,12 +69,18 @@ function parseApiError(error: ApiClientError) {
   return `${error.code}: ${error.message}`;
 }
 
+function branchLabel(branch: BranchOption | null | undefined) {
+  if (!branch) return "-";
+  return branch.code ? `${branch.name} (${branch.code})` : branch.name;
+}
+
 export default function AdminUsersPage() {
   const router = useRouter();
   const [checkingRole, setCheckingRole] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
   const [items, setItems] = useState<UserItem[]>([]);
+  const [branches, setBranches] = useState<BranchOption[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -64,9 +88,11 @@ export default function AdminUsersPage() {
   const [q, setQ] = useState("");
   const [roleFilter, setRoleFilter] = useState<"" | Role>("");
   const [activeFilter, setActiveFilter] = useState<"" | "true" | "false">("");
+  const [branchFilter, setBranchFilter] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createSaving, setCreateSaving] = useState(false);
@@ -76,6 +102,7 @@ export default function AdminUsersPage() {
     password: "",
     role: "viewer" as Role,
     isActive: true,
+    branchId: "",
   });
 
   const [editOpen, setEditOpen] = useState(false);
@@ -86,6 +113,7 @@ export default function AdminUsersPage() {
     role: "viewer" as Role,
     isActive: true,
     password: "",
+    branchId: "",
   });
 
   const [toggleTarget, setToggleTarget] = useState<UserItem | null>(null);
@@ -98,8 +126,9 @@ export default function AdminUsersPage() {
     if (q.trim()) params.set("q", q.trim());
     if (roleFilter) params.set("role", roleFilter);
     if (activeFilter) params.set("isActive", activeFilter);
+    if (branchFilter) params.set("branchId", branchFilter);
     return params.toString();
-  }, [activeFilter, page, pageSize, q, roleFilter]);
+  }, [activeFilter, branchFilter, page, pageSize, q, roleFilter]);
 
   const handleAuthError = useCallback(
     (err: ApiClientError) => {
@@ -125,6 +154,17 @@ export default function AdminUsersPage() {
       })
       .finally(() => setCheckingRole(false));
   }, [router]);
+
+  const loadBranches = useCallback(async () => {
+    const token = getToken();
+    if (!token || !isAdmin) return;
+    try {
+      const data = await fetchJson<BranchListResponse>("/api/admin/branches?page=1&pageSize=200", { token });
+      setBranches(data.items || []);
+    } catch {
+      setBranches([]);
+    }
+  }, [isAdmin]);
 
   const loadUsers = useCallback(async () => {
     const token = getToken();
@@ -156,6 +196,11 @@ export default function AdminUsersPage() {
     loadUsers();
   }, [isAdmin, loadUsers]);
 
+  useEffect(() => {
+    if (!isAdmin) return;
+    loadBranches();
+  }, [isAdmin, loadBranches]);
+
   async function createUser() {
     const token = getToken();
     if (!token) return;
@@ -181,10 +226,11 @@ export default function AdminUsersPage() {
           password: createForm.password,
           role: createForm.role,
           isActive: createForm.isActive,
+          branchId: createForm.branchId || null,
         },
       });
       setCreateOpen(false);
-      setCreateForm({ name: "", email: "", password: "", role: "viewer", isActive: true });
+      setCreateForm({ name: "", email: "", password: "", role: "viewer", isActive: true, branchId: "" });
       setSuccess("Tạo người dùng thành công.");
       await loadUsers();
     } catch (e) {
@@ -202,6 +248,7 @@ export default function AdminUsersPage() {
       role: user.role,
       isActive: user.isActive,
       password: "",
+      branchId: user.branchId || "",
     });
     setEditOpen(true);
   }
@@ -225,6 +272,7 @@ export default function AdminUsersPage() {
           name: editForm.name || null,
           role: editForm.role,
           isActive: editForm.isActive,
+          branchId: editForm.branchId || null,
           ...(editForm.password ? { password: editForm.password } : {}),
         },
       });
@@ -286,27 +334,52 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-zinc-900">Quản trị người dùng</h1>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={loadUsers} disabled={loading}>
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <Spinner /> Đang tải...
-              </span>
-            ) : (
-              "Làm mới"
-            )}
-          </Button>
-          <Button onClick={() => setCreateOpen(true)}>Tạo người dùng</Button>
+      <MobileHeader
+        title="Quản trị người dùng"
+        subtitle="Quản lý tài khoản và chi nhánh"
+        rightActions={<Button onClick={() => setCreateOpen(true)}>Tạo</Button>}
+      />
+
+      <div className="hidden md:block">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-xl font-semibold text-zinc-900">Quản trị người dùng</h1>
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" onClick={loadUsers} disabled={loading}>
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <Spinner /> Đang tải...
+                </span>
+              ) : (
+                "Làm mới"
+              )}
+            </Button>
+            <Button onClick={() => setCreateOpen(true)}>Tạo người dùng</Button>
+          </div>
         </div>
       </div>
 
       {error ? <Alert type="error" message={error} /> : null}
       {success ? <Alert type="success" message={success} /> : null}
 
-      <div className="rounded-xl bg-white p-4 shadow-sm">
-        <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
+      <div className="sticky top-[116px] z-20 rounded-2xl border border-zinc-200 bg-zinc-100/90 p-2 backdrop-blur md:hidden">
+        <MobileToolbar
+          value={qInput}
+          onChange={setQInput}
+          onOpenFilter={() => setMobileFilterOpen(true)}
+          activeFilterCount={(q ? 1 : 0) + (roleFilter ? 1 : 0) + (activeFilter ? 1 : 0) + (branchFilter ? 1 : 0)}
+          quickActions={
+            <>
+              <Button variant="secondary" onClick={loadUsers}>
+                Làm mới
+              </Button>
+              <Button onClick={() => setCreateOpen(true)}>Tạo người dùng</Button>
+            </>
+          }
+        />
+      </div>
+
+      <div className="hidden rounded-xl bg-white p-4 shadow-sm md:block">
+        <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-5">
           <div>
             <label className="mb-1 block text-sm text-zinc-600">Tìm kiếm</label>
             <Input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Tên hoặc email" />
@@ -324,6 +397,23 @@ export default function AdminUsersPage() {
               {ROLE_OPTIONS.map((role) => (
                 <option key={role.value} value={role.value}>
                   {role.label}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm text-zinc-600">Chi nhánh</label>
+            <Select
+              value={branchFilter}
+              onChange={(e) => {
+                setPage(1);
+                setBranchFilter(e.target.value);
+              }}
+            >
+              <option value="">Tất cả chi nhánh</option>
+              {branches.map((branch) => (
+                <option key={branch.id} value={branch.id}>
+                  {branchLabel(branch)}
                 </option>
               ))}
             </Select>
@@ -359,43 +449,158 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
-      {loading ? (
-        <div className="rounded-xl bg-white p-6 text-sm text-zinc-600">Đang tải danh sách người dùng...</div>
-      ) : items.length === 0 ? (
-        <div className="rounded-xl bg-white p-6 text-sm text-zinc-600">Không có dữ liệu người dùng.</div>
-      ) : (
-        <Table headers={["Tên", "Email", "Vai trò", "Trạng thái", "Ngày tạo", "Hành động"]}>
-          {items.map((user) => (
-            <tr key={user.id} className="border-t border-zinc-100">
-              <td className="px-3 py-2">{user.name || "-"}</td>
-              <td className="px-3 py-2">{user.email}</td>
-              <td className="px-3 py-2">
-                <Badge text={roleLabel(user.role)} />
-              </td>
-              <td className="px-3 py-2">
-                <Badge text={user.isActive ? "Đang hoạt động" : "Đã khóa"} />
-              </td>
-              <td className="px-3 py-2 text-sm text-zinc-600">{formatDateTimeVi(user.createdAt)}</td>
-              <td className="px-3 py-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button variant="secondary" className="h-7 px-2 py-1 text-xs" onClick={() => openEdit(user)}>
+      <div className="space-y-2 md:hidden">
+        {loading ? (
+          <div className="surface rounded-2xl px-3 py-6 text-center text-sm text-zinc-600">Đang tải danh sách người dùng...</div>
+        ) : items.length === 0 ? (
+          <EmptyState title="Không có người dùng" description="Hãy thay đổi bộ lọc hoặc tạo mới người dùng." />
+        ) : (
+          items.map((user) => (
+            <DataCard
+              key={user.id}
+              title={user.name || user.email}
+              subtitle={user.email}
+              badge={<Badge text={user.isActive ? "Đang hoạt động" : "Đã khóa"} />}
+              footer={
+                <div className="flex w-full items-center gap-2">
+                  <Button variant="secondary" className="flex-1" onClick={() => openEdit(user)}>
                     Sửa
                   </Button>
                   <Button
                     variant={user.isActive ? "danger" : "secondary"}
-                    className="h-7 px-2 py-1 text-xs"
+                    className="flex-1"
                     onClick={() => setToggleTarget(user)}
                   >
                     {user.isActive ? "Khóa" : "Mở khóa"}
                   </Button>
                 </div>
-              </td>
-            </tr>
-          ))}
-        </Table>
-      )}
+              }
+            >
+              <div className="space-y-1 text-xs">
+                <p>
+                  <span className="text-zinc-500">Vai trò:</span> {roleLabel(user.role)}
+                </p>
+                <p>
+                  <span className="text-zinc-500">Chi nhánh:</span> {branchLabel(user.branch)}
+                </p>
+                <p>
+                  <span className="text-zinc-500">Tạo lúc:</span> {formatDateTimeVi(user.createdAt)}
+                </p>
+              </div>
+            </DataCard>
+          ))
+        )}
+      </div>
+
+      <div className="hidden md:block">
+        {loading ? (
+          <div className="rounded-xl bg-white p-6 text-sm text-zinc-600">Đang tải danh sách người dùng...</div>
+        ) : items.length === 0 ? (
+          <div className="rounded-xl bg-white p-6 text-sm text-zinc-600">Không có dữ liệu người dùng.</div>
+        ) : (
+          <Table headers={["Tên", "Email", "Vai trò", "Chi nhánh", "Trạng thái", "Ngày tạo", "Hành động"]}>
+            {items.map((user) => (
+              <tr key={user.id} className="border-t border-zinc-100">
+                <td className="px-3 py-2">{user.name || "-"}</td>
+                <td className="px-3 py-2">{user.email}</td>
+                <td className="px-3 py-2">
+                  <Badge text={roleLabel(user.role)} />
+                </td>
+                <td className="px-3 py-2 text-sm text-zinc-700">{branchLabel(user.branch)}</td>
+                <td className="px-3 py-2">
+                  <Badge text={user.isActive ? "Đang hoạt động" : "Đã khóa"} />
+                </td>
+                <td className="px-3 py-2 text-sm text-zinc-600">{formatDateTimeVi(user.createdAt)}</td>
+                <td className="px-3 py-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button variant="secondary" className="h-7 px-2 py-1 text-xs" onClick={() => openEdit(user)}>
+                      Sửa
+                    </Button>
+                    <Button
+                      variant={user.isActive ? "danger" : "secondary"}
+                      className="h-7 px-2 py-1 text-xs"
+                      onClick={() => setToggleTarget(user)}
+                    >
+                      {user.isActive ? "Khóa" : "Mở khóa"}
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </Table>
+        )}
+      </div>
 
       <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
+
+      <MobileFiltersSheet
+        open={mobileFilterOpen}
+        onOpenChange={setMobileFilterOpen}
+        title="Bộ lọc người dùng"
+        onApply={() => setPage(1)}
+        onReset={() => {
+          setQInput("");
+          setQ("");
+          setRoleFilter("");
+          setActiveFilter("");
+          setBranchFilter("");
+          setPage(1);
+        }}
+      >
+        <div className="space-y-3">
+          <Input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Tên hoặc email" />
+          <Select
+            value={roleFilter}
+            onChange={(e) => {
+              setPage(1);
+              setRoleFilter(e.target.value as "" | Role);
+            }}
+          >
+            <option value="">Tất cả vai trò</option>
+            {ROLE_OPTIONS.map((role) => (
+              <option key={role.value} value={role.value}>
+                {role.label}
+              </option>
+            ))}
+          </Select>
+          <Select
+            value={branchFilter}
+            onChange={(e) => {
+              setPage(1);
+              setBranchFilter(e.target.value);
+            }}
+          >
+            <option value="">Tất cả chi nhánh</option>
+            {branches.map((branch) => (
+              <option key={branch.id} value={branch.id}>
+                {branchLabel(branch)}
+              </option>
+            ))}
+          </Select>
+          <Select
+            value={activeFilter}
+            onChange={(e) => {
+              setPage(1);
+              setActiveFilter(e.target.value as "" | "true" | "false");
+            }}
+          >
+            <option value="">Tất cả</option>
+            <option value="true">Đang hoạt động</option>
+            <option value="false">Đã khóa</option>
+          </Select>
+          <Select
+            value={String(pageSize)}
+            onChange={(e) => {
+              setPage(1);
+              setPageSize(Number(e.target.value));
+            }}
+          >
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </Select>
+        </div>
+      </MobileFiltersSheet>
 
       <Modal open={createOpen} title="Tạo người dùng" onClose={() => setCreateOpen(false)}>
         <div className="space-y-3">
@@ -431,15 +636,26 @@ export default function AdminUsersPage() {
               </Select>
             </div>
             <div>
-              <label className="mb-1 block text-sm text-zinc-600">Trạng thái</label>
-              <Select
-                value={createForm.isActive ? "true" : "false"}
-                onChange={(e) => setCreateForm((s) => ({ ...s, isActive: e.target.value === "true" }))}
-              >
-                <option value="true">Đang hoạt động</option>
-                <option value="false">Đã khóa</option>
+              <label className="mb-1 block text-sm text-zinc-600">Chi nhánh</label>
+              <Select value={createForm.branchId} onChange={(e) => setCreateForm((s) => ({ ...s, branchId: e.target.value }))}>
+                <option value="">Không chọn</option>
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branchLabel(branch)}
+                  </option>
+                ))}
               </Select>
             </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm text-zinc-600">Trạng thái</label>
+            <Select
+              value={createForm.isActive ? "true" : "false"}
+              onChange={(e) => setCreateForm((s) => ({ ...s, isActive: e.target.value === "true" }))}
+            >
+              <option value="true">Đang hoạt động</option>
+              <option value="false">Đã khóa</option>
+            </Select>
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setCreateOpen(false)}>
@@ -470,15 +686,26 @@ export default function AdminUsersPage() {
               </Select>
             </div>
             <div>
-              <label className="mb-1 block text-sm text-zinc-600">Trạng thái</label>
-              <Select
-                value={editForm.isActive ? "true" : "false"}
-                onChange={(e) => setEditForm((s) => ({ ...s, isActive: e.target.value === "true" }))}
-              >
-                <option value="true">Đang hoạt động</option>
-                <option value="false">Đã khóa</option>
+              <label className="mb-1 block text-sm text-zinc-600">Chi nhánh</label>
+              <Select value={editForm.branchId} onChange={(e) => setEditForm((s) => ({ ...s, branchId: e.target.value }))}>
+                <option value="">Không chọn</option>
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branchLabel(branch)}
+                  </option>
+                ))}
               </Select>
             </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm text-zinc-600">Trạng thái</label>
+            <Select
+              value={editForm.isActive ? "true" : "false"}
+              onChange={(e) => setEditForm((s) => ({ ...s, isActive: e.target.value === "true" }))}
+            >
+              <option value="true">Đang hoạt động</option>
+              <option value="false">Đã khóa</option>
+            </Select>
           </div>
           <div>
             <label className="mb-1 block text-sm text-zinc-600">Đặt lại mật khẩu (không bắt buộc)</label>

@@ -30,6 +30,14 @@ export async function GET(req: Request, context: RouteContext) {
         email: true,
         role: true,
         isActive: true,
+        branchId: true,
+        branch: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
         createdAt: true,
         updatedAt: true,
       },
@@ -57,8 +65,18 @@ export async function PATCH(req: Request, context: RouteContext) {
     if (body.role !== undefined && !isRole(body.role)) {
       return jsonError(400, "VALIDATION_ERROR", "Invalid role");
     }
+    if (body.branchId !== undefined && body.branchId !== null && typeof body.branchId !== "string") {
+      return jsonError(400, "VALIDATION_ERROR", "branchId must be a string");
+    }
     if (body.password !== undefined && (typeof body.password !== "string" || body.password.length < 8)) {
       return jsonError(400, "VALIDATION_ERROR", "password must be at least 8 characters");
+    }
+
+    const branchId =
+      typeof body.branchId === "string" && body.branchId.trim().length > 0 ? body.branchId.trim() : null;
+    if (body.branchId !== undefined && branchId) {
+      const branch = await prisma.branch.findUnique({ where: { id: branchId }, select: { id: true } });
+      if (!branch) return jsonError(400, "VALIDATION_ERROR", "Branch not found");
     }
 
     const exists = await prisma.user.findUnique({ where: { id }, select: { id: true } });
@@ -77,6 +95,7 @@ export async function PATCH(req: Request, context: RouteContext) {
         ...(body.isActive !== undefined
           ? { isActive: typeof body.isActive === "boolean" ? body.isActive : undefined }
           : {}),
+        ...(body.branchId !== undefined ? { branchId } : {}),
         ...(passwordHash ? { password: passwordHash } : {}),
       },
       select: {
@@ -85,6 +104,14 @@ export async function PATCH(req: Request, context: RouteContext) {
         email: true,
         role: true,
         isActive: true,
+        branchId: true,
+        branch: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
         createdAt: true,
         updatedAt: true,
       },

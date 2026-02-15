@@ -39,6 +39,7 @@ export async function GET(req: Request) {
     const q = searchParams.get("q")?.trim();
     const role = searchParams.get("role");
     const isActive = parseBooleanFilter(searchParams.get("isActive"));
+    const branchId = searchParams.get("branchId")?.trim();
 
     if (role !== null && !isRole(role)) {
       return jsonError(400, "VALIDATION_ERROR", "Invalid role");
@@ -55,6 +56,7 @@ export async function GET(req: Request) {
         : {}),
       ...(role ? { role } : {}),
       ...(isActive !== undefined ? { isActive } : {}),
+      ...(branchId ? { branchId } : {}),
     };
 
     const [items, total] = await Promise.all([
@@ -66,6 +68,14 @@ export async function GET(req: Request) {
           email: true,
           role: true,
           isActive: true,
+          branchId: true,
+          branch: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+            },
+          },
           createdAt: true,
           updatedAt: true,
         },
@@ -105,6 +115,16 @@ export async function POST(req: Request) {
     if (!isRole(body.role)) {
       return jsonError(400, "VALIDATION_ERROR", "Invalid role");
     }
+    if (body.branchId !== undefined && body.branchId !== null && typeof body.branchId !== "string") {
+      return jsonError(400, "VALIDATION_ERROR", "branchId must be a string");
+    }
+
+    const branchId =
+      typeof body.branchId === "string" && body.branchId.trim().length > 0 ? body.branchId.trim() : null;
+    if (branchId) {
+      const branch = await prisma.branch.findUnique({ where: { id: branchId }, select: { id: true } });
+      if (!branch) return jsonError(400, "VALIDATION_ERROR", "Branch not found");
+    }
 
     const existing = await prisma.user.findUnique({ where: { email: body.email } });
     if (existing) return jsonError(400, "VALIDATION_ERROR", "Email already exists");
@@ -118,6 +138,7 @@ export async function POST(req: Request) {
         password: passwordHash,
         role: body.role,
         isActive: typeof body.isActive === "boolean" ? body.isActive : true,
+        branchId,
       },
       select: {
         id: true,
@@ -125,6 +146,14 @@ export async function POST(req: Request) {
         email: true,
         role: true,
         isActive: true,
+        branchId: true,
+        branch: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
         createdAt: true,
         updatedAt: true,
       },

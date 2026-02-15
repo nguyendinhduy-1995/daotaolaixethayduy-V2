@@ -202,6 +202,17 @@ else
   log "SKIP (route missing): /api/admin/branches"
 fi
 
+if [[ -n "$USER_ID" && -n "$BRANCH_ID" ]]; then
+  curl -sS -X PATCH "$BASE_URL/api/users/$USER_ID" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H 'Content-Type: application/json' \
+    -d "{\"branchId\":\"$BRANCH_ID\"}" \
+  | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.user?.id){process.exit(1)}'
+  curl -sS "$BASE_URL/api/users?page=1&pageSize=20&branchId=$BRANCH_ID" -H "Authorization: Bearer $TOKEN" \
+  | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!Array.isArray(o.items)||o.items.length===0){process.exit(1)}; if(!o.items.some(i=>i.branch?.id)){process.exit(1)}'
+  log "users branch assignment/list OK"
+fi
+
 if route_exists "health/db"; then
   curl -sS "$BASE_URL/api/health/db" | grep -q '"ok":true' || fail "Health endpoint failed"
   log "health/db OK"

@@ -178,9 +178,11 @@ model User {
   password  String
   role      Role     @default(viewer)
   isActive  Boolean  @default(true)
+  branchId  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  branch    Branch?   @relation(fields: [branchId], references: [id], onDelete: SetNull)
   leads     Lead[]    @relation("OwnerLeads")
   receipts  Receipt[] @relation("ReceiptCreatedBy")
   events    LeadEvent[] @relation("EventCreatedBy")
@@ -193,6 +195,8 @@ model User {
   commissionLedgers CommissionLedger[]
   payrollItems PayrollItem[]
   generatedPayrollRuns PayrollRun[] @relation("PayrollGeneratedBy")
+
+  @@index([branchId])
 }
 
 model Lead {
@@ -548,11 +552,13 @@ model MarketingMetric {
 model Branch {
   id        String   @id @default(cuid())
   name      String
+  code      String?  @unique
   isActive  Boolean  @default(true)
   commissionPerPaid50 Int?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  users     User[]
   salaryProfiles SalaryProfile[]
   attendances Attendance[]
   commissionLedgers CommissionLedger[]

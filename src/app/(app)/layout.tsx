@@ -49,6 +49,7 @@ const OPS_ITEMS: NavItem[] = [
 ];
 
 const ADMIN_ITEMS: NavItem[] = [
+  { href: "/admin/branches", label: "Chi nhánh", match: (p) => p.startsWith("/admin/branches") },
   { href: "/admin/users", label: "Người dùng", match: (p) => p.startsWith("/admin/users") },
   { href: "/admin/assign-leads", label: "Phân khách hàng", match: (p) => p.startsWith("/admin/assign-leads") },
   { href: "/admin/tuition-plans", label: "Bảng học phí", match: (p) => p.startsWith("/admin/tuition-plans") },
@@ -100,6 +101,7 @@ function guessPageTitle(pathname: string) {
     { test: (p) => p.startsWith("/hr/salary-profiles"), title: "Hồ sơ lương", subtitle: "Quản lý mức lương theo nhân sự" },
     { test: (p) => p.startsWith("/hr/attendance"), title: "Chấm công", subtitle: "Theo dõi ngày công theo nhân sự" },
     { test: (p) => p.startsWith("/hr/payroll"), title: "Bảng lương", subtitle: "Tính và chốt lương theo kỳ" },
+    { test: (p) => p.startsWith("/admin/branches"), title: "Chi nhánh", subtitle: "Quản trị danh sách chi nhánh" },
     { test: (p) => p.startsWith("/automation"), title: "Tự động hóa", subtitle: "Theo dõi tác vụ tự động" },
     { test: (p) => p.startsWith("/admin"), title: "Quản trị", subtitle: "Thiết lập và vận hành hệ thống" },
   ];
