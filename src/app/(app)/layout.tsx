@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useMemo, useState } from "react";
-import { clearToken, fetchMe, logoutSession, type MeResponse } from "@/lib/auth-client";
+import { logoutSession, type MeResponse } from "@/lib/auth-client";
 import { isAdminRole } from "@/lib/admin-auth";
+import { guardByAuthMe } from "@/lib/ui-auth-guard";
 import { MobileBottomNav } from "@/components/mobile/MobileBottomNav";
 import { MobileTopbar } from "@/components/mobile/MobileTopbar";
 import { Button } from "@/components/ui/button";
@@ -122,11 +123,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const pageMeta = useMemo(() => guessPageTitle(pathname), [pathname]);
 
   useEffect(() => {
-    fetchMe()
-      .then((data) => setUser(data.user))
-      .catch(() => {
-        clearToken();
-        router.replace("/login");
+    guardByAuthMe(router)
+      .then((nextUser) => {
+        if (nextUser) setUser(nextUser);
       })
       .finally(() => setLoading(false));
   }, [router]);

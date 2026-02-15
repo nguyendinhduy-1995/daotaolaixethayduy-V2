@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchJson, type ApiClientError } from "@/lib/api-client";
-import { fetchMe } from "@/lib/auth-client";
+import { guardByAuthMe } from "@/lib/ui-auth-guard";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,9 +22,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetchMe()
-      .then(() => router.replace("/leads"))
-      .catch(() => undefined);
+    guardByAuthMe(router).then((user) => {
+      if (user) router.replace("/leads");
+    });
   }, [router]);
 
   async function onSubmit(event: FormEvent) {

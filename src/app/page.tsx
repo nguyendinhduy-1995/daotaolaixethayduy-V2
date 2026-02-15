@@ -2,16 +2,16 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { fetchMe } from "@/lib/auth-client";
+import { guardByAuthMe } from "@/lib/ui-auth-guard";
 import { Spinner } from "@/components/ui/spinner";
 
 export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    fetchMe()
-      .then(() => router.replace("/dashboard"))
-      .catch(() => router.replace("/login"));
+    guardByAuthMe(router).then((user) => {
+      if (user) router.replace("/dashboard");
+    });
   }, [router]);
 
   return (

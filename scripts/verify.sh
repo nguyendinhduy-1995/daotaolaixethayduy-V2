@@ -90,6 +90,19 @@ fi
 log "Waiting for health endpoint"
 wait_for_health || fail "Health check failed at $BASE_URL/api/health/db"
 
+FORGED_ADMIN_JWT='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjQ3NDg2MTQ0MDAsInJvbGUiOiJhZG1pbiIsInN1YiI6ImZha2UifQ.invalid'
+FORGED_ADMIN_HTTP_CODE="$(curl -sS -D /tmp/thayduy-crm-verify-forged-admin.headers -o /tmp/thayduy-crm-verify-forged-admin.html -w '%{http_code}' "$BASE_URL/admin/scheduler" -H "Cookie: access_token=$FORGED_ADMIN_JWT")"
+if [[ "$FORGED_ADMIN_HTTP_CODE" == "302" || "$FORGED_ADMIN_HTTP_CODE" == "307" ]]; then
+  grep -qi "location: .*login" /tmp/thayduy-crm-verify-forged-admin.headers || fail "Forged admin token redirect should point to login"
+elif [[ "$FORGED_ADMIN_HTTP_CODE" == "200" ]]; then
+  if grep -q "Bộ lập lịch (n8n)" /tmp/thayduy-crm-verify-forged-admin.html; then
+    fail "Forged admin token must not access admin scheduler content"
+  fi
+else
+  fail "Forged admin token should be blocked (got $FORGED_ADMIN_HTTP_CODE)"
+fi
+log "forged token -> admin redirect OK"
+
 TOKEN="$(get_token)" || fail "Login failed; cannot obtain token"
 ADMIN_ID="$(
   curl -sS "$BASE_URL/api/auth/me" -H "Authorization: Bearer $TOKEN" \
