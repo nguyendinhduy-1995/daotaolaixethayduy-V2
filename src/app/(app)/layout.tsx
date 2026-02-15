@@ -129,9 +129,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const isAdmin = user ? isAdminRole(user.role) : false;
 
   return (
-    <div className="min-h-screen bg-zinc-100">
+    <div className="page min-h-screen">
       <div className="mx-auto flex min-h-screen max-w-[1480px]">
-        <aside className="hidden w-72 shrink-0 border-r border-zinc-200 bg-white px-4 py-5 lg:block">
+        <aside className="hidden w-72 shrink-0 border-r border-[var(--border)] bg-zinc-50/80 px-4 py-5 lg:block">
           <div className="mb-6">
             <p className="text-lg font-semibold text-slate-900">Thầy Duy CRM</p>
             <p className="text-xs text-zinc-500">Bảng điều hành nội bộ</p>
@@ -166,12 +166,10 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           </nav>
         </aside>
 
-        {menuOpen ? (
-          <div className="fixed inset-0 z-40 bg-black/35 lg:hidden" onClick={() => setMenuOpen(false)} aria-hidden="true" />
-        ) : null}
+        {menuOpen ? <div className="fixed inset-0 z-40 bg-black/30 lg:hidden" onClick={() => setMenuOpen(false)} aria-hidden="true" /> : null}
 
         <aside
-          className={`fixed inset-y-0 left-0 z-50 w-72 border-r border-zinc-200 bg-white px-4 py-5 shadow-xl transition-transform lg:hidden ${
+          className={`fixed inset-y-2 left-2 z-50 w-[86%] max-w-72 rounded-2xl border border-[var(--border)] bg-white px-4 py-5 shadow-xl transition-transform lg:hidden ${
             menuOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
@@ -215,14 +213,14 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         </aside>
 
         <div className="min-w-0 flex-1">
-          <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/95 px-4 py-3 backdrop-blur md:px-5">
+          <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-white/95 px-4 py-3 backdrop-blur md:px-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <Button variant="secondary" className="lg:hidden" onClick={() => setMenuOpen(true)}>
                   Mở menu
                 </Button>
                 <div>
-                  <p className="text-base font-semibold text-slate-900">{pageMeta.title}</p>
+                  <p className="text-lg font-semibold tracking-tight text-slate-900">{pageMeta.title}</p>
                   <p className="text-xs text-zinc-500">{pageMeta.subtitle}</p>
                 </div>
               </div>

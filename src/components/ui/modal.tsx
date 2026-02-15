@@ -15,9 +15,9 @@ export function Modal({ open, title, description, children, onClose }: ModalProp
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3 md:items-center md:p-4">
-      <div className="w-full max-w-2xl rounded-2xl border border-zinc-200 bg-white shadow-xl">
-        <div className="flex items-start justify-between gap-3 border-b border-zinc-200 px-4 py-3">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/35 p-2 md:items-center md:p-4">
+      <div className="w-full max-w-2xl overflow-hidden rounded-[20px] border border-[var(--border)] bg-white shadow-xl">
+        <div className="flex items-start justify-between gap-3 border-b border-[var(--border)] px-4 py-3 md:px-5">
           <div>
             <h2 className="text-base font-semibold text-slate-900">{title}</h2>
             {description ? <p className="mt-1 text-sm text-zinc-600">{description}</p> : null}
@@ -26,7 +26,7 @@ export function Modal({ open, title, description, children, onClose }: ModalProp
             Đóng
           </Button>
         </div>
-        <div className="max-h-[80vh] overflow-auto p-4">{children}</div>
+        <div className="max-h-[70vh] overflow-auto p-4 md:max-h-[75vh] md:p-5">{children}</div>
       </div>
     </div>
   );

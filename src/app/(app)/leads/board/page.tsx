@@ -109,7 +109,8 @@ export default function LeadsBoardPage() {
   const searchParams = useSearchParams();
 
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
-  const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [mobileStatus, setMobileStatus] = useState("NEW");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [canManageOwner, setCanManageOwner] = useState(false);
@@ -347,114 +348,50 @@ export default function LeadsBoardPage() {
         }
       />
 
-      <div className="sticky top-[68px] z-20 space-y-2 rounded-2xl border border-zinc-200 bg-zinc-100/80 p-2 backdrop-blur md:top-[72px]">
-        <FilterCard
-          actions={
-            <>
-              <Button onClick={() => applyFiltersToUrl(filters)}>Áp dụng</Button>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setFilters(EMPTY_FILTERS);
-                  applyFiltersToUrl(EMPTY_FILTERS);
-                }}
-              >
-                Xóa
-              </Button>
-            </>
-          }
-        >
-          <div className="grid gap-2 md:grid-cols-6">
-            <div className="md:col-span-2">
-              <Input
-                value={filters.q}
-                placeholder="Tìm kiếm tên/SĐT"
-                onChange={(e) => setFilters((s) => ({ ...s, q: e.target.value }))}
-              />
-            </div>
-            <Input
-              value={filters.source}
-              placeholder="Nguồn"
-              onChange={(e) => setFilters((s) => ({ ...s, source: e.target.value }))}
-            />
-            <Input
-              value={filters.channel}
-              placeholder="Kênh"
-              onChange={(e) => setFilters((s) => ({ ...s, channel: e.target.value }))}
-            />
-            <Input
-              value={filters.licenseType}
-              placeholder="Hạng bằng"
-              onChange={(e) => setFilters((s) => ({ ...s, licenseType: e.target.value }))}
-            />
-            {canManageOwner ? (
-              <Select value={filters.ownerId} onChange={(e) => setFilters((s) => ({ ...s, ownerId: e.target.value }))}>
-                <option value="">Tất cả người phụ trách</option>
-                {owners.map((owner) => (
-                  <option key={owner.id} value={owner.id}>
-                    {owner.name || owner.email}
-                  </option>
-                ))}
-              </Select>
-            ) : !isTelesales ? (
-              <Input
-                value={filters.ownerId}
-                placeholder="Mã người phụ trách"
-                onChange={(e) => setFilters((s) => ({ ...s, ownerId: e.target.value }))}
-              />
-            ) : null}
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <Button variant="ghost" onClick={() => setShowAdvancedFilter((v) => !v)}>
-              {showAdvancedFilter ? "Ẩn bộ lọc nâng cao" : "Bộ lọc nâng cao"}
-            </Button>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  const today = dateYmdLocal(new Date());
-                  const next = { ...filters, createdFrom: today, createdTo: today };
-                  setFilters(next);
-                  applyFiltersToUrl(next);
-                }}
-              >
-                Hôm nay
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  const now = new Date();
-                  const start = new Date(now);
-                  start.setDate(now.getDate() - 6);
-                  const next = { ...filters, createdFrom: dateYmdLocal(start), createdTo: dateYmdLocal(now) };
-                  setFilters(next);
-                  applyFiltersToUrl(next);
-                }}
-              >
-                Tuần này
-              </Button>
-            </div>
-          </div>
-
-          {showAdvancedFilter ? (
-            <div className="grid gap-2 md:grid-cols-4">
-              <Input
-                type="date"
-                value={filters.createdFrom}
-                onChange={(e) => setFilters((s) => ({ ...s, createdFrom: e.target.value }))}
-              />
-              <Input
-                type="date"
-                value={filters.createdTo}
-                onChange={(e) => setFilters((s) => ({ ...s, createdTo: e.target.value }))}
-              />
-              <div className="md:col-span-2 text-xs text-zinc-500">
-                Gợi ý: dùng bộ lọc ngày để xem lead mới trong ngày/tuần và giảm nhiễu khi theo dõi pipeline.
-              </div>
-            </div>
+      <div className="sticky top-[68px] z-20 space-y-2 rounded-[16px] border border-[var(--border)] bg-zinc-100/90 p-2 backdrop-blur md:top-[72px]">
+        <div className="surface flex flex-wrap items-center gap-2 px-3 py-2">
+          <Button variant="secondary" onClick={() => setFilterOpen(true)}>
+            Bộ lọc
+          </Button>
+          {filters.q ? <Badge text={`Từ khóa: ${filters.q}`} tone="primary" /> : null}
+          {filters.source ? <Badge text={`Nguồn: ${filters.source}`} tone="accent" /> : null}
+          {filters.channel ? <Badge text={`Kênh: ${filters.channel}`} tone="accent" /> : null}
+          {filters.licenseType ? <Badge text={`Hạng bằng: ${filters.licenseType}`} tone="primary" /> : null}
+          {filters.createdFrom || filters.createdTo ? (
+            <Badge text={`Ngày: ${filters.createdFrom || "..."} - ${filters.createdTo || "..."}`} tone="neutral" />
           ) : null}
-        </FilterCard>
+          <div className="ml-auto flex items-center gap-2">
+            <Button variant="secondary" onClick={() => applyFiltersToUrl(filters)}>
+              Áp dụng
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setFilters(EMPTY_FILTERS);
+                applyFiltersToUrl(EMPTY_FILTERS);
+              }}
+            >
+              Xóa lọc
+            </Button>
+          </div>
+        </div>
+
+        <div className="surface flex gap-2 overflow-x-auto p-2 md:hidden">
+          {STATUSES.map((status) => (
+            <button
+              key={status}
+              type="button"
+              onClick={() => setMobileStatus(status)}
+              className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium ${
+                mobileStatus === status
+                  ? "bg-slate-900 text-white"
+                  : "border border-zinc-300 bg-white text-zinc-700"
+              }`}
+            >
+              {STATUS_LABELS[status] || status}
+            </button>
+          ))}
+        </div>
       </div>
 
       {error ? <Alert type="error" message={error} /> : null}
@@ -469,7 +406,9 @@ export default function LeadsBoardPage() {
               return (
                 <section
                   key={status}
-                  className="w-[320px] shrink-0 rounded-2xl border border-zinc-200 bg-zinc-100/70 p-2"
+                  className={`w-[320px] shrink-0 rounded-2xl border border-zinc-200 bg-zinc-100/70 p-2 ${
+                    mobileStatus === status ? "block" : "hidden md:block"
+                  }`}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={() => onDrop(status)}
                 >
@@ -590,6 +529,114 @@ export default function LeadsBoardPage() {
           </div>
         </div>
       )}
+
+      <Modal
+        open={filterOpen}
+        title="Bộ lọc Kanban"
+        description="Thiết lập điều kiện lọc để giảm nhiễu khi theo dõi pipeline"
+        onClose={() => setFilterOpen(false)}
+      >
+        <div className="space-y-4">
+          <FilterCard title="Lọc nhanh">
+            <div className="grid gap-2 md:grid-cols-2">
+              <Input
+                value={filters.q}
+                placeholder="Tìm kiếm tên/SĐT"
+                onChange={(e) => setFilters((s) => ({ ...s, q: e.target.value }))}
+              />
+              <Input
+                value={filters.source}
+                placeholder="Nguồn"
+                onChange={(e) => setFilters((s) => ({ ...s, source: e.target.value }))}
+              />
+              <Input
+                value={filters.channel}
+                placeholder="Kênh"
+                onChange={(e) => setFilters((s) => ({ ...s, channel: e.target.value }))}
+              />
+              <Input
+                value={filters.licenseType}
+                placeholder="Hạng bằng"
+                onChange={(e) => setFilters((s) => ({ ...s, licenseType: e.target.value }))}
+              />
+              {canManageOwner ? (
+                <Select value={filters.ownerId} onChange={(e) => setFilters((s) => ({ ...s, ownerId: e.target.value }))}>
+                  <option value="">Tất cả người phụ trách</option>
+                  {owners.map((owner) => (
+                    <option key={owner.id} value={owner.id}>
+                      {owner.name || owner.email}
+                    </option>
+                  ))}
+                </Select>
+              ) : !isTelesales ? (
+                <Input
+                  value={filters.ownerId}
+                  placeholder="Mã người phụ trách"
+                  onChange={(e) => setFilters((s) => ({ ...s, ownerId: e.target.value }))}
+                />
+              ) : null}
+            </div>
+          </FilterCard>
+
+          <FilterCard title="Khoảng ngày">
+            <div className="grid gap-2 md:grid-cols-2">
+              <Input
+                type="date"
+                value={filters.createdFrom}
+                onChange={(e) => setFilters((s) => ({ ...s, createdFrom: e.target.value }))}
+              />
+              <Input
+                type="date"
+                value={filters.createdTo}
+                onChange={(e) => setFilters((s) => ({ ...s, createdTo: e.target.value }))}
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  const today = dateYmdLocal(new Date());
+                  setFilters((s) => ({ ...s, createdFrom: today, createdTo: today }));
+                }}
+              >
+                Hôm nay
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  const now = new Date();
+                  const start = new Date(now);
+                  start.setDate(now.getDate() - 6);
+                  setFilters((s) => ({ ...s, createdFrom: dateYmdLocal(start), createdTo: dateYmdLocal(now) }));
+                }}
+              >
+                Tuần này
+              </Button>
+            </div>
+          </FilterCard>
+
+          <div className="sticky bottom-0 flex justify-end gap-2 border-t border-zinc-200 bg-white pt-3">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setFilters(EMPTY_FILTERS);
+                setFilterOpen(false);
+                applyFiltersToUrl(EMPTY_FILTERS);
+              }}
+            >
+              Xóa lọc
+            </Button>
+            <Button
+              onClick={() => {
+                setFilterOpen(false);
+                applyFiltersToUrl(filters);
+              }}
+            >
+              Áp dụng
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         open={eventOpen}
