@@ -10,6 +10,7 @@ STARTED_SERVER=0
 DEV_PID=""
 COOKIE_JAR="/tmp/thayduy-crm-verify-cookie.txt"
 STUDENT_COOKIE_JAR="/tmp/thayduy-crm-verify-student-cookie.txt"
+TELE_COOKIE_JAR="/tmp/thayduy-crm-verify-tele-cookie.txt"
 CALLBACK_SECRET="${N8N_CALLBACK_SECRET:-verify-callback-secret}"
 export N8N_CALLBACK_SECRET="$CALLBACK_SECRET"
 CRON_SECRET_VALUE="${CRON_SECRET:-}"
@@ -33,6 +34,7 @@ cleanup() {
   fi
   rm -f "$COOKIE_JAR" >/dev/null 2>&1 || true
   rm -f "$STUDENT_COOKIE_JAR" >/dev/null 2>&1 || true
+  rm -f "$TELE_COOKIE_JAR" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
@@ -138,6 +140,12 @@ if [[ -f "src/app/(app)/admin/ops/page.tsx" ]]; then
   OPS_HTTP_CODE="$(curl -sS -o /tmp/thayduy-crm-verify-admin-ops.html -w '%{http_code}' "$BASE_URL/admin/ops" -b "$COOKIE_JAR")"
   [[ "$OPS_HTTP_CODE" == "200" ]] || fail "Admin ops route failed with status $OPS_HTTP_CODE"
   log "admin/ops HTML route OK"
+fi
+
+if [[ -f "src/app/(app)/admin/n8n/page.tsx" ]]; then
+  N8N_ADMIN_HTTP_CODE="$(curl -sS -o /tmp/thayduy-crm-verify-admin-n8n.html -w '%{http_code}' "$BASE_URL/admin/n8n" -b "$COOKIE_JAR")"
+  [[ "$N8N_ADMIN_HTTP_CODE" == "200" ]] || fail "Admin n8n route failed with status $N8N_ADMIN_HTTP_CODE"
+  log "admin/n8n HTML route OK"
 fi
 
 if [[ -f "src/app/(app)/hr/kpi/page.tsx" ]]; then
@@ -249,6 +257,25 @@ if [[ -n "$USER_ID" && -n "$BRANCH_ID" ]]; then
   curl -sS "$BASE_URL/api/users?page=1&pageSize=20&branchId=$BRANCH_ID" -H "Authorization: Bearer $TOKEN" \
   | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!Array.isArray(o.items)||o.items.length===0){process.exit(1)}; if(!o.items.some(i=>i.branch?.id)){process.exit(1)}'
   log "users branch assignment/list OK"
+fi
+
+if [[ -f "src/app/(app)/admin/n8n/page.tsx" && -n "$USER_A_EMAIL" ]]; then
+  curl -sS -X POST "$BASE_URL/api/auth/login" \
+    -c "$TELE_COOKIE_JAR" \
+    -H 'Content-Type: application/json' \
+    -d "{\"email\":\"$USER_A_EMAIL\",\"password\":\"Verify@123456\"}" \
+  | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!(o.accessToken||o.token)){process.exit(1)}'
+  N8N_TELE_HTTP_CODE="$(curl -sS -D /tmp/thayduy-crm-verify-admin-n8n-tele.headers -o /tmp/thayduy-crm-verify-admin-n8n-tele.html -w '%{http_code}' "$BASE_URL/admin/n8n" -b "$TELE_COOKIE_JAR")"
+  if [[ "$N8N_TELE_HTTP_CODE" == "302" || "$N8N_TELE_HTTP_CODE" == "307" ]]; then
+    grep -qi "location: .*leads" /tmp/thayduy-crm-verify-admin-n8n-tele.headers || fail "Telesales redirect from /admin/n8n should point to /leads"
+  elif [[ "$N8N_TELE_HTTP_CODE" == "200" ]]; then
+    if grep -q "Luồng n8n" /tmp/thayduy-crm-verify-admin-n8n-tele.html; then
+      fail "Telesales must not access /admin/n8n content"
+    fi
+  else
+    fail "Unexpected status for telesales /admin/n8n: $N8N_TELE_HTTP_CODE"
+  fi
+  log "admin/n8n non-admin guard OK"
 fi
 
 if route_exists "health/db"; then

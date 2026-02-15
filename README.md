@@ -285,6 +285,14 @@ curl -sS -X POST http://localhost:3000/api/worker/outbound \
   - `/admin/ops`
   - Hiển thị trạng thái `OK/WARNING/CRITICAL`, gap KPI và checklist gợi ý ưu tiên.
 
+## Luồng n8n (admin)
+
+- Trang runbook nội bộ: `/admin/n8n` (admin-only).
+- API cấp dữ liệu workflow cho trang:
+  - `GET /api/admin/n8n/workflows` (cookie session + admin role).
+- Tài liệu chi tiết copy/paste payload + cURL:
+  - `docs/N8N_WORKFLOWS.md`.
+
 ## KPI nhân sự (theo từng user)
 
 - Mục tiêu: admin thiết lập KPI riêng theo nhân viên và thời gian hiệu lực.
