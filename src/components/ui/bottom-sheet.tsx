@@ -40,14 +40,14 @@ export function BottomSheet({ open, onOpenChange, title, children, footer }: Bot
     <div className="fixed inset-0 z-50 md:hidden">
       <button
         type="button"
-        className="absolute inset-0 bg-black/30 backdrop-blur-[1px]"
+        className="absolute inset-0 bg-black/30 backdrop-blur-[1px] animate-[fade-in_180ms_ease-out]"
         onClick={() => onOpenChange(false)}
         aria-label="Đóng bộ lọc"
       />
       <div
         ref={panelRef}
         tabIndex={-1}
-        className="absolute bottom-0 left-0 right-0 rounded-t-[20px] border border-zinc-200 bg-white p-4 shadow-2xl outline-none"
+        className="absolute bottom-0 left-0 right-0 rounded-t-[20px] border border-zinc-200 bg-white p-4 shadow-2xl outline-none animate-[sheet-up_220ms_ease-out]"
       >
         <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-zinc-300" />
         <div className="mb-3 flex items-center justify-between gap-2">

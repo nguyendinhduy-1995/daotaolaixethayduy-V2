@@ -56,3 +56,11 @@
 - Chuẩn UI:
   - Mobile-first, tap target tối thiểu 44px.
   - Header sticky, filter dạng bottom sheet, card list trên mobile; desktop giữ table hiện có.
+- Trang đã áp dụng thêm pattern trong đợt này:
+  - `/admin/tuition-plans`
+  - `/marketing`
+  - `/automation/logs`
+- Polish iOS/Notion:
+  - Card mobile có hover/tap feedback nhẹ.
+  - Bottom sheet có animation mở mượt + footer sticky.
+  - Tăng độ tương phản topbar mobile và hạn chế overflow ngang.

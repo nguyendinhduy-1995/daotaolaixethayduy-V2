@@ -23,7 +23,7 @@ export function QuickSearchRow({
 }: QuickSearchRowProps) {
   return (
     <div className="space-y-2 md:hidden">
-      <div className="surface flex items-center gap-2 p-2">
+      <div className="surface flex items-center gap-2 p-2 transition-shadow duration-200">
         <Input
           className="min-h-11"
           placeholder={placeholder}
@@ -38,4 +38,3 @@ export function QuickSearchRow({
     </div>
   );
 }
-

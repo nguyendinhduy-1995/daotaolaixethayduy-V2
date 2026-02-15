@@ -32,7 +32,7 @@ export function AdminCardItem({
   children,
 }: AdminCardItemProps) {
   return (
-    <article className="surface rounded-2xl p-3 transition-transform active:scale-[0.99]">
+    <article className="surface rounded-2xl p-3 transition duration-200 ease-out hover:-translate-y-[1px] hover:shadow-md active:scale-[0.99]">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-slate-900">{title}</p>
@@ -54,4 +54,3 @@ export function AdminCardItem({
     </article>
   );
 }
-
