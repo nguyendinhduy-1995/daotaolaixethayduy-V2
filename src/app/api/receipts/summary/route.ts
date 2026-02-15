@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-response";
 import { requireRouteAuth } from "@/lib/route-auth";
+import { isAdminRole } from "@/lib/admin-auth";
 import { KpiDateError, resolveKpiDateParam } from "@/lib/services/kpi-daily";
 
 function dayRangeInHoChiMinh(dateStr: string) {
@@ -20,7 +21,18 @@ export async function GET(req: Request) {
     const { start, end } = dayRangeInHoChiMinh(date);
 
     const agg = await prisma.receipt.aggregate({
-      where: { receivedAt: { gte: start, lte: end } },
+      where: {
+        receivedAt: { gte: start, lte: end },
+        ...(!isAdminRole(authResult.auth.role)
+          ? {
+              student: {
+                lead: {
+                  ownerId: authResult.auth.sub,
+                },
+              },
+            }
+          : {}),
+      },
       _sum: { amount: true },
       _count: { id: true },
     });

@@ -3,6 +3,7 @@ import type { ExamResult, Prisma, StudyStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-response";
 import { requireRouteAuth } from "@/lib/route-auth";
+import { isAdminRole } from "@/lib/admin-auth";
 
 const STUDY_STATUSES: StudyStatus[] = ["studying", "paused", "done"];
 const EXAM_RESULTS: ExamResult[] = ["pass", "fail"];
@@ -48,17 +49,20 @@ export async function GET(req: Request) {
       return jsonError(400, "VALIDATION_ERROR", "Invalid studyStatus");
     }
 
+    const leadFilter: Prisma.LeadWhereInput = {
+      ...(!isAdminRole(authResult.auth.role) ? { ownerId: authResult.auth.sub } : {}),
+      ...(q
+        ? {
+            OR: [{ fullName: { contains: q, mode: "insensitive" } }, { phone: { contains: q, mode: "insensitive" } }],
+          }
+        : {}),
+    };
+
     const where: Prisma.StudentWhereInput = {
       ...(courseId ? { courseId } : {}),
       ...(leadId ? { leadId } : {}),
       ...(studyStatus ? { studyStatus } : {}),
-      ...(q
-        ? {
-            lead: {
-              OR: [{ fullName: { contains: q, mode: "insensitive" } }, { phone: { contains: q, mode: "insensitive" } }],
-            },
-          }
-        : {}),
+      ...(Object.keys(leadFilter).length > 0 ? { lead: leadFilter } : {}),
     };
 
     const [items, total] = await Promise.all([
@@ -104,8 +108,14 @@ export async function POST(req: Request) {
       return jsonError(400, "VALIDATION_ERROR", "Invalid examResult");
     }
 
-    const lead = await prisma.lead.findUnique({ where: { id: body.leadId }, select: { id: true } });
+    const lead = await prisma.lead.findUnique({
+      where: { id: body.leadId },
+      select: { id: true, ownerId: true },
+    });
     if (!lead) return jsonError(404, "NOT_FOUND", "Lead not found");
+    if (!isAdminRole(authResult.auth.role) && lead.ownerId !== authResult.auth.sub) {
+      return jsonError(403, "AUTH_FORBIDDEN", "Forbidden");
+    }
 
     if (body.courseId) {
       const course = await prisma.course.findUnique({ where: { id: body.courseId }, select: { id: true } });

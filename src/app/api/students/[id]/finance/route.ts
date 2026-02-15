@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-response";
 import { requireRouteAuth } from "@/lib/route-auth";
-import { isTelesalesRole } from "@/lib/admin-auth";
+import { isAdminRole } from "@/lib/admin-auth";
 
 type RouteContext = { params: Promise<{ id: string }> | { id: string } };
 
@@ -22,7 +22,7 @@ export async function GET(req: Request, context: RouteContext) {
       },
     });
     if (!student) return jsonError(404, "NOT_FOUND", "Student not found");
-    if (isTelesalesRole(authResult.auth.role) && student.lead.ownerId !== authResult.auth.sub) {
+    if (!isAdminRole(authResult.auth.role) && student.lead.ownerId !== authResult.auth.sub) {
       return jsonError(403, "AUTH_FORBIDDEN", "Forbidden");
     }
 

@@ -278,6 +278,7 @@ else
 fi
 
 LEAD_ID=""
+LEAD_FOR_B=""
 LEAD_IDS=""
 if route_exists "leads"; then
   IDS=()
@@ -307,6 +308,12 @@ if route_exists "leads"; then
       -H 'Content-Type: application/json' \
       -d "{\"strategy\":\"round_robin\",\"leadIds\":[\"${IDS[2]}\",\"${IDS[3]}\",\"${IDS[4]}\"]}" \
     | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(typeof o.updated!=="number"||!Array.isArray(o.assigned)){process.exit(1)}'
+    LEAD_FOR_B="${IDS[2]}"
+    curl -sS -X POST "$BASE_URL/api/leads/assign" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H 'Content-Type: application/json' \
+      -d "{\"leadIds\":[\"$LEAD_FOR_B\"],\"ownerId\":\"$USER_B_ID\"}" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(typeof o.updated!=="number"){process.exit(1)}'
     TOKEN_A="$(
       curl -sS -X POST "$BASE_URL/api/auth/login" \
         -H 'Content-Type: application/json' \
@@ -315,9 +322,11 @@ if route_exists "leads"; then
     )"
     curl -sS "$BASE_URL/api/leads?page=1&pageSize=100" -H "Authorization: Bearer $TOKEN_A" \
     | node -e "const fs=require('fs'); const o=JSON.parse(fs.readFileSync(0,'utf8')); const aid='$USER_A_ID'; if(!Array.isArray(o.items)||o.items.length===0){process.exit(1)}; if(o.items.some(i=>i.ownerId!==aid)){process.exit(1)}"
+    FORBIDDEN_LEAD_CODE="$(curl -sS -o /tmp/thayduy-crm-verify-lead-forbidden.json -w '%{http_code}' "$BASE_URL/api/leads/$LEAD_FOR_B" -H "Authorization: Bearer $TOKEN_A")"
+    [[ "$FORBIDDEN_LEAD_CODE" == "403" ]] || fail "Owner scope failed for /api/leads/[id] (expected 403, got $FORBIDDEN_LEAD_CODE)"
     curl -sS "$BASE_URL/api/leads/$LEAD_ID/events?page=1&pageSize=20&sort=createdAt&order=desc" -H "Authorization: Bearer $TOKEN" \
     | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!Array.isArray(o.items)){process.exit(1)}; if(!o.items.some(i=>i.type==="OWNER_CHANGED")){process.exit(1)}'
-    log "leads assign/auto-assign + telesales scope + OWNER_CHANGED event OK"
+    log "leads assign/auto-assign + owner scope + OWNER_CHANGED event OK"
   fi
   log "leads create/list OK"
 else
@@ -340,6 +349,7 @@ else
 fi
 
 STUDENT_ID=""
+STUDENT_B_ID=""
 TUITION_PLAN_ID=""
 if route_exists "students" && [[ -n "$LEAD_ID" ]]; then
   STUDENT_ID="$(
@@ -349,6 +359,15 @@ if route_exists "students" && [[ -n "$LEAD_ID" ]]; then
       -d "{\"leadId\":\"$LEAD_ID\"${COURSE_ID:+,\"courseId\":\"$COURSE_ID\"},\"studyStatus\":\"studying\"}" \
     | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.student?.id){process.exit(1)}; process.stdout.write(o.student.id);'
   )"
+  if [[ -n "$LEAD_FOR_B" ]]; then
+    STUDENT_B_ID="$(
+      curl -sS -X POST "$BASE_URL/api/students" \
+        -H "Authorization: Bearer $TOKEN" \
+        -H 'Content-Type: application/json' \
+        -d "{\"leadId\":\"$LEAD_FOR_B\"${COURSE_ID:+,\"courseId\":\"$COURSE_ID\"},\"studyStatus\":\"studying\"}" \
+      | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.student?.id){process.exit(1)}; process.stdout.write(o.student.id);'
+    )"
+  fi
   log "students create OK"
 elif route_exists "students"; then
   log "SKIP (students create): missing lead id"
@@ -461,6 +480,21 @@ if route_exists "receipts" && [[ -n "$STUDENT_ID" ]]; then
   if route_exists "receipts/[id]"; then
     curl -sS "$BASE_URL/api/receipts/$RECEIPT_ID" -H "Authorization: Bearer $TOKEN" \
     | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.receipt?.id){process.exit(1)}'
+  fi
+  if [[ -n "${TOKEN_A:-}" && -n "$STUDENT_B_ID" ]]; then
+    RECEIPT_B_ID="$(
+      curl -sS -X POST "$BASE_URL/api/receipts" \
+        -H "Authorization: Bearer $TOKEN" \
+        -H 'Content-Type: application/json' \
+        -d "{\"studentId\":\"$STUDENT_B_ID\",\"amount\":200000,\"method\":\"cash\",\"receivedAt\":\"$DATE_HCM\"}" \
+      | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.receipt?.id){process.exit(1)}; process.stdout.write(o.receipt.id);'
+    )"
+    FORBIDDEN_STUDENT_CODE="$(curl -sS -o /tmp/thayduy-crm-verify-student-forbidden.json -w '%{http_code}' "$BASE_URL/api/students/$STUDENT_B_ID" -H "Authorization: Bearer $TOKEN_A")"
+    [[ "$FORBIDDEN_STUDENT_CODE" == "403" ]] || fail "Owner scope failed for /api/students/[id] (expected 403, got $FORBIDDEN_STUDENT_CODE)"
+    FORBIDDEN_RECEIPT_CODE="$(curl -sS -o /tmp/thayduy-crm-verify-receipt-forbidden.json -w '%{http_code}' "$BASE_URL/api/receipts/$RECEIPT_B_ID" -H "Authorization: Bearer $TOKEN_A")"
+    [[ "$FORBIDDEN_RECEIPT_CODE" == "403" ]] || fail "Owner scope failed for /api/receipts/[id] (expected 403, got $FORBIDDEN_RECEIPT_CODE)"
+    curl -sS "$BASE_URL/api/receipts?page=1&pageSize=200" -H "Authorization: Bearer $TOKEN_A" \
+    | node -e "const fs=require('fs'); const o=JSON.parse(fs.readFileSync(0,'utf8')); const rid='$RECEIPT_B_ID'; if(!Array.isArray(o.items)){process.exit(1)}; if(o.items.some(i=>i.id===rid)){process.exit(1)}"
   fi
   if route_exists "students/[id]/finance"; then
     curl -sS "$BASE_URL/api/students/$STUDENT_ID/finance" -H "Authorization: Bearer $TOKEN" \

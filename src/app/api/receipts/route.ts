@@ -3,6 +3,7 @@ import type { Prisma, ReceiptMethod } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-response";
 import { requireRouteAuth } from "@/lib/route-auth";
+import { isAdminRole } from "@/lib/admin-auth";
 import { KpiDateError, resolveKpiDateParam } from "@/lib/services/kpi-daily";
 
 type ReceiptInputMethod = "cash" | "bank" | "momo" | "other" | "bank_transfer" | "card";
@@ -62,9 +63,12 @@ export async function POST(req: Request) {
 
     const student = await prisma.student.findUnique({
       where: { id: body.studentId },
-      select: { id: true },
+      select: { id: true, lead: { select: { ownerId: true } } },
     });
     if (!student) return jsonError(404, "NOT_FOUND", "Student not found");
+    if (!isAdminRole(authResult.auth.role) && student.lead.ownerId !== authResult.auth.sub) {
+      return jsonError(403, "AUTH_FORBIDDEN", "Forbidden");
+    }
 
     const amount = parseAmount(body.amount);
     const method = parseReceiptMethod(body.method) ?? "cash";
@@ -136,10 +140,20 @@ export async function GET(req: Request) {
       ...(studentId ? { studentId } : {}),
       ...(method ? { method: parseReceiptMethod(method) } : {}),
       ...(receivedAt ? { receivedAt } : {}),
+      ...(!isAdminRole(authResult.auth.role)
+        ? {
+            student: {
+              lead: {
+                ownerId: authResult.auth.sub,
+              },
+            },
+          }
+        : {}),
       ...(q
         ? {
             student: {
               lead: {
+                ...(isAdminRole(authResult.auth.role) ? {} : { ownerId: authResult.auth.sub }),
                 OR: [{ fullName: { contains: q, mode: "insensitive" } }, { phone: { contains: q, mode: "insensitive" } }],
               },
             },

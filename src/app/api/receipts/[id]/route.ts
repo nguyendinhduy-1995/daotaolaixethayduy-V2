@@ -3,6 +3,7 @@ import type { ReceiptMethod } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-response";
 import { requireRouteAuth } from "@/lib/route-auth";
+import { isAdminRole } from "@/lib/admin-auth";
 import { KpiDateError, resolveKpiDateParam } from "@/lib/services/kpi-daily";
 
 type ReceiptInputMethod = "cash" | "bank" | "momo" | "other" | "bank_transfer" | "card";
@@ -45,8 +46,14 @@ export async function GET(req: Request, context: RouteContext) {
 
   try {
     const { id } = await Promise.resolve(context.params);
-    const receipt = await prisma.receipt.findUnique({ where: { id } });
+    const receipt = await prisma.receipt.findUnique({
+      where: { id },
+      include: { student: { include: { lead: { select: { ownerId: true } } } } },
+    });
     if (!receipt) return jsonError(404, "NOT_FOUND", "Receipt not found");
+    if (!isAdminRole(authResult.auth.role) && receipt.student.lead.ownerId !== authResult.auth.sub) {
+      return jsonError(403, "AUTH_FORBIDDEN", "Forbidden");
+    }
     return NextResponse.json({ receipt });
   } catch {
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
@@ -64,8 +71,14 @@ export async function PATCH(req: Request, context: RouteContext) {
       return jsonError(400, "VALIDATION_ERROR", "Invalid JSON body");
     }
 
-    const exists = await prisma.receipt.findUnique({ where: { id }, select: { id: true } });
+    const exists = await prisma.receipt.findUnique({
+      where: { id },
+      select: { id: true, student: { select: { lead: { select: { ownerId: true } } } } },
+    });
     if (!exists) return jsonError(404, "NOT_FOUND", "Receipt not found");
+    if (!isAdminRole(authResult.auth.role) && exists.student.lead.ownerId !== authResult.auth.sub) {
+      return jsonError(403, "AUTH_FORBIDDEN", "Forbidden");
+    }
 
     const data: {
       amount?: number;
