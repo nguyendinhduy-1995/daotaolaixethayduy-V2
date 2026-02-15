@@ -26,6 +26,22 @@ enum LeadStatus {
   LOST
 }
 
+enum LeadEventType {
+  NEW
+  HAS_PHONE
+  APPOINTED
+  ARRIVED
+  SIGNED
+  STUDYING
+  EXAMED
+  RESULT
+  LOST
+  CALLED
+  OWNER_CHANGED
+  ASSIGNED_OWNER
+  OTHER
+}
+
 enum CallOutcome {
   no_answer
   interested
@@ -261,7 +277,7 @@ model LeadMessage {
 model LeadEvent {
   id        String   @id @default(cuid())
   leadId    String
-  type      String
+  type      LeadEventType
   payload   Json?
   createdAt DateTime @default(now())
 
