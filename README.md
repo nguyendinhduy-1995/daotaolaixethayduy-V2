@@ -204,12 +204,11 @@ curl -sS -X POST http://localhost:3000/api/worker/outbound \
   "dateKey": "2026-02-15",
   "windowMinutes": 10,
   "metrics": {
-    "openMessages": 18,
-    "newData": 2
+    "messagesToday": 100,
+    "dataToday": 10
   },
   "targets": {
-    "newData": 4,
-    "openMessagesMax": 12
+    "dataRatePctTarget": 20
   }
 }
 ```

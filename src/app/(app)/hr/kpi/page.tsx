@@ -59,8 +59,7 @@ type FormState = {
   effectiveFrom: string;
   effectiveTo: string;
   isActive: boolean;
-  dataDaily: string;
-  openMessagesMax: string;
+  dataRatePctTarget: string;
   data: string;
   called: string;
   appointed: string;
@@ -78,8 +77,7 @@ const DEFAULT_FORM: FormState = {
   effectiveFrom: new Date().toISOString().slice(0, 10),
   effectiveTo: "",
   isActive: true,
-  dataDaily: "4",
-  openMessagesMax: "15",
+  dataRatePctTarget: "20",
   data: "4",
   called: "0",
   appointed: "4",
@@ -105,7 +103,8 @@ function roleLabel(role: Role) {
 
 function summarizeTargets(role: Role, targets: Record<string, number>) {
   if (role === "PAGE") {
-    return `Data/ngày: ${targets.dataDaily ?? 0} • Open tối đa: ${targets.openMessagesMax ?? 0}`;
+    const target = Number(targets.dataRatePctTarget ?? 0).toFixed(1);
+    return `Mục tiêu % ra Data: ${target}% (Data / Tin nhắn × 100)`;
   }
   const abs = `Data: ${targets.dataDaily ?? targets.data ?? 0} • Gọi: ${targets.calledDaily ?? targets.called ?? 0} • Hẹn: ${targets.appointedDaily ?? targets.appointed ?? 0} • Đến: ${targets.arrivedDaily ?? targets.arrived ?? 0} • Ký: ${targets.signedDaily ?? targets.signed ?? 0}`;
   const pct = `Gọi ${targets.calledPctGlobal ?? 0}% • Hẹn ${targets.appointedPctGlobal ?? 0}% • Đến ${targets.arrivedPctGlobal ?? 0}% • Ký ${targets.signedPctGlobal ?? 0}% (MTD)`;
@@ -217,8 +216,7 @@ export default function EmployeeKpiPage() {
       effectiveFrom: setting.effectiveFrom.slice(0, 10),
       effectiveTo: setting.effectiveTo ? setting.effectiveTo.slice(0, 10) : "",
       isActive: setting.isActive,
-      dataDaily: String(setting.targetsJson.dataDaily ?? 4),
-      openMessagesMax: String(setting.targetsJson.openMessagesMax ?? 15),
+      dataRatePctTarget: String(setting.targetsJson.dataRatePctTarget ?? 20),
       data: String(setting.targetsJson.dataDaily ?? setting.targetsJson.data ?? 4),
       called: String(setting.targetsJson.calledDaily ?? setting.targetsJson.called ?? 0),
       appointed: String(setting.targetsJson.appointedDaily ?? setting.targetsJson.appointed ?? 4),
@@ -248,15 +246,13 @@ export default function EmployeeKpiPage() {
 
       let targetsJson: Record<string, number>;
       if (form.role === "PAGE") {
-        const dataDaily = toNumber(form.dataDaily);
-        if (dataDaily === undefined) {
-          setError("VALIDATION_ERROR: Data/ngày phải là số không âm.");
+        const dataRatePctTarget = toNumber(form.dataRatePctTarget);
+        if (dataRatePctTarget === undefined || dataRatePctTarget < 0 || dataRatePctTarget > 100) {
+          setError("VALIDATION_ERROR: Mục tiêu % ra Data phải từ 0 đến 100.");
           return;
         }
-        const openMessagesMax = toNumber(form.openMessagesMax);
         targetsJson = {
-          dataDaily,
-          ...(openMessagesMax !== undefined ? { openMessagesMax } : {}),
+          dataRatePctTarget: Math.round(dataRatePctTarget * 10) / 10,
         };
       } else {
         targetsJson = {};
@@ -514,15 +510,20 @@ export default function EmployeeKpiPage() {
           </div>
 
           {form.role === "PAGE" ? (
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-3">
               <label className="space-y-1 text-sm text-zinc-700">
-                <span>Data/ngày</span>
-                <Input value={form.dataDaily} onChange={(e) => setForm((prev) => ({ ...prev, dataDaily: e.target.value }))} />
+                <span>Mục tiêu % ra Data</span>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step="0.1"
+                  placeholder="20"
+                  value={form.dataRatePctTarget}
+                  onChange={(e) => setForm((prev) => ({ ...prev, dataRatePctTarget: e.target.value }))}
+                />
               </label>
-              <label className="space-y-1 text-sm text-zinc-700">
-                <span>Open messages tối đa</span>
-                <Input value={form.openMessagesMax} onChange={(e) => setForm((prev) => ({ ...prev, openMessagesMax: e.target.value }))} />
-              </label>
+              <p className="text-xs text-zinc-500">% = Data / Tin nhắn × 100</p>
             </div>
           ) : (
             <div className="space-y-4">

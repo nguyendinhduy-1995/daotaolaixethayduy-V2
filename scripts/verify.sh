@@ -291,8 +291,8 @@ if route_exists "ops/pulse" && route_exists "admin/ops/pulse"; then
     curl -sS -X POST "$BASE_URL/api/ops/pulse" \
       -H "x-ops-secret: $OPS_SECRET_VALUE" \
       -H 'Content-Type: application/json' \
-      -d "{\"role\":\"PAGE\",\"dateKey\":\"$DATE_HCM\",\"windowMinutes\":10,\"metrics\":{\"openMessages\":24,\"newData\":2},\"targets\":{\"newData\":4,\"openMessagesMax\":12}}" \
-    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.ok!==true||!o.id||!o.status||!o.computedJson){process.exit(1)}'
+      -d "{\"role\":\"PAGE\",\"dateKey\":\"$DATE_HCM\",\"windowMinutes\":10,\"metrics\":{\"messagesToday\":100,\"dataToday\":10},\"targets\":{\"dataRatePctTarget\":20}}" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.ok!==true||!o.id||!o.status||!o.computedJson){process.exit(1)}; if(o.computedJson?.daily?.dataRatePctDaily!==10){process.exit(1)}'
 
     if [[ -n "$USER_A_ID" ]]; then
       curl -sS -X POST "$BASE_URL/api/ops/pulse" \

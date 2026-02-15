@@ -5,8 +5,8 @@ import { getKpiTargetsForUser } from "@/lib/services/employee-kpi";
 export type OpsStatus = "OK" | "WARNING" | "CRITICAL";
 
 type PageMetrics = {
-  openMessages: number;
-  newData: number;
+  messagesToday: number;
+  dataToday: number;
 };
 
 type TelesalesMetrics = {
@@ -42,6 +42,17 @@ export type OpsPulseComputed = {
   checklist: string[];
   suggestions: string[];
   generatedAt: string;
+  daily?: {
+    messagesToday: number;
+    dataToday: number;
+    dataRatePctDaily: number;
+  };
+  target?: {
+    dataRatePctTarget: number;
+  };
+  gap?: {
+    dataRatePct: number;
+  };
   period?: {
     type: "MTD";
     monthStartISO: string;
@@ -124,7 +135,7 @@ function parseNumberFromTargets(value: unknown, fallback: number) {
 function parsePercentFromTargets(value: unknown) {
   if (value === undefined || value === null || value === "") return undefined;
   if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
-  const rounded = Math.round(value);
+  const rounded = Math.round(value * 10) / 10;
   if (rounded < 0 || rounded > 100) return undefined;
   return rounded;
 }
@@ -137,8 +148,11 @@ function parseMetrics(role: OpsPulseRole, metrics: unknown) {
   if (role === "PAGE") {
     const source = metrics as Record<string, unknown>;
     return {
-      openMessages: toNonNegativeNumber(source.openMessages ?? 0, "metrics.openMessages"),
-      newData: toNonNegativeNumber(source.newData ?? 0, "metrics.newData"),
+      messagesToday: toNonNegativeNumber(
+        source.messagesToday ?? source.openMessages ?? 0,
+        "metrics.messagesToday"
+      ),
+      dataToday: toNonNegativeNumber(source.dataToday ?? source.newData ?? 0, "metrics.dataToday"),
     } satisfies PageMetrics;
   }
 
@@ -160,8 +174,7 @@ function normalizeTargets(input: unknown) {
 
 function defaultTargetsForPage(): PulseTargets {
   return {
-    newData: 4,
-    openMessagesMax: 15,
+    dataRatePctTarget: 20,
   };
 }
 
@@ -180,35 +193,34 @@ function computePageSuggestions(
   resolvedTargets: PulseTargets,
   targetSource: TargetSource
 ): OpsPulseComputed {
-  const targets: PulseTargets = {
-    newData: parseNumberFromTargets(resolvedTargets.newData, 4),
-    openMessagesMax: parseNumberFromTargets(resolvedTargets.openMessagesMax, 15),
-  };
+  const dataRatePctTarget = parsePercentFromTargets(resolvedTargets.dataRatePctTarget) ?? 20;
+  const dataRatePctDaily =
+    metrics.messagesToday > 0 ? Math.round((metrics.dataToday / metrics.messagesToday) * 1000) / 10 : 0;
+  const dataRateGap = Math.max(0, Math.round((dataRatePctTarget - dataRatePctDaily) * 10) / 10);
 
-  const gaps = {
-    newData: Math.max(0, targets.newData - metrics.newData),
-    openMessages: Math.max(0, metrics.openMessages - targets.openMessagesMax),
-  };
+  const targets: PulseTargets = { dataRatePctTarget };
+  const gaps = { dataRatePct: dataRateGap };
 
   let status: OpsStatus = "OK";
-  if (metrics.openMessages >= 30 || (gaps.openMessages >= 10 && gaps.newData > 0)) {
+  if (metrics.dataToday === 0 && metrics.messagesToday > 0) {
     status = "CRITICAL";
-  } else if (gaps.openMessages > 0 || gaps.newData > 0) {
+  } else if (dataRatePctDaily >= dataRatePctTarget) {
+    status = "OK";
+  } else if (dataRatePctDaily >= dataRatePctTarget * 0.8) {
     status = "WARNING";
+  } else {
+    status = "CRITICAL";
   }
 
   const suggestions: string[] = [];
-  if (gaps.openMessages > 0) {
-    suggestions.push(`Ưu tiên xử lý ${Math.ceil(gaps.openMessages)} hội thoại đang chờ trong 10 phút tới.`);
-  }
-  if (gaps.newData > 0) {
-    suggestions.push(`Cần bổ sung thêm ${Math.ceil(gaps.newData)} data mới để đạt nhịp mục tiêu.`);
-  }
-  if (metrics.openMessages > 0 && metrics.newData <= 0) {
-    suggestions.push("Giảm backlog bằng cách chốt nhanh hội thoại có tín hiệu cao trước.");
-  }
-  if (suggestions.length === 0) {
-    suggestions.push("Nhịp Trực Page đang ổn. Duy trì phản hồi nhanh và cập nhật data đều.");
+  if (status !== "OK") {
+    suggestions.push("Ưu tiên hội thoại mới trong 5 phút đầu để tăng tốc độ chuyển đổi.");
+    suggestions.push("Lọc lại hội thoại nóng và nhắc đội chốt thông tin thiếu ngay trong lượt đầu.");
+    suggestions.push("Dùng mẫu hỏi ngắn để xác thực nhu cầu rồi đẩy form Data ngay.");
+    suggestions.push("Rà soát ca trực: phân người theo nhóm hội thoại chưa phản hồi quá 10 phút.");
+    suggestions.push("Cuối mỗi 30 phút chốt lại tỷ lệ % ra Data và điều chỉnh kịch bản phản hồi.");
+  } else {
+    suggestions.push("Tỷ lệ ra Data trong ngày đang đạt mục tiêu. Duy trì nhịp phản hồi và chuẩn hóa kịch bản.");
   }
 
   return {
@@ -222,6 +234,17 @@ function computePageSuggestions(
     checklist: suggestions,
     suggestions,
     generatedAt: new Date().toISOString(),
+    daily: {
+      messagesToday: metrics.messagesToday,
+      dataToday: metrics.dataToday,
+      dataRatePctDaily,
+    },
+    target: {
+      dataRatePctTarget,
+    },
+    gap: {
+      dataRatePct: dataRateGap,
+    },
   };
 }
 
@@ -489,8 +512,10 @@ async function resolveTargets(input: OpsPulseInput): Promise<{
       if (input.role === "PAGE") {
         return {
           targets: {
-            newData: parseNumberFromTargets(settingTargets.dataDaily, 4),
-            openMessagesMax: parseNumberFromTargets(settingTargets.openMessagesMax, 15),
+            dataRatePctTarget:
+              parsePercentFromTargets(settingTargets.dataRatePctTarget) ??
+              parsePercentFromTargets(settingTargets.dataDaily) ??
+              20,
           },
           source: "user_setting",
         };
@@ -525,8 +550,10 @@ async function resolveTargets(input: OpsPulseInput): Promise<{
     if (input.role === "PAGE") {
       return {
         targets: {
-          newData: parseNumberFromTargets(input.targets.newData, 4),
-          openMessagesMax: parseNumberFromTargets(input.targets.openMessagesMax, 15),
+          dataRatePctTarget:
+            parsePercentFromTargets(input.targets.dataRatePctTarget) ??
+            parsePercentFromTargets(input.targets.newData) ??
+            20,
         },
         source: "payload",
       };

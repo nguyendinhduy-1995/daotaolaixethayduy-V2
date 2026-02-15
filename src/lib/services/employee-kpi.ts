@@ -19,7 +19,7 @@ export type EmployeeKpiListParams = {
   pageSize?: number;
 };
 
-const PAGE_KEYS = ["dataDaily", "openMessagesMax"] as const;
+const PAGE_KEYS = ["dataRatePctTarget", "dataDaily", "openMessagesMax"] as const;
 const TELESALES_ABS_KEYS = [
   "dataDaily",
   "calledDaily",
@@ -73,7 +73,7 @@ function normalizePercentTarget(value: unknown, key: string) {
   if (typeof value !== "number" || !Number.isFinite(value)) {
     throw new EmployeeKpiValidationError(`targetsJson.${key} must be a number`);
   }
-  const rounded = Math.round(value);
+  const rounded = Math.round(value * 10) / 10;
   if (rounded < 0 || rounded > 100) {
     throw new EmployeeKpiValidationError(`targetsJson.${key} must be between 0 and 100`);
   }
@@ -91,22 +91,20 @@ export function validateTargets(role: EmployeeKpiRole, targetsInput: unknown): E
   const raw = normalizeTargetsRecord(targetsInput);
 
   if (role === "PAGE") {
-    if (raw.dataDaily === undefined) {
-      throw new EmployeeKpiValidationError("PAGE targetsJson requires dataDaily");
+    if (raw.dataRatePctTarget === undefined && raw.dataDaily === undefined) {
+      throw new EmployeeKpiValidationError("PAGE targetsJson requires dataRatePctTarget");
     }
-    const normalized: EmployeeKpiTargets = {
-      dataDaily: normalizeTargetValue(raw.dataDaily, "dataDaily"),
-    };
-
-    if (raw.openMessagesMax !== undefined) {
-      normalized.openMessagesMax = normalizeTargetValue(raw.openMessagesMax, "openMessagesMax");
-    }
+    const normalized: EmployeeKpiTargets = {};
 
     for (const [key, value] of Object.entries(raw)) {
       if (![...PAGE_KEYS].includes(key as (typeof PAGE_KEYS)[number])) {
         continue;
       }
-      normalized[key] = normalizeTargetValue(value, key);
+      if (key === "dataRatePctTarget") {
+        normalized[key] = normalizePercentTarget(value, key);
+      } else {
+        normalized[key] = normalizeTargetValue(value, key);
+      }
     }
 
     return normalized;

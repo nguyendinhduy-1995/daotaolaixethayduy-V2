@@ -41,6 +41,17 @@ type OpsItem = {
     status?: OpsStatus;
     metrics?: Record<string, number>;
     gaps?: Record<string, number>;
+    daily?: {
+      messagesToday?: number;
+      dataToday?: number;
+      dataRatePctDaily?: number;
+    };
+    target?: {
+      dataRatePctTarget?: number;
+    };
+    gap?: {
+      dataRatePct?: number;
+    };
     suggestions?: string[];
     checklist?: string[];
   };
@@ -84,6 +95,11 @@ function statusTone(status?: OpsStatus) {
 
 function roleLabel(role: Role) {
   return role === "PAGE" ? "Trực Page" : "Telesales";
+}
+
+function formatPct(value: number | undefined) {
+  if (typeof value !== "number" || Number.isNaN(value)) return "0.0%";
+  return `${value.toFixed(1)}%`;
 }
 
 export default function AdminOpsPage() {
@@ -220,9 +236,14 @@ export default function AdminOpsPage() {
             <Badge text={latestPage?.computedJson?.status || "Chưa có"} tone={statusTone(latestPage?.computedJson?.status)} />
             <span className="text-xs text-zinc-500">{latestPage ? formatDateTimeVi(latestPage.createdAt) : "-"}</span>
           </div>
-          <div className="mt-3 text-sm text-zinc-700">
-            {latestPage?.computedJson?.suggestions?.[0] || "Chưa có snapshot mới."}
+          <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-zinc-700">
+            <div>Tin nhắn hôm nay: <span className="font-semibold">{latestPage?.computedJson?.daily?.messagesToday ?? 0}</span></div>
+            <div>Data hôm nay: <span className="font-semibold">{latestPage?.computedJson?.daily?.dataToday ?? 0}</span></div>
+            <div>% ra Data hôm nay: <span className="font-semibold">{formatPct(latestPage?.computedJson?.daily?.dataRatePctDaily)}</span></div>
+            <div>Target %: <span className="font-semibold">{formatPct(latestPage?.computedJson?.target?.dataRatePctTarget)}</span></div>
+            <div className="col-span-2">Gap %: <span className="font-semibold">{formatPct(latestPage?.computedJson?.gap?.dataRatePct)}</span></div>
           </div>
+          <div className="mt-2 text-sm text-zinc-700">{latestPage?.computedJson?.suggestions?.[0] || "Chưa có snapshot mới."}</div>
         </div>
 
         <div className="rounded-xl bg-white p-4 shadow-sm">
@@ -288,6 +309,11 @@ export default function AdminOpsPage() {
             >
               <div className="space-y-2">
                 <p className="text-xs text-zinc-500">Chi nhánh: {item.branch ? `${item.branch.name}${item.branch.code ? ` (${item.branch.code})` : ""}` : "-"}</p>
+                {item.role === "PAGE" ? (
+                  <p className="text-xs text-zinc-700">
+                    Tin nhắn: {item.computedJson?.daily?.messagesToday ?? 0} • Data: {item.computedJson?.daily?.dataToday ?? 0} • %: {formatPct(item.computedJson?.daily?.dataRatePctDaily)} • Target: {formatPct(item.computedJson?.target?.dataRatePctTarget)} • Gap: {formatPct(item.computedJson?.gap?.dataRatePct)}
+                  </p>
+                ) : null}
                 <p className="text-xs text-zinc-700">{item.computedJson?.suggestions?.[0] || "Không có gợi ý"}</p>
                 {Array.isArray(item.computedJson?.checklist) && item.computedJson.checklist.length > 0 ? (
                   <ul className="list-disc space-y-1 pl-4 text-xs text-zinc-700">
