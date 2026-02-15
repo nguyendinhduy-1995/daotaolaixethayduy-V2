@@ -235,7 +235,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             </div>
           </header>
 
-          <main className="mx-auto w-full max-w-[1200px] p-4 md:p-5 lg:p-6">{children}</main>
+          <main className="page-enter mx-auto w-full max-w-[1200px] p-4 md:p-5 lg:p-6">{children}</main>
         </div>
       </div>
     </div>

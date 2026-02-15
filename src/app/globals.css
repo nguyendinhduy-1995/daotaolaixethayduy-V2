@@ -27,6 +27,7 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans);
   text-rendering: optimizeLegibility;
+  overflow-x: hidden;
 }
 
 * {
@@ -47,4 +48,73 @@ body {
 
 .muted {
   color: var(--muted);
+}
+
+.page-enter {
+  animation: page-enter 200ms ease-out;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter {
+    animation: none;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background-image: linear-gradient(90deg, #e5e7eb 0%, #f3f4f6 50%, #e5e7eb 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s linear infinite;
+}
+
+@media (max-width: 767px) {
+  .table-mobile-cards thead {
+    display: none;
+  }
+
+  .table-mobile-cards table,
+  .table-mobile-cards tbody,
+  .table-mobile-cards tr,
+  .table-mobile-cards td {
+    display: block;
+    width: 100%;
+  }
+
+  .table-mobile-cards tbody {
+    padding: 8px;
+    display: grid;
+    gap: 10px;
+  }
+
+  .table-mobile-cards tr {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: var(--shadow);
+    padding: 8px 10px;
+  }
+
+  .table-mobile-cards td {
+    padding: 4px 2px !important;
+    border: 0;
+  }
 }

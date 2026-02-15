@@ -7,13 +7,17 @@ import { fetchJson, type ApiClientError } from "@/lib/api-client";
 import { clearToken, fetchMe, getToken } from "@/lib/auth-client";
 import { isAdminRole, isTelesalesRole } from "@/lib/admin-auth";
 import { Alert } from "@/components/ui/alert";
+import { MobileHeader } from "@/components/app/mobile-header";
+import { MobileToolbar } from "@/components/app/mobile-toolbar";
 import { Badge } from "@/components/ui/badge";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { FilterCard } from "@/components/ui/filter-card";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { PageHeader } from "@/components/ui/page-header";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { formatDateTimeVi } from "@/lib/date-utils";
 
@@ -329,26 +333,63 @@ export default function LeadsBoardPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        title="Bảng Kanban khách hàng"
-        subtitle="Theo dõi pipeline theo trạng thái"
-        actions={
-          <>
-            {canManageOwner ? <Badge text="Admin · Quản trị" tone="accent" /> : null}
-            <Button onClick={loadBoard}>
-              {loading ? (
-                <span className="inline-flex items-center gap-2">
-                  <Spinner /> Đang tải...
-                </span>
-              ) : (
-                "Làm mới"
-              )}
-            </Button>
-          </>
-        }
-      />
+      <MobileHeader title="Bảng Kanban khách hàng" subtitle="Theo dõi pipeline theo trạng thái" />
+      <div className="hidden md:block">
+        <PageHeader
+          title="Bảng Kanban khách hàng"
+          subtitle="Theo dõi pipeline theo trạng thái"
+          actions={
+            <>
+              {canManageOwner ? <Badge text="Admin · Quản trị" tone="accent" /> : null}
+              <Button onClick={loadBoard}>
+                {loading ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Spinner /> Đang tải...
+                  </span>
+                ) : (
+                  "Làm mới"
+                )}
+              </Button>
+            </>
+          }
+        />
+      </div>
 
       <div className="sticky top-[68px] z-20 space-y-2 rounded-[16px] border border-[var(--border)] bg-zinc-100/90 p-2 backdrop-blur md:top-[72px]">
+        <MobileToolbar
+          value={filters.q}
+          onChange={(value) => setFilters((s) => ({ ...s, q: value }))}
+          onOpenFilter={() => setFilterOpen(true)}
+          activeFilterCount={Object.values(filters).filter(Boolean).length}
+          quickActions={
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  const today = dateYmdLocal(new Date());
+                  const next = { ...filters, createdFrom: today, createdTo: today };
+                  setFilters(next);
+                  applyFiltersToUrl(next);
+                }}
+              >
+                Hôm nay
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  const now = new Date();
+                  const start = new Date(now);
+                  start.setDate(now.getDate() - 6);
+                  const next = { ...filters, createdFrom: dateYmdLocal(start), createdTo: dateYmdLocal(now) };
+                  setFilters(next);
+                  applyFiltersToUrl(next);
+                }}
+              >
+                Tuần này
+              </Button>
+            </>
+          }
+        />
         <div className="surface flex flex-wrap items-center gap-2 px-3 py-2">
           <Button variant="secondary" onClick={() => setFilterOpen(true)}>
             Bộ lọc
@@ -397,7 +438,16 @@ export default function LeadsBoardPage() {
       {error ? <Alert type="error" message={error} /> : null}
 
       {loading ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-6 text-zinc-600 shadow-sm">Đang tải bảng Kanban...</div>
+        <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center gap-2 text-sm text-zinc-600">
+            <Spinner /> Đang tải bảng Kanban...
+          </div>
+          <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+            <Skeleton className="h-24" />
+            <Skeleton className="h-24" />
+            <Skeleton className="h-24" />
+          </div>
+        </div>
       ) : (
         <div className="overflow-x-auto pb-1">
           <div className="flex min-w-max gap-3">
@@ -530,12 +580,28 @@ export default function LeadsBoardPage() {
         </div>
       )}
 
-      <Modal
-        open={filterOpen}
-        title="Bộ lọc Kanban"
-        description="Thiết lập điều kiện lọc để giảm nhiễu khi theo dõi pipeline"
-        onClose={() => setFilterOpen(false)}
-      >
+      <BottomSheet open={filterOpen} onOpenChange={setFilterOpen} title="Bộ lọc Kanban" footer={
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setFilters(EMPTY_FILTERS);
+              setFilterOpen(false);
+              applyFiltersToUrl(EMPTY_FILTERS);
+            }}
+          >
+            Xóa lọc
+          </Button>
+          <Button
+            onClick={() => {
+              setFilterOpen(false);
+              applyFiltersToUrl(filters);
+            }}
+          >
+            Áp dụng
+          </Button>
+        </div>
+      }>
         <div className="space-y-4">
           <FilterCard title="Lọc nhanh">
             <div className="grid gap-2 md:grid-cols-2">
@@ -615,28 +681,8 @@ export default function LeadsBoardPage() {
             </div>
           </FilterCard>
 
-          <div className="sticky bottom-0 flex justify-end gap-2 border-t border-zinc-200 bg-white pt-3">
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setFilters(EMPTY_FILTERS);
-                setFilterOpen(false);
-                applyFiltersToUrl(EMPTY_FILTERS);
-              }}
-            >
-              Xóa lọc
-            </Button>
-            <Button
-              onClick={() => {
-                setFilterOpen(false);
-                applyFiltersToUrl(filters);
-              }}
-            >
-              Áp dụng
-            </Button>
-          </div>
         </div>
-      </Modal>
+      </BottomSheet>
 
       <Modal
         open={eventOpen}

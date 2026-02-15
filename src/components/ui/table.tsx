@@ -9,7 +9,7 @@ type TableProps = {
 
 export function Table({ headers, children }: TableProps) {
   return (
-    <div className="overflow-hidden rounded-[16px] border border-[var(--border)] bg-white shadow-sm">
+    <div className="table-mobile-cards overflow-hidden rounded-[16px] border border-[var(--border)] bg-white shadow-sm">
       <div className="overflow-x-auto">
         <table className="min-w-full text-left text-sm">
           <thead className="bg-zinc-50/90 text-zinc-700">
