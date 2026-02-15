@@ -1,5 +1,6 @@
 import type { OpsPulseRole, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { getKpiTargetsForUser } from "@/lib/services/employee-kpi";
 
 export type OpsStatus = "OK" | "WARNING" | "CRITICAL";
 
@@ -33,6 +34,8 @@ export type OpsPulseComputed = {
   status: OpsStatus;
   metrics: PageMetrics | TelesalesMetrics;
   targets: PulseTargets;
+  resolvedTargets: PulseTargets;
+  targetSource: "user_setting" | "payload" | "default";
   gaps: Record<string, number>;
   checklist: string[];
   suggestions: string[];
@@ -112,10 +115,31 @@ function normalizeTargets(input: unknown) {
   return Object.fromEntries(entries.filter(([, value]) => typeof value === "number" && Number.isFinite(value) && value >= 0));
 }
 
-function computePageSuggestions(metrics: PageMetrics, rawTargets: Record<string, unknown> = {}): OpsPulseComputed {
+function defaultTargetsForPage(): PulseTargets {
+  return {
+    newData: 4,
+    openMessagesMax: 15,
+  };
+}
+
+function defaultTargetsForTelesales(): PulseTargets {
+  return {
+    data: 4,
+    called: 0,
+    appointed: 4,
+    arrived: 0,
+    signed: 0,
+  };
+}
+
+function computePageSuggestions(
+  metrics: PageMetrics,
+  resolvedTargets: PulseTargets,
+  targetSource: "user_setting" | "payload" | "default"
+): OpsPulseComputed {
   const targets: PulseTargets = {
-    newData: parseNumberFromTargets(rawTargets.newData, 4),
-    openMessagesMax: parseNumberFromTargets(rawTargets.openMessagesMax, 15),
+    newData: parseNumberFromTargets(resolvedTargets.newData, 4),
+    openMessagesMax: parseNumberFromTargets(resolvedTargets.openMessagesMax, 15),
   };
 
   const gaps = {
@@ -149,6 +173,8 @@ function computePageSuggestions(metrics: PageMetrics, rawTargets: Record<string,
     status,
     metrics,
     targets,
+    resolvedTargets: targets,
+    targetSource,
     gaps,
     checklist: suggestions,
     suggestions,
@@ -156,13 +182,17 @@ function computePageSuggestions(metrics: PageMetrics, rawTargets: Record<string,
   };
 }
 
-function computeTelesalesSuggestions(metrics: TelesalesMetrics, rawTargets: Record<string, unknown> = {}): OpsPulseComputed {
+function computeTelesalesSuggestions(
+  metrics: TelesalesMetrics,
+  resolvedTargets: PulseTargets,
+  targetSource: "user_setting" | "payload" | "default"
+): OpsPulseComputed {
   const targets: PulseTargets = {
-    data: parseNumberFromTargets(rawTargets.data, 4),
-    called: parseNumberFromTargets(rawTargets.called, 0),
-    appointed: parseNumberFromTargets(rawTargets.appointed, 4),
-    arrived: parseNumberFromTargets(rawTargets.arrived, 0),
-    signed: parseNumberFromTargets(rawTargets.signed, 0),
+    data: parseNumberFromTargets(resolvedTargets.data, 4),
+    called: parseNumberFromTargets(resolvedTargets.called, 0),
+    appointed: parseNumberFromTargets(resolvedTargets.appointed, 4),
+    arrived: parseNumberFromTargets(resolvedTargets.arrived, 0),
+    signed: parseNumberFromTargets(resolvedTargets.signed, 0),
   };
 
   const gaps = {
@@ -197,6 +227,8 @@ function computeTelesalesSuggestions(metrics: TelesalesMetrics, rawTargets: Reco
     status,
     metrics,
     targets,
+    resolvedTargets: targets,
+    targetSource,
     gaps,
     checklist: suggestions,
     suggestions,
@@ -229,17 +261,82 @@ export function normalizeOpsPulseInput(raw: unknown): OpsPulseInput {
   };
 }
 
-export function computeOpsPulse(input: OpsPulseInput): OpsPulseComputed {
+export function computeOpsPulse(
+  input: OpsPulseInput,
+  resolvedTargets: PulseTargets,
+  targetSource: "user_setting" | "payload" | "default"
+): OpsPulseComputed {
   const metrics = parseMetrics(input.role, input.metrics);
   if (input.role === "PAGE") {
-    return computePageSuggestions(metrics as PageMetrics, input.targets);
+    return computePageSuggestions(metrics as PageMetrics, resolvedTargets, targetSource);
   }
-  return computeTelesalesSuggestions(metrics as TelesalesMetrics, input.targets);
+  return computeTelesalesSuggestions(metrics as TelesalesMetrics, resolvedTargets, targetSource);
 }
 
 function floorToWindow(date: Date, windowMinutes: number) {
   const windowMs = windowMinutes * 60 * 1000;
   return new Date(Math.floor(date.getTime() / windowMs) * windowMs);
+}
+
+async function resolveTargets(input: OpsPulseInput): Promise<{
+  targets: PulseTargets;
+  source: "user_setting" | "payload" | "default";
+}> {
+  if (input.ownerId) {
+    const settingTargets = await getKpiTargetsForUser({
+      userId: input.ownerId,
+      role: input.role,
+      dateKey: input.dateKey,
+    });
+    if (settingTargets) {
+      if (input.role === "PAGE") {
+        return {
+          targets: {
+            newData: parseNumberFromTargets(settingTargets.dataDaily, 4),
+            openMessagesMax: parseNumberFromTargets(settingTargets.openMessagesMax, 15),
+          },
+          source: "user_setting",
+        };
+      }
+      return {
+        targets: {
+          data: parseNumberFromTargets(settingTargets.data, 4),
+          called: parseNumberFromTargets(settingTargets.called, 0),
+          appointed: parseNumberFromTargets(settingTargets.appointed, 4),
+          arrived: parseNumberFromTargets(settingTargets.arrived, 0),
+          signed: parseNumberFromTargets(settingTargets.signed, 0),
+        },
+        source: "user_setting",
+      };
+    }
+  }
+
+  if (input.targets && Object.keys(input.targets).length > 0) {
+    if (input.role === "PAGE") {
+      return {
+        targets: {
+          newData: parseNumberFromTargets(input.targets.newData, 4),
+          openMessagesMax: parseNumberFromTargets(input.targets.openMessagesMax, 15),
+        },
+        source: "payload",
+      };
+    }
+    return {
+      targets: {
+        data: parseNumberFromTargets(input.targets.data, 4),
+        called: parseNumberFromTargets(input.targets.called, 0),
+        appointed: parseNumberFromTargets(input.targets.appointed, 4),
+        arrived: parseNumberFromTargets(input.targets.arrived, 0),
+        signed: parseNumberFromTargets(input.targets.signed, 0),
+      },
+      source: "payload",
+    };
+  }
+
+  return {
+    targets: input.role === "PAGE" ? defaultTargetsForPage() : defaultTargetsForTelesales(),
+    source: "default",
+  };
 }
 
 export async function ingestOpsPulse(inputRaw: unknown) {
@@ -254,7 +351,8 @@ export async function ingestOpsPulse(inputRaw: unknown) {
     if (!branch) throw new OpsPulseValidationError("branchId not found");
   }
 
-  const computed = computeOpsPulse(input);
+  const targetResolution = await resolveTargets(input);
+  const computed = computeOpsPulse(input, targetResolution.targets, targetResolution.source);
   const now = new Date();
   const start = floorToWindow(now, input.windowMinutes);
   const end = new Date(start.getTime() + input.windowMinutes * 60 * 1000);
@@ -278,6 +376,8 @@ export async function ingestOpsPulse(inputRaw: unknown) {
     JSON.stringify({
       metrics: input.metrics,
       targets: input.targets ?? {},
+      resolvedTargets: targetResolution.targets,
+      targetSource: targetResolution.source,
     })
   ) as Prisma.InputJsonValue;
   const computedJson = JSON.parse(JSON.stringify(computed)) as Prisma.InputJsonValue;

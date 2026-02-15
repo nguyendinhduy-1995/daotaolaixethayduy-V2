@@ -115,6 +115,12 @@ if [[ -f "src/app/(app)/admin/ops/page.tsx" ]]; then
   log "admin/ops HTML route OK"
 fi
 
+if [[ -f "src/app/(app)/hr/kpi/page.tsx" ]]; then
+  HR_KPI_HTTP_CODE="$(curl -sS -o /tmp/thayduy-crm-verify-hr-kpi.html -w '%{http_code}' "$BASE_URL/hr/kpi" -b "$COOKIE_JAR")"
+  [[ "$HR_KPI_HTTP_CODE" == "200" ]] || fail "HR KPI route failed with status $HR_KPI_HTTP_CODE"
+  log "hr/kpi HTML route OK"
+fi
+
 if route_exists "auth/me"; then
   curl -sS "$BASE_URL/api/auth/me" -b "$COOKIE_JAR" \
   | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.user?.id){process.exit(1)}'
@@ -248,6 +254,15 @@ if route_exists "ops/pulse" && route_exists "admin/ops/pulse"; then
   if [[ -z "$OPS_SECRET_VALUE" ]]; then
     log "SKIP ops pulse: thiếu biến OPS_SECRET trong môi trường"
   else
+    if route_exists "admin/employee-kpi" && [[ -n "$USER_A_ID" ]]; then
+      curl -sS -X POST "$BASE_URL/api/admin/employee-kpi" \
+        -H "Authorization: Bearer $TOKEN" \
+        -H 'Content-Type: application/json' \
+        -d "{\"userId\":\"$USER_A_ID\",\"role\":\"TELESALES\",\"effectiveFrom\":\"$DATE_HCM\",\"targetsJson\":{\"called\":10,\"appointed\":6},\"isActive\":true}" \
+      | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.setting?.id){process.exit(1)}'
+      log "employee-kpi setting create OK"
+    fi
+
     curl -sS -X POST "$BASE_URL/api/ops/pulse" \
       -H "x-ops-secret: $OPS_SECRET_VALUE" \
       -H 'Content-Type: application/json' \
@@ -258,8 +273,8 @@ if route_exists "ops/pulse" && route_exists "admin/ops/pulse"; then
       curl -sS -X POST "$BASE_URL/api/ops/pulse" \
         -H "x-ops-secret: $OPS_SECRET_VALUE" \
         -H 'Content-Type: application/json' \
-        -d "{\"role\":\"TELESALES\",\"ownerId\":\"$USER_A_ID\",\"dateKey\":\"$DATE_HCM\",\"windowMinutes\":10,\"metrics\":{\"data\":4,\"called\":3,\"appointed\":1,\"arrived\":0,\"signed\":0},\"targets\":{\"appointed\":4}}" \
-      | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.ok!==true||!o.id||!o.status||!o.computedJson){process.exit(1)}'
+        -d "{\"role\":\"TELESALES\",\"ownerId\":\"$USER_A_ID\",\"dateKey\":\"$DATE_HCM\",\"windowMinutes\":10,\"metrics\":{\"data\":4,\"called\":3,\"appointed\":1,\"arrived\":0,\"signed\":0},\"targets\":{\"called\":1,\"appointed\":1}}" \
+      | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.ok!==true||!o.id||!o.status||!o.computedJson){process.exit(1)}; const rt=o.computedJson?.resolvedTargets||{}; if(rt.called!==10){process.exit(1)}'
     fi
 
     curl -sS "$BASE_URL/api/admin/ops/pulse?dateKey=$DATE_HCM&limit=20" -H "Authorization: Bearer $TOKEN" \

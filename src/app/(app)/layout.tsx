@@ -62,6 +62,7 @@ const ADMIN_ITEMS: NavItem[] = [
 ];
 
 const HR_ITEMS: NavItem[] = [
+  { href: "/hr/kpi", label: "KPI nhân sự", match: (p) => p.startsWith("/hr/kpi") },
   { href: "/hr/salary-profiles", label: "Hồ sơ lương", match: (p) => p.startsWith("/hr/salary-profiles") },
   { href: "/hr/attendance", label: "Chấm công", match: (p) => p.startsWith("/hr/attendance") },
   { href: "/hr/payroll", label: "Bảng lương", match: (p) => p.startsWith("/hr/payroll") },
@@ -99,6 +100,7 @@ function guessPageTitle(pathname: string) {
     { test: (p) => p.startsWith("/notifications"), title: "Thông báo", subtitle: "Danh sách việc cần xử lý" },
     { test: (p) => p.startsWith("/outbound"), title: "Gửi tin", subtitle: "Hàng đợi và lịch sử nhắc học viên" },
     { test: (p) => p.startsWith("/me/payroll"), title: "Lương của tôi", subtitle: "Xem phiếu lương theo tháng" },
+    { test: (p) => p.startsWith("/hr/kpi"), title: "KPI nhân sự", subtitle: "Thiết lập KPI theo nhân viên và thời gian hiệu lực" },
     { test: (p) => p.startsWith("/hr/salary-profiles"), title: "Hồ sơ lương", subtitle: "Quản lý mức lương theo nhân sự" },
     { test: (p) => p.startsWith("/hr/attendance"), title: "Chấm công", subtitle: "Theo dõi ngày công theo nhân sự" },
     { test: (p) => p.startsWith("/hr/payroll"), title: "Bảng lương", subtitle: "Tính và chốt lương theo kỳ" },

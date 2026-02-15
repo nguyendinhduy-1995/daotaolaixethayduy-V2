@@ -238,6 +238,23 @@ curl -sS -X POST http://localhost:3000/api/worker/outbound \
   - `/admin/ops`
   - Hiển thị trạng thái `OK/WARNING/CRITICAL`, gap KPI và checklist gợi ý ưu tiên.
 
+## KPI nhân sự (theo từng user)
+
+- Mục tiêu: admin thiết lập KPI riêng theo nhân viên và thời gian hiệu lực.
+- API admin:
+  - `GET /api/admin/employee-kpi?page=&pageSize=&role=&userId=&active=`
+  - `POST /api/admin/employee-kpi`
+  - `PATCH /api/admin/employee-kpi/[id]`
+- UI:
+  - `/hr/kpi`
+- Thứ tự ưu tiên target khi Ops Pulse tính KPI:
+  1. `EmployeeKpiSetting` theo user + role + ngày hiệu lực
+  2. `payload.targets` từ n8n
+  3. target mặc định hệ thống
+- `computedJson` của Ops Pulse lưu thêm:
+  - `resolvedTargets`
+  - `targetSource` (`user_setting` | `payload` | `default`)
+
 ## Marketing Meta Ads via n8n
 
 - Mục tiêu: nhận báo cáo chi phí Meta Ads theo ngày và số lượng học viên liên hệ để theo dõi CPL.
