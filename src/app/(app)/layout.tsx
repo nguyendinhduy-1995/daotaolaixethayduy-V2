@@ -5,6 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { clearToken, fetchMe, logoutSession, type MeResponse } from "@/lib/auth-client";
 import { isAdminRole } from "@/lib/admin-auth";
+import { MobileBottomNav } from "@/components/mobile/MobileBottomNav";
+import { MobileTopbar } from "@/components/mobile/MobileTopbar";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 
@@ -26,7 +28,7 @@ function roleLabel(role: string) {
 const MAIN_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Tổng quan", match: (p) => p.startsWith("/dashboard") },
   { href: "/leads", label: "Khách hàng", match: (p) => (p === "/leads" || p.startsWith("/leads/")) && !p.startsWith("/leads/board") },
-  { href: "/leads/board", label: "Bảng Kanban", match: (p) => p.startsWith("/leads/board") },
+  { href: "/leads/board", label: "Kanban", match: (p) => p.startsWith("/leads/board") },
   { href: "/kpi/daily", label: "KPI ngày", match: (p) => p.startsWith("/kpi/daily") },
   { href: "/students", label: "Học viên", match: (p) => p === "/students" || p.startsWith("/students/") },
   { href: "/courses", label: "Khóa học", match: (p) => p === "/courses" || p.startsWith("/courses/") },
@@ -34,7 +36,7 @@ const MAIN_ITEMS: NavItem[] = [
   { href: "/receipts", label: "Thu tiền", match: (p) => p.startsWith("/receipts") },
   { href: "/notifications", label: "Thông báo", match: (p) => p.startsWith("/notifications") },
   { href: "/outbound", label: "Gửi tin", match: (p) => p.startsWith("/outbound") },
-  { href: "/me/payroll", label: "Lương của tôi", match: (p) => p.startsWith("/me/payroll") },
+  { href: "/me/payroll", label: "Lương tôi", match: (p) => p.startsWith("/me/payroll") },
 ];
 
 const MARKETING_ITEMS: NavItem[] = [
@@ -143,6 +145,14 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   }
 
   const isAdmin = user ? isAdminRole(user.role) : false;
+  const mobileBottomMain = MAIN_ITEMS.filter((item) => ["/dashboard", "/leads", "/students", "/receipts"].includes(item.href));
+  const mobileMoreSections = [
+    { title: "Kinh doanh", items: MAIN_ITEMS.filter((item) => !mobileBottomMain.some((it) => it.href === item.href)) },
+    { title: "Vận hành", items: OPS_ITEMS.filter((item) => isAdmin || item.href === "/automation/logs") },
+    ...(isAdmin ? [{ title: "Marketing", items: MARKETING_ITEMS }] : []),
+    ...(isAdmin ? [{ title: "Quản trị", items: ADMIN_ITEMS }] : []),
+    ...(isAdmin ? [{ title: "Nhân sự", items: HR_ITEMS }] : []),
+  ];
 
   return (
     <div className="page min-h-screen">
@@ -207,21 +217,21 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         {menuOpen ? <div className="fixed inset-0 z-40 bg-black/30 lg:hidden" onClick={() => setMenuOpen(false)} aria-hidden="true" /> : null}
 
         <aside
-          className={`fixed inset-y-2 left-2 z-50 w-[86%] max-w-72 rounded-2xl border border-[var(--border)] bg-white px-4 py-5 shadow-xl transition-transform lg:hidden ${
+          className={`fixed inset-y-2 left-2 z-50 w-[88%] max-w-80 rounded-2xl border border-[var(--border)] bg-white px-4 py-5 shadow-xl transition-transform lg:hidden ${
             menuOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex items-start justify-between gap-3">
             <div>
               <p className="text-base font-semibold text-slate-900">Thầy Duy CRM</p>
-              <p className="text-xs text-zinc-500">Điều hướng nhanh</p>
+              <p className="text-xs text-zinc-500">{user ? `${user.name || user.email} • ${roleLabel(user.role)}` : "Điều hướng nhanh"}</p>
             </div>
             <Button variant="ghost" onClick={() => setMenuOpen(false)}>
               Đóng
             </Button>
           </div>
 
-          <nav className="space-y-4 overflow-y-auto pb-6">
+          <nav className="space-y-4 overflow-y-auto pb-20">
             <div className="space-y-1">
               {MAIN_ITEMS.map((item) => (
                 <NavLink key={item.href} item={item} pathname={pathname} onClick={() => setMenuOpen(false)} />
@@ -270,19 +280,31 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               </div>
             ) : null}
           </nav>
+
+          <div className="absolute right-4 bottom-4 left-4 border-t border-zinc-200 pt-3">
+            <Button className="w-full" variant="secondary" onClick={logout}>
+              Đăng xuất
+            </Button>
+          </div>
         </aside>
 
         <div className="min-w-0 flex-1">
-          <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-white/95 px-4 py-3 backdrop-blur md:px-5">
+          <MobileTopbar
+            title={pageMeta.title}
+            subtitle={pageMeta.subtitle}
+            onOpenMenu={() => setMenuOpen(true)}
+            rightAction={
+              <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+                {user ? roleLabel(user.role) : ""}
+              </span>
+            }
+          />
+
+          <header className="sticky top-0 z-30 hidden border-b border-[var(--border)] bg-white/95 px-4 py-3 backdrop-blur md:px-5 lg:block">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <Button variant="secondary" className="lg:hidden" onClick={() => setMenuOpen(true)}>
-                  Mở menu
-                </Button>
-                <div>
-                  <p className="text-lg font-semibold tracking-tight text-slate-900">{pageMeta.title}</p>
-                  <p className="text-xs text-zinc-500">{pageMeta.subtitle}</p>
-                </div>
+              <div>
+                <p className="text-lg font-semibold tracking-tight text-slate-900">{pageMeta.title}</p>
+                <p className="text-xs text-zinc-500">{pageMeta.subtitle}</p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="hidden rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 md:inline-flex">
@@ -295,9 +317,11 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             </div>
           </header>
 
-          <main className="page-enter mx-auto w-full max-w-[1200px] p-4 md:p-5 lg:p-6">{children}</main>
+          <main className="mx-auto w-full max-w-[1200px] px-3 py-3 pb-24 md:p-5 md:pb-5 lg:p-6">{children}</main>
         </div>
       </div>
+
+      <MobileBottomNav pathname={pathname} mainItems={mobileBottomMain} sections={mobileMoreSections} />
     </div>
   );
 }

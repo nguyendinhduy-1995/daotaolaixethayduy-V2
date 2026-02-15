@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { fetchJson, type ApiClientError } from "@/lib/api-client";
 import { clearToken, fetchMe, getToken } from "@/lib/auth-client";
@@ -17,6 +18,12 @@ import { Table } from "@/components/ui/table";
 import { DataTable } from "@/components/ui/data-table";
 import { FilterCard } from "@/components/ui/filter-card";
 import { PageHeader } from "@/components/ui/page-header";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { DataCard } from "@/components/mobile/DataCard";
+import { EmptyState } from "@/components/mobile/EmptyState";
+import { MobileFiltersSheet } from "@/components/mobile/MobileFiltersSheet";
+import { MobileHeader } from "@/components/app/mobile-header";
+import { MobileToolbar } from "@/components/app/mobile-toolbar";
 import { formatDateTimeVi } from "@/lib/date-utils";
 
 type Lead = {
@@ -70,6 +77,19 @@ type UsersResponse = { items: UserOption[] };
 
 const STATUS_OPTIONS = ["NEW", "HAS_PHONE", "APPOINTED", "ARRIVED", "SIGNED", "STUDYING", "EXAMED", "RESULT", "LOST"];
 const EVENT_OPTIONS = [...STATUS_OPTIONS, "CALLED"];
+
+const STATUS_LABELS: Record<string, string> = {
+  NEW: "Mới",
+  HAS_PHONE: "Đã có SĐT",
+  APPOINTED: "Đã hẹn",
+  ARRIVED: "Đã đến",
+  SIGNED: "Đã ghi danh",
+  STUDYING: "Đang học",
+  EXAMED: "Đã thi",
+  RESULT: "Có kết quả",
+  LOST: "Mất",
+  CALLED: "Đã gọi",
+};
 
 type Filters = {
   status: string;
@@ -130,6 +150,8 @@ export default function LeadsPage() {
   const [detailEvents, setDetailEvents] = useState<LeadEvent[]>([]);
   const [detailError, setDetailError] = useState("");
 
+  const [eventLeadId, setEventLeadId] = useState("");
+  const [eventOpen, setEventOpen] = useState(false);
   const [eventSaving, setEventSaving] = useState(false);
   const [eventForm, setEventForm] = useState({ type: "CALLED", note: "", meta: "" });
 
@@ -138,6 +160,8 @@ export default function LeadsPage() {
   const [assignLead, setAssignLead] = useState<Lead | null>(null);
   const [assignOwnerId, setAssignOwnerId] = useState("");
   const [assignSaving, setAssignSaving] = useState(false);
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const [mobileActionLead, setMobileActionLead] = useState<Lead | null>(null);
 
   const query = useMemo(() => {
     const params = new URLSearchParams();
@@ -281,9 +305,10 @@ export default function LeadsPage() {
         token,
         body: { status: pendingStatus.status },
       });
+      const updatedId = pendingStatus.id;
       setPendingStatus(null);
       await loadLeads();
-      if (detailLead?.id === pendingStatus.id) openDetail(pendingStatus.id);
+      if (detailLead?.id === updatedId) openDetail(updatedId);
     } catch (e) {
       const err = e as ApiClientError;
       if (!handleAuthError(err)) setError(formatError(err));
@@ -293,20 +318,23 @@ export default function LeadsPage() {
   }
 
   async function addEvent() {
-    if (!detailLead) return;
+    if (!eventLeadId) return;
     const token = getToken();
     if (!token) return;
     setEventSaving(true);
     try {
       const meta = eventForm.meta.trim() ? JSON.parse(eventForm.meta) : undefined;
-      await fetchJson(`/api/leads/${detailLead.id}/events`, {
+      await fetchJson(`/api/leads/${eventLeadId}/events`, {
         method: "POST",
         token,
         body: { type: eventForm.type, note: eventForm.note || undefined, meta },
       });
+      const currentLeadId = eventLeadId;
       setEventForm({ type: "CALLED", note: "", meta: "" });
-      await openDetail(detailLead.id);
+      setEventOpen(false);
+      setEventLeadId("");
       await loadLeads();
+      if (detailLead?.id === currentLeadId) openDetail(currentLeadId);
     } catch (e) {
       const err = e as ApiClientError;
       if (!handleAuthError(err)) setDetailError(formatError(err));
@@ -327,10 +355,11 @@ export default function LeadsPage() {
         token,
         body: { ownerId: assignOwnerId || null },
       });
+      const updatedId = assignLead.id;
       setAssignLead(null);
       setAssignOwnerId("");
       await loadLeads();
-      if (detailLead?.id === assignLead.id) openDetail(assignLead.id);
+      if (detailLead?.id === updatedId) openDetail(updatedId);
     } catch (e) {
       const err = e as ApiClientError;
       if (!handleAuthError(err)) setError(formatError(err));
@@ -339,102 +368,323 @@ export default function LeadsPage() {
     }
   }
 
+  const activeFilterCount = Object.values(filtersDraft).filter(Boolean).length;
+
   return (
     <div className="space-y-4">
-      <PageHeader
+      <MobileHeader
         title="Khách hàng"
-        subtitle="Quản lý dữ liệu lead và theo dõi trạng thái chuyển đổi"
-        actions={<Button onClick={() => setCreateOpen(true)}>Tạo mới</Button>}
+        subtitle="Danh sách và chuyển đổi trạng thái"
+        rightActions={<Button onClick={() => setCreateOpen(true)}>Tạo</Button>}
       />
+
+      <div className="hidden md:block">
+        <PageHeader
+          title="Khách hàng"
+          subtitle="Quản lý dữ liệu lead và theo dõi trạng thái chuyển đổi"
+          actions={<Button onClick={() => setCreateOpen(true)}>Tạo mới</Button>}
+        />
+      </div>
 
       {error ? <Alert type="error" message={error} /> : null}
 
-      <FilterCard
-        actions={
-          <>
-            <Button
-              onClick={() => {
-                setPage(1);
-                setFilters(filtersDraft);
-              }}
-            >
-              Áp dụng bộ lọc
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setFiltersDraft(INITIAL_FILTERS);
-                setFilters(INITIAL_FILTERS);
-                setPage(1);
-              }}
-            >
-              Làm mới
-            </Button>
-          </>
-        }
-      >
-        <div className="grid gap-2 md:grid-cols-4">
-        <Input
-          placeholder="Tìm kiếm tên/SĐT"
+      <div className="sticky top-[116px] z-20 rounded-2xl border border-zinc-200 bg-zinc-100/90 p-2 backdrop-blur md:hidden">
+        <MobileToolbar
           value={filtersDraft.q}
-          onChange={(e) => setFiltersDraft((s) => ({ ...s, q: e.target.value }))}
+          onChange={(value) => setFiltersDraft((s) => ({ ...s, q: value }))}
+          onOpenFilter={() => setMobileFilterOpen(true)}
+          activeFilterCount={activeFilterCount}
         />
-        <Select
-          value={filtersDraft.status}
-          onChange={(e) => setFiltersDraft((s) => ({ ...s, status: e.target.value }))}
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {filters.q ? <Badge text={`Từ khóa: ${filters.q}`} tone="primary" /> : null}
+          {filters.status ? <Badge text={`Trạng thái: ${STATUS_LABELS[filters.status] || filters.status}`} tone="accent" /> : null}
+          {filters.source ? <Badge text={`Nguồn: ${filters.source}`} tone="neutral" /> : null}
+        </div>
+      </div>
+
+      <div className="hidden md:block">
+        <FilterCard
+          actions={
+            <>
+              <Button
+                onClick={() => {
+                  setPage(1);
+                  setFilters(filtersDraft);
+                }}
+              >
+                Áp dụng bộ lọc
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setFiltersDraft(INITIAL_FILTERS);
+                  setFilters(INITIAL_FILTERS);
+                  setPage(1);
+                }}
+              >
+                Làm mới
+              </Button>
+            </>
+          }
         >
-          <option value="">Tất cả trạng thái</option>
-          {STATUS_OPTIONS.map((status) => (
-            <option key={status} value={status}>
-              {status}
-            </option>
-          ))}
-        </Select>
-        <Input
-          placeholder="Nguồn"
-          value={filtersDraft.source}
-          onChange={(e) => setFiltersDraft((s) => ({ ...s, source: e.target.value }))}
-        />
-        <Input
-          placeholder="Kênh"
-          value={filtersDraft.channel}
-          onChange={(e) => setFiltersDraft((s) => ({ ...s, channel: e.target.value }))}
-        />
-        <Input
-          placeholder="Hạng bằng"
-          value={filtersDraft.licenseType}
-          onChange={(e) => setFiltersDraft((s) => ({ ...s, licenseType: e.target.value }))}
-        />
-        {canManageOwner ? (
+          <div className="grid gap-2 md:grid-cols-4">
+            <Input
+              placeholder="Tìm kiếm tên/SĐT"
+              value={filtersDraft.q}
+              onChange={(e) => setFiltersDraft((s) => ({ ...s, q: e.target.value }))}
+            />
+            <Select
+              value={filtersDraft.status}
+              onChange={(e) => setFiltersDraft((s) => ({ ...s, status: e.target.value }))}
+            >
+              <option value="">Tất cả trạng thái</option>
+              {STATUS_OPTIONS.map((status) => (
+                <option key={status} value={status}>
+                  {STATUS_LABELS[status] || status}
+                </option>
+              ))}
+            </Select>
+            <Input
+              placeholder="Nguồn"
+              value={filtersDraft.source}
+              onChange={(e) => setFiltersDraft((s) => ({ ...s, source: e.target.value }))}
+            />
+            <Input
+              placeholder="Kênh"
+              value={filtersDraft.channel}
+              onChange={(e) => setFiltersDraft((s) => ({ ...s, channel: e.target.value }))}
+            />
+            <Input
+              placeholder="Hạng bằng"
+              value={filtersDraft.licenseType}
+              onChange={(e) => setFiltersDraft((s) => ({ ...s, licenseType: e.target.value }))}
+            />
+            {canManageOwner ? (
+              <Select
+                value={filtersDraft.ownerId}
+                onChange={(e) => setFiltersDraft((s) => ({ ...s, ownerId: e.target.value }))}
+              >
+                <option value="">Tất cả người phụ trách</option>
+                {owners.map((owner) => (
+                  <option key={owner.id} value={owner.id}>
+                    {owner.name || owner.email}
+                  </option>
+                ))}
+              </Select>
+            ) : !isTelesales ? (
+              <Input
+                placeholder="Mã người phụ trách"
+                value={filtersDraft.ownerId}
+                onChange={(e) => setFiltersDraft((s) => ({ ...s, ownerId: e.target.value }))}
+              />
+            ) : null}
+            <Input
+              type="date"
+              value={filtersDraft.createdFrom}
+              onChange={(e) => setFiltersDraft((s) => ({ ...s, createdFrom: e.target.value }))}
+            />
+            <Input
+              type="date"
+              value={filtersDraft.createdTo}
+              onChange={(e) => setFiltersDraft((s) => ({ ...s, createdTo: e.target.value }))}
+            />
+            <div className="flex flex-wrap items-center gap-2 md:col-span-4">
+              <Select value={sort} onChange={(e) => setSort(e.target.value)}>
+                <option value="createdAt">Sắp xếp: Ngày tạo</option>
+                <option value="updatedAt">Sắp xếp: Cập nhật</option>
+                <option value="lastContactAt">Sắp xếp: Liên hệ gần nhất</option>
+              </Select>
+              <Select value={order} onChange={(e) => setOrder(e.target.value)}>
+                <option value="desc">Thứ tự: Mới đến cũ</option>
+                <option value="asc">Thứ tự: Cũ đến mới</option>
+              </Select>
+              <Select
+                value={String(pageSize)}
+                onChange={(e) => {
+                  setPage(1);
+                  setPageSize(Number(e.target.value));
+                }}
+              >
+                <option value="20">20 / trang</option>
+                <option value="50">50 / trang</option>
+                <option value="100">100 / trang</option>
+              </Select>
+            </div>
+          </div>
+        </FilterCard>
+      </div>
+
+      <div className="space-y-2 md:hidden">
+        {loading ? (
+          <div className="surface rounded-2xl px-3 py-6 text-center text-sm text-zinc-600">Đang tải dữ liệu khách hàng...</div>
+        ) : items.length === 0 ? (
+          <EmptyState title="Không có khách hàng" description="Thử nới bộ lọc hoặc tạo khách hàng mới." />
+        ) : (
+          items.map((lead) => (
+            <DataCard
+              key={lead.id}
+              title={lead.fullName || "Chưa có tên"}
+              subtitle={lead.phone || "Chưa có SĐT"}
+              badge={<Badge text={STATUS_LABELS[lead.status] || lead.status} tone="primary" />}
+              footer={
+                <>
+                  <Button variant="secondary" onClick={() => openDetail(lead.id)}>
+                    Chi tiết
+                  </Button>
+                  <Button variant="ghost" onClick={() => setMobileActionLead(lead)}>
+                    ...
+                  </Button>
+                </>
+              }
+            >
+              <div className="space-y-1 text-xs">
+                <p>
+                  <span className="text-zinc-500">Nguồn:</span> {lead.source || "-"} · {lead.channel || "-"}
+                </p>
+                <p>
+                  <span className="text-zinc-500">Phụ trách:</span> {lead.owner?.name || lead.owner?.email || "-"}
+                </p>
+                <p>
+                  <span className="text-zinc-500">Tạo lúc:</span> {formatDateTimeVi(lead.createdAt)}
+                </p>
+              </div>
+            </DataCard>
+          ))
+        )}
+      </div>
+
+      <div className="hidden md:block">
+        <DataTable
+          loading={loading}
+          isEmpty={!loading && items.length === 0}
+          emptyText="Không có dữ liệu khách hàng."
+        >
+          <Table headers={["Khách hàng", "SĐT", "Trạng thái", "Người phụ trách", "Nguồn/Kênh", "Ngày tạo", "Hành động"]}>
+            {items.map((lead) => (
+              <tr key={lead.id}>
+                <td className="px-3 py-2">
+                  <div className="font-medium text-zinc-900">{lead.fullName || "Chưa có tên"}</div>
+                  <div className="text-xs text-zinc-500">{lead.id}</div>
+                </td>
+                <td className="px-3 py-2">{lead.phone || "-"}</td>
+                <td className="px-3 py-2">
+                  <Badge text={STATUS_LABELS[lead.status] || lead.status} />
+                </td>
+                <td className="px-3 py-2 text-xs text-zinc-600">{lead.owner?.name || lead.owner?.email || "-"}</td>
+                <td className="px-3 py-2">
+                  <div>{lead.source || "-"}</div>
+                  <div className="text-xs text-zinc-500">{lead.channel || "-"}</div>
+                </td>
+                <td className="px-3 py-2 text-xs text-zinc-600">{formatDateTimeVi(lead.createdAt)}</td>
+                <td className="space-y-2 px-3 py-2">
+                  <Button variant="secondary" className="w-full" onClick={() => openDetail(lead.id)}>
+                    Mở
+                  </Button>
+                  {canManageOwner ? (
+                    <Button
+                      variant="secondary"
+                      className="w-full"
+                      onClick={() => {
+                        setAssignLead(lead);
+                        setAssignOwnerId(lead.ownerId || "");
+                      }}
+                    >
+                      Gán telesale
+                    </Button>
+                  ) : null}
+                  <Select value={lead.status} onChange={(e) => setPendingStatus({ id: lead.id, status: e.target.value })}>
+                    {STATUS_OPTIONS.map((status) => (
+                      <option key={status} value={status}>
+                        {STATUS_LABELS[status] || status}
+                      </option>
+                    ))}
+                  </Select>
+                </td>
+              </tr>
+            ))}
+          </Table>
+        </DataTable>
+      </div>
+
+      <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
+
+      <MobileFiltersSheet
+        open={mobileFilterOpen}
+        onOpenChange={setMobileFilterOpen}
+        title="Bộ lọc khách hàng"
+        onApply={() => {
+          setPage(1);
+          setFilters(filtersDraft);
+        }}
+        onReset={() => {
+          setFiltersDraft(INITIAL_FILTERS);
+          setFilters(INITIAL_FILTERS);
+          setPage(1);
+        }}
+      >
+        <div className="space-y-3">
+          <Input
+            placeholder="Tìm kiếm tên/SĐT"
+            value={filtersDraft.q}
+            onChange={(e) => setFiltersDraft((s) => ({ ...s, q: e.target.value }))}
+          />
           <Select
-            value={filtersDraft.ownerId}
-            onChange={(e) => setFiltersDraft((s) => ({ ...s, ownerId: e.target.value }))}
+            value={filtersDraft.status}
+            onChange={(e) => setFiltersDraft((s) => ({ ...s, status: e.target.value }))}
           >
-            <option value="">Tất cả người phụ trách</option>
-            {owners.map((owner) => (
-              <option key={owner.id} value={owner.id}>
-                {owner.name || owner.email}
+            <option value="">Tất cả trạng thái</option>
+            {STATUS_OPTIONS.map((status) => (
+              <option key={status} value={status}>
+                {STATUS_LABELS[status] || status}
               </option>
             ))}
           </Select>
-        ) : !isTelesales ? (
           <Input
-            placeholder="Mã người phụ trách"
-            value={filtersDraft.ownerId}
-            onChange={(e) => setFiltersDraft((s) => ({ ...s, ownerId: e.target.value }))}
+            placeholder="Nguồn"
+            value={filtersDraft.source}
+            onChange={(e) => setFiltersDraft((s) => ({ ...s, source: e.target.value }))}
           />
-        ) : null}
-        <Input
-          type="date"
-          value={filtersDraft.createdFrom}
-          onChange={(e) => setFiltersDraft((s) => ({ ...s, createdFrom: e.target.value }))}
-        />
-        <Input
-          type="date"
-          value={filtersDraft.createdTo}
-          onChange={(e) => setFiltersDraft((s) => ({ ...s, createdTo: e.target.value }))}
-        />
-        <div className="md:col-span-4 flex flex-wrap items-center gap-2">
+          <Input
+            placeholder="Kênh"
+            value={filtersDraft.channel}
+            onChange={(e) => setFiltersDraft((s) => ({ ...s, channel: e.target.value }))}
+          />
+          <Input
+            placeholder="Hạng bằng"
+            value={filtersDraft.licenseType}
+            onChange={(e) => setFiltersDraft((s) => ({ ...s, licenseType: e.target.value }))}
+          />
+          {canManageOwner ? (
+            <Select
+              value={filtersDraft.ownerId}
+              onChange={(e) => setFiltersDraft((s) => ({ ...s, ownerId: e.target.value }))}
+            >
+              <option value="">Tất cả người phụ trách</option>
+              {owners.map((owner) => (
+                <option key={owner.id} value={owner.id}>
+                  {owner.name || owner.email}
+                </option>
+              ))}
+            </Select>
+          ) : !isTelesales ? (
+            <Input
+              placeholder="Mã người phụ trách"
+              value={filtersDraft.ownerId}
+              onChange={(e) => setFiltersDraft((s) => ({ ...s, ownerId: e.target.value }))}
+            />
+          ) : null}
+          <div className="grid grid-cols-2 gap-2">
+            <Input
+              type="date"
+              value={filtersDraft.createdFrom}
+              onChange={(e) => setFiltersDraft((s) => ({ ...s, createdFrom: e.target.value }))}
+            />
+            <Input
+              type="date"
+              value={filtersDraft.createdTo}
+              onChange={(e) => setFiltersDraft((s) => ({ ...s, createdTo: e.target.value }))}
+            />
+          </div>
           <Select value={sort} onChange={(e) => setSort(e.target.value)}>
             <option value="createdAt">Sắp xếp: Ngày tạo</option>
             <option value="updatedAt">Sắp xếp: Cập nhật</option>
@@ -456,61 +706,68 @@ export default function LeadsPage() {
             <option value="100">100 / trang</option>
           </Select>
         </div>
-        </div>
-      </FilterCard>
+      </MobileFiltersSheet>
 
-      <DataTable
-        loading={loading}
-        isEmpty={!loading && items.length === 0}
-        emptyText="Không có dữ liệu khách hàng."
+      <BottomSheet
+        open={Boolean(mobileActionLead)}
+        onOpenChange={(open) => {
+          if (!open) setMobileActionLead(null);
+        }}
+        title="Hành động khách hàng"
       >
-        <Table headers={["Khách hàng", "SĐT", "Trạng thái", "Người phụ trách", "Nguồn/Kênh", "Ngày tạo", "Hành động"]}>
-          {items.map((lead) => (
-            <tr key={lead.id}>
-              <td className="px-3 py-2">
-                <div className="font-medium text-zinc-900">{lead.fullName || "Chưa có tên"}</div>
-                <div className="text-xs text-zinc-500">{lead.id}</div>
-              </td>
-              <td className="px-3 py-2">{lead.phone || "-"}</td>
-              <td className="px-3 py-2">
-                <Badge text={lead.status} />
-              </td>
-              <td className="px-3 py-2 text-xs text-zinc-600">{lead.owner?.name || lead.owner?.email || "-"}</td>
-              <td className="px-3 py-2">
-                <div>{lead.source || "-"}</div>
-                <div className="text-xs text-zinc-500">{lead.channel || "-"}</div>
-              </td>
-              <td className="px-3 py-2 text-xs text-zinc-600">{formatDateTimeVi(lead.createdAt)}</td>
-              <td className="space-y-2 px-3 py-2">
-                <Button variant="secondary" className="w-full" onClick={() => openDetail(lead.id)}>
-                  Mở
-                </Button>
-                {canManageOwner ? (
-                  <Button
-                    variant="secondary"
-                    className="w-full"
-                    onClick={() => {
-                      setAssignLead(lead);
-                      setAssignOwnerId(lead.ownerId || "");
-                    }}
-                  >
-                    Gán telesale
-                  </Button>
-                ) : null}
-                <Select value={lead.status} onChange={(e) => setPendingStatus({ id: lead.id, status: e.target.value })}>
-                  {STATUS_OPTIONS.map((status) => (
-                    <option key={status} value={status}>
-                      {status}
-                    </option>
-                  ))}
-                </Select>
-              </td>
-            </tr>
-          ))}
-        </Table>
-      </DataTable>
-
-      <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
+        <div className="space-y-2">
+          {mobileActionLead ? (
+            <p className="text-xs text-zinc-500">{mobileActionLead.fullName || mobileActionLead.id}</p>
+          ) : null}
+          {canManageOwner ? (
+            <Button
+              variant="secondary"
+              className="w-full justify-start"
+              onClick={() => {
+                if (!mobileActionLead) return;
+                setAssignLead(mobileActionLead);
+                setAssignOwnerId(mobileActionLead.ownerId || "");
+                setMobileActionLead(null);
+              }}
+            >
+              Gán telesale
+            </Button>
+          ) : null}
+          <Button
+            variant="secondary"
+            className="w-full justify-start"
+            onClick={() => {
+              if (!mobileActionLead) return;
+              setEventLeadId(mobileActionLead.id);
+              setEventOpen(true);
+              setMobileActionLead(null);
+            }}
+          >
+            Thêm sự kiện
+          </Button>
+          <Select
+            value={mobileActionLead?.status || ""}
+            onChange={(e) => {
+              if (!mobileActionLead) return;
+              setPendingStatus({ id: mobileActionLead.id, status: e.target.value });
+              setMobileActionLead(null);
+            }}
+          >
+            {STATUS_OPTIONS.map((status) => (
+              <option key={status} value={status}>
+                {STATUS_LABELS[status] || status}
+              </option>
+            ))}
+          </Select>
+          <Link
+            href={mobileActionLead ? `/leads/${mobileActionLead.id}` : "#"}
+            className="inline-flex h-11 w-full items-center rounded-xl border border-zinc-200 px-4 text-sm font-medium text-zinc-700"
+            onClick={() => setMobileActionLead(null)}
+          >
+            Mở trang chi tiết
+          </Link>
+        </div>
+      </BottomSheet>
 
       <Modal open={createOpen} title="Tạo khách hàng" onClose={() => setCreateOpen(false)}>
         <div className="space-y-3">
@@ -532,7 +789,7 @@ export default function LeadsPage() {
 
       <Modal open={Boolean(pendingStatus)} title="Xác nhận cập nhật trạng thái" onClose={() => setPendingStatus(null)}>
         <p className="text-sm text-zinc-700">
-          {pendingStatus ? `Bạn chắc chắn muốn cập nhật trạng thái thành ${pendingStatus.status}?` : ""}
+          {pendingStatus ? `Bạn chắc chắn muốn cập nhật trạng thái thành ${STATUS_LABELS[pendingStatus.status] || pendingStatus.status}?` : ""}
         </p>
         <div className="mt-4 flex justify-end gap-2">
           <Button variant="secondary" onClick={() => setPendingStatus(null)}>
@@ -541,6 +798,28 @@ export default function LeadsPage() {
           <Button onClick={confirmStatusChange} disabled={statusSaving}>
             {statusSaving ? "Đang cập nhật..." : "Xác nhận"}
           </Button>
+        </div>
+      </Modal>
+
+      <Modal open={eventOpen} title="Thêm sự kiện" onClose={() => setEventOpen(false)}>
+        <div className="space-y-3">
+          <Select value={eventForm.type} onChange={(e) => setEventForm((s) => ({ ...s, type: e.target.value }))}>
+            {EVENT_OPTIONS.map((type) => (
+              <option key={type} value={type}>
+                {STATUS_LABELS[type] || type}
+              </option>
+            ))}
+          </Select>
+          <Input placeholder="Ghi chú" value={eventForm.note} onChange={(e) => setEventForm((s) => ({ ...s, note: e.target.value }))} />
+          <Input placeholder="Dữ liệu JSON (không bắt buộc)" value={eventForm.meta} onChange={(e) => setEventForm((s) => ({ ...s, meta: e.target.value }))} />
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setEventOpen(false)}>
+              Hủy
+            </Button>
+            <Button onClick={addEvent} disabled={eventSaving}>
+              {eventSaving ? "Đang lưu..." : "Lưu sự kiện"}
+            </Button>
+          </div>
         </div>
       </Modal>
 
@@ -561,7 +840,7 @@ export default function LeadsPage() {
                 <span className="text-zinc-500">SĐT:</span> {detailLead.phone || "-"}
               </div>
               <div>
-                <span className="text-zinc-500">Trạng thái:</span> {detailLead.status}
+                <span className="text-zinc-500">Trạng thái:</span> {STATUS_LABELS[detailLead.status] || detailLead.status}
               </div>
               <div>
                 <span className="text-zinc-500">Nguồn:</span> {detailLead.source || "-"}
@@ -577,24 +856,15 @@ export default function LeadsPage() {
               </div>
             </div>
 
-            <div className="rounded-lg border border-zinc-200 p-3">
-              <h3 className="mb-2 text-sm font-semibold text-zinc-900">Thêm sự kiện</h3>
-              <div className="grid gap-2 md:grid-cols-3">
-                <Select value={eventForm.type} onChange={(e) => setEventForm((s) => ({ ...s, type: e.target.value }))}>
-                  {EVENT_OPTIONS.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </Select>
-                <Input placeholder="Ghi chú" value={eventForm.note} onChange={(e) => setEventForm((s) => ({ ...s, note: e.target.value }))} />
-                <Input placeholder="Dữ liệu JSON (không bắt buộc)" value={eventForm.meta} onChange={(e) => setEventForm((s) => ({ ...s, meta: e.target.value }))} />
-              </div>
-              <div className="mt-2 flex justify-end">
-                <Button onClick={addEvent} disabled={eventSaving}>
-                  {eventSaving ? "Đang lưu..." : "Thêm sự kiện"}
-                </Button>
-              </div>
+            <div className="flex justify-end">
+              <Button
+                onClick={() => {
+                  setEventLeadId(detailLead.id);
+                  setEventOpen(true);
+                }}
+              >
+                Thêm sự kiện
+              </Button>
             </div>
 
             <div>
@@ -606,7 +876,7 @@ export default function LeadsPage() {
                   {detailEvents.map((event) => (
                     <div key={event.id} className="rounded-lg border border-zinc-200 p-3 text-sm">
                       <div className="flex items-center justify-between">
-                        <Badge text={event.type} />
+                        <Badge text={STATUS_LABELS[event.type] || event.type} />
                         <span className="text-xs text-zinc-500">{formatDateTimeVi(event.createdAt)}</span>
                       </div>
                       {event.payload ? (

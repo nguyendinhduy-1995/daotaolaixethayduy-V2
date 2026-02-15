@@ -10,7 +10,6 @@ import { Alert } from "@/components/ui/alert";
 import { MobileHeader } from "@/components/app/mobile-header";
 import { MobileToolbar } from "@/components/app/mobile-toolbar";
 import { Badge } from "@/components/ui/badge";
-import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { FilterCard } from "@/components/ui/filter-card";
 import { Input } from "@/components/ui/input";
@@ -19,6 +18,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { MobileFiltersSheet } from "@/components/mobile/MobileFiltersSheet";
 import { formatDateTimeVi } from "@/lib/date-utils";
 
 type Lead = {
@@ -355,7 +355,7 @@ export default function LeadsBoardPage() {
         />
       </div>
 
-      <div className="sticky top-[68px] z-20 space-y-2 rounded-[16px] border border-[var(--border)] bg-zinc-100/90 p-2 backdrop-blur md:top-[72px]">
+      <div className="sticky top-[116px] z-20 space-y-2 rounded-[16px] border border-[var(--border)] bg-zinc-100/90 p-2 backdrop-blur md:top-[72px]">
         <MobileToolbar
           value={filters.q}
           onChange={(value) => setFilters((s) => ({ ...s, q: value }))}
@@ -580,28 +580,16 @@ export default function LeadsBoardPage() {
         </div>
       )}
 
-      <BottomSheet open={filterOpen} onOpenChange={setFilterOpen} title="Bộ lọc Kanban" footer={
-        <div className="flex justify-end gap-2">
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setFilters(EMPTY_FILTERS);
-              setFilterOpen(false);
-              applyFiltersToUrl(EMPTY_FILTERS);
-            }}
-          >
-            Xóa lọc
-          </Button>
-          <Button
-            onClick={() => {
-              setFilterOpen(false);
-              applyFiltersToUrl(filters);
-            }}
-          >
-            Áp dụng
-          </Button>
-        </div>
-      }>
+      <MobileFiltersSheet
+        open={filterOpen}
+        onOpenChange={setFilterOpen}
+        title="Bộ lọc Kanban"
+        onApply={() => applyFiltersToUrl(filters)}
+        onReset={() => {
+          setFilters(EMPTY_FILTERS);
+          applyFiltersToUrl(EMPTY_FILTERS);
+        }}
+      >
         <div className="space-y-4">
           <FilterCard title="Lọc nhanh">
             <div className="grid gap-2 md:grid-cols-2">
@@ -682,7 +670,7 @@ export default function LeadsBoardPage() {
           </FilterCard>
 
         </div>
-      </BottomSheet>
+      </MobileFiltersSheet>
 
       <Modal
         open={eventOpen}
