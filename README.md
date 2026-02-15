@@ -66,6 +66,7 @@ If a route file is missing in `src/app/api`, verification prints `SKIP (route mi
 - [ ] `.env` uses strong `JWT_SECRET`
 - [ ] `.env` sets `N8N_CALLBACK_SECRET` and (optional) `N8N_WEBHOOK_URL`
 - [ ] `.env` sets `CRON_SECRET` for internal cron endpoint
+- [ ] `.env` sets `OPS_SECRET` for ingest snapshot vận hành từ n8n
 - [ ] `DATABASE_URL` and `REDIS_URL` point to intended environment
 - [ ] `npm run prisma:validate` passes
 - [ ] `npm run prisma:generate` passes
@@ -187,6 +188,55 @@ curl -sS -X POST http://localhost:3000/api/worker/outbound \
   - `WORKER_CONCURRENCY=5`
   - `WORKER_RATE_LIMIT_PER_MIN=120`
   - `WORKER_RATE_LIMIT_PER_OWNER_PER_MIN=30`
+
+## AI hỗ trợ nhân sự (Ops Pulse từ n8n)
+
+- Mục tiêu: nhận snapshot vận hành mỗi 10 phút để CRM tự tính gap KPI và gợi ý việc cần làm ngay.
+- Biến môi trường:
+  - `OPS_SECRET` (bắt buộc cho webhook ingest)
+- Endpoint ingest (không cần session):
+  - `POST /api/ops/pulse`
+  - Header: `x-ops-secret: <OPS_SECRET>`
+- Payload mẫu cho Trực Page:
+```json
+{
+  "role": "PAGE",
+  "dateKey": "2026-02-15",
+  "windowMinutes": 10,
+  "metrics": {
+    "openMessages": 18,
+    "newData": 2
+  },
+  "targets": {
+    "newData": 4,
+    "openMessagesMax": 12
+  }
+}
+```
+- Payload mẫu cho Telesales:
+```json
+{
+  "role": "TELESALES",
+  "ownerId": "user_cuid",
+  "dateKey": "2026-02-15",
+  "windowMinutes": 10,
+  "metrics": {
+    "data": 4,
+    "called": 3,
+    "appointed": 1,
+    "arrived": 0,
+    "signed": 0
+  },
+  "targets": {
+    "appointed": 4
+  }
+}
+```
+- API xem realtime (admin-only):
+  - `GET /api/admin/ops/pulse?dateKey=YYYY-MM-DD&role=PAGE|TELESALES&ownerId=&limit=50`
+- UI admin:
+  - `/admin/ops`
+  - Hiển thị trạng thái `OK/WARNING/CRITICAL`, gap KPI và checklist gợi ý ưu tiên.
 
 ## Marketing Meta Ads via n8n
 

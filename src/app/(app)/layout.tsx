@@ -44,6 +44,7 @@ const MARKETING_ITEMS: NavItem[] = [
 ];
 
 const OPS_ITEMS: NavItem[] = [
+  { href: "/admin/ops", label: "AI hỗ trợ nhân sự", match: (p) => p.startsWith("/admin/ops") },
   { href: "/automation/logs", label: "Tự động hóa - Nhật ký", match: (p) => p.startsWith("/automation/logs") },
   { href: "/automation/run", label: "Tự động hóa - Chạy tay", match: (p) => p.startsWith("/automation/run") },
 ];
@@ -101,6 +102,7 @@ function guessPageTitle(pathname: string) {
     { test: (p) => p.startsWith("/hr/salary-profiles"), title: "Hồ sơ lương", subtitle: "Quản lý mức lương theo nhân sự" },
     { test: (p) => p.startsWith("/hr/attendance"), title: "Chấm công", subtitle: "Theo dõi ngày công theo nhân sự" },
     { test: (p) => p.startsWith("/hr/payroll"), title: "Bảng lương", subtitle: "Tính và chốt lương theo kỳ" },
+    { test: (p) => p.startsWith("/admin/ops"), title: "AI hỗ trợ nhân sự", subtitle: "Snapshot 10 phút và gợi ý ưu tiên xử lý" },
     { test: (p) => p.startsWith("/admin/branches"), title: "Chi nhánh", subtitle: "Quản trị danh sách chi nhánh" },
     { test: (p) => p.startsWith("/automation"), title: "Tự động hóa", subtitle: "Theo dõi tác vụ tự động" },
     { test: (p) => p.startsWith("/admin"), title: "Quản trị", subtitle: "Thiết lập và vận hành hệ thống" },

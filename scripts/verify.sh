@@ -14,6 +14,7 @@ CALLBACK_SECRET="${N8N_CALLBACK_SECRET:-verify-callback-secret}"
 export N8N_CALLBACK_SECRET="$CALLBACK_SECRET"
 CRON_SECRET_VALUE="${CRON_SECRET:-}"
 WORKER_SECRET_VALUE="${WORKER_SECRET:-}"
+OPS_SECRET_VALUE="${OPS_SECRET:-}"
 
 log() {
   printf '[verify] %s\n' "$1"
@@ -106,6 +107,12 @@ if [[ -f "src/app/(app)/admin/scheduler/page.tsx" ]]; then
   SCHEDULER_HTTP_CODE="$(curl -sS -o /tmp/thayduy-crm-verify-admin-scheduler.html -w '%{http_code}' "$BASE_URL/admin/scheduler" -b "$COOKIE_JAR")"
   [[ "$SCHEDULER_HTTP_CODE" == "200" ]] || fail "Admin scheduler route failed with status $SCHEDULER_HTTP_CODE"
   log "admin/scheduler HTML route OK"
+fi
+
+if [[ -f "src/app/(app)/admin/ops/page.tsx" ]]; then
+  OPS_HTTP_CODE="$(curl -sS -o /tmp/thayduy-crm-verify-admin-ops.html -w '%{http_code}' "$BASE_URL/admin/ops" -b "$COOKIE_JAR")"
+  [[ "$OPS_HTTP_CODE" == "200" ]] || fail "Admin ops route failed with status $OPS_HTTP_CODE"
+  log "admin/ops HTML route OK"
 fi
 
 if route_exists "auth/me"; then
@@ -235,6 +242,33 @@ if route_exists "kpi/daily"; then
   log "kpi/daily OK ($DATE_HCM)"
 else
   log "SKIP (route missing): /api/kpi/daily"
+fi
+
+if route_exists "ops/pulse" && route_exists "admin/ops/pulse"; then
+  if [[ -z "$OPS_SECRET_VALUE" ]]; then
+    log "SKIP ops pulse: thiếu biến OPS_SECRET trong môi trường"
+  else
+    curl -sS -X POST "$BASE_URL/api/ops/pulse" \
+      -H "x-ops-secret: $OPS_SECRET_VALUE" \
+      -H 'Content-Type: application/json' \
+      -d "{\"role\":\"PAGE\",\"dateKey\":\"$DATE_HCM\",\"windowMinutes\":10,\"metrics\":{\"openMessages\":24,\"newData\":2},\"targets\":{\"newData\":4,\"openMessagesMax\":12}}" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.ok!==true||!o.id||!o.status||!o.computedJson){process.exit(1)}'
+
+    if [[ -n "$USER_A_ID" ]]; then
+      curl -sS -X POST "$BASE_URL/api/ops/pulse" \
+        -H "x-ops-secret: $OPS_SECRET_VALUE" \
+        -H 'Content-Type: application/json' \
+        -d "{\"role\":\"TELESALES\",\"ownerId\":\"$USER_A_ID\",\"dateKey\":\"$DATE_HCM\",\"windowMinutes\":10,\"metrics\":{\"data\":4,\"called\":3,\"appointed\":1,\"arrived\":0,\"signed\":0},\"targets\":{\"appointed\":4}}" \
+      | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.ok!==true||!o.id||!o.status||!o.computedJson){process.exit(1)}'
+    fi
+
+    curl -sS "$BASE_URL/api/admin/ops/pulse?dateKey=$DATE_HCM&limit=20" -H "Authorization: Bearer $TOKEN" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!Array.isArray(o.items)||typeof o.aggregate!=="object"){process.exit(1)}'
+
+    log "ops pulse ingest + admin list OK"
+  fi
+else
+  log "SKIP (route missing): /api/ops/pulse or /api/admin/ops/pulse"
 fi
 
 if route_exists "admin/marketing/reports"; then

@@ -141,6 +141,11 @@ enum MarketingGrain {
   YEAR
 }
 
+enum OpsPulseRole {
+  PAGE
+  TELESALES
+}
+
 enum HrAttendanceStatus {
   PRESENT
   HALF
@@ -195,6 +200,7 @@ model User {
   commissionLedgers CommissionLedger[]
   payrollItems PayrollItem[]
   generatedPayrollRuns PayrollRun[] @relation("PayrollGeneratedBy")
+  opsPulses OpsPulse[]
 
   @@index([branchId])
 }
@@ -564,6 +570,7 @@ model Branch {
   commissionLedgers CommissionLedger[]
   payrollRuns PayrollRun[]
   marketingReports MarketingReport[]
+  opsPulses OpsPulse[]
 }
 
 model CommissionScheme {
@@ -700,4 +707,22 @@ model MarketingReport {
   @@unique([dateKey, branchId, source])
   @@index([dateKey])
   @@index([branchId, dateKey])
+}
+
+model OpsPulse {
+  id            String       @id @default(cuid())
+  createdAt     DateTime     @default(now())
+  role          OpsPulseRole
+  ownerId       String?
+  branchId      String?
+  dateKey       String
+  windowMinutes Int          @default(10)
+  payloadJson   Json
+  computedJson  Json
+
+  owner         User?        @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  branch        Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@index([role, dateKey, createdAt])
+  @@index([ownerId, createdAt])
 }
