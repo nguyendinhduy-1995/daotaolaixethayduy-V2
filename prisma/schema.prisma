@@ -736,9 +736,12 @@ model OpsPulse {
   createdAt     DateTime     @default(now())
   role          OpsPulseRole
   ownerId       String?
+  ownerScopeKey String       @default("")
   branchId      String?
+  branchScopeKey String      @default("")
   dateKey       String
   windowMinutes Int          @default(10)
+  bucketStart   DateTime
   payloadJson   Json
   computedJson  Json
 
@@ -747,6 +750,7 @@ model OpsPulse {
 
   @@index([role, dateKey, createdAt])
   @@index([ownerId, createdAt])
+  @@unique([role, dateKey, windowMinutes, bucketStart, ownerScopeKey, branchScopeKey])
 }
 
 model EmployeeKpiSetting {

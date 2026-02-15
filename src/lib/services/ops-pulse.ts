@@ -603,23 +603,9 @@ export async function ingestOpsPulse(inputRaw: unknown) {
   const targetResolution = await resolveTargets(input);
   const computed = await computeOpsPulse(input, targetResolution.targets, targetResolution.source);
   const now = new Date();
-  const start = floorToWindow(now, input.windowMinutes);
-  const end = new Date(start.getTime() + input.windowMinutes * 60 * 1000);
-
-  const existing = await prisma.opsPulse.findFirst({
-    where: {
-      role: input.role,
-      ownerId: input.ownerId ?? null,
-      branchId: input.branchId ?? null,
-      dateKey: input.dateKey,
-      windowMinutes: input.windowMinutes,
-      createdAt: {
-        gte: start,
-        lt: end,
-      },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const bucketStart = floorToWindow(now, input.windowMinutes);
+  const ownerScopeKey = input.ownerId ?? "";
+  const branchScopeKey = input.branchId ?? "";
 
   const payloadJson = JSON.parse(
     JSON.stringify({
@@ -634,16 +620,30 @@ export async function ingestOpsPulse(inputRaw: unknown) {
   const data = {
     role: input.role,
     ownerId: input.ownerId ?? null,
+    ownerScopeKey,
     branchId: input.branchId ?? null,
+    branchScopeKey,
     dateKey: input.dateKey,
     windowMinutes: input.windowMinutes,
+    bucketStart,
     payloadJson,
     computedJson,
   };
 
-  const row = existing
-    ? await prisma.opsPulse.update({ where: { id: existing.id }, data })
-    : await prisma.opsPulse.create({ data });
+  const row = await prisma.opsPulse.upsert({
+    where: {
+      role_dateKey_windowMinutes_bucketStart_ownerScopeKey_branchScopeKey: {
+        role: input.role,
+        dateKey: input.dateKey,
+        windowMinutes: input.windowMinutes,
+        bucketStart,
+        ownerScopeKey,
+        branchScopeKey,
+      },
+    },
+    update: data,
+    create: data,
+  });
 
   return {
     id: row.id,

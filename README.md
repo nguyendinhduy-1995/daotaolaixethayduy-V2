@@ -197,6 +197,9 @@ curl -sS -X POST http://localhost:3000/api/worker/outbound \
 - Endpoint ingest (không cần session):
   - `POST /api/ops/pulse`
   - Header: `x-ops-secret: <OPS_SECRET>`
+- Idempotency:
+  - Snapshot được upsert theo bucket thời gian (`windowMinutes`) + role + dateKey + scope owner/branch.
+  - Retry từ n8n trong cùng bucket sẽ cập nhật bản ghi hiện có, không tạo trùng.
 - Payload mẫu cho Trực Page:
 ```json
 {
