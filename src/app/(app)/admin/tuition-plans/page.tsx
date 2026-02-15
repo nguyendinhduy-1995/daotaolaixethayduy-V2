@@ -15,6 +15,11 @@ import { Pagination } from "@/components/ui/pagination";
 import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Table } from "@/components/ui/table";
+import { MobileTopbar } from "@/components/admin/mobile-topbar";
+import { QuickSearchRow } from "@/components/admin/quick-search-row";
+import { FiltersSheet } from "@/components/admin/filters-sheet";
+import { AdminCardItem, AdminCardList } from "@/components/admin/admin-card-list";
+import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/admin/ui-states";
 import { formatCurrencyVnd, formatDateTimeVi } from "@/lib/date-utils";
 
 type TuitionPlan = {
@@ -60,6 +65,7 @@ export default function TuitionPlansAdminPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createSaving, setCreateSaving] = useState(false);
@@ -286,6 +292,12 @@ export default function TuitionPlansAdminPage() {
 
   return (
     <div className="space-y-4">
+      <MobileTopbar
+        title="Bảng học phí"
+        subtitle="Quản trị chính sách học phí"
+        actionNode={<Button className="min-h-11" onClick={() => setCreateOpen(true)}>Tạo mới</Button>}
+      />
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold text-zinc-900">Bảng học phí</h1>
         <div className="flex items-center gap-2">
@@ -305,7 +317,48 @@ export default function TuitionPlansAdminPage() {
       {error ? <Alert type="error" message={error} /> : null}
       {success ? <Alert type="success" message={success} /> : null}
 
-      <div className="rounded-xl bg-white p-4 shadow-sm">
+      <QuickSearchRow
+        value={qInput}
+        onChange={setQInput}
+        onOpenFilter={() => setMobileFilterOpen(true)}
+        placeholder="Tìm theo tỉnh hoặc ghi chú"
+        activeFilterCount={[province, licenseType, activeFilter].filter(Boolean).length}
+      />
+
+      <FiltersSheet
+        open={mobileFilterOpen}
+        onOpenChange={setMobileFilterOpen}
+        title="Bộ lọc bảng học phí"
+        onApply={() => {
+          setPage(1);
+        }}
+        onClear={() => {
+          setProvince("");
+          setLicenseType("");
+          setActiveFilter("");
+        }}
+      >
+        <div className="space-y-3">
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span>Tỉnh</span>
+            <Input value={province} onChange={(e) => setProvince(e.target.value)} placeholder="VD: Hồ Chí Minh" />
+          </label>
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span>Hạng bằng</span>
+            <Input value={licenseType} onChange={(e) => setLicenseType(e.target.value)} placeholder="VD: B, C1, D..." />
+          </label>
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span>Trạng thái</span>
+            <Select value={activeFilter} onChange={(e) => setActiveFilter(e.target.value as "" | "true" | "false")}>
+              <option value="">Tất cả</option>
+              <option value="true">Đang áp dụng</option>
+              <option value="false">Ngưng áp dụng</option>
+            </Select>
+          </label>
+        </div>
+      </FiltersSheet>
+
+      <div className="hidden rounded-xl bg-white p-4 shadow-sm md:block">
         <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-5">
           <div>
             <label className="mb-1 block text-sm text-zinc-600">Tìm kiếm</label>
@@ -339,33 +392,51 @@ export default function TuitionPlansAdminPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center gap-2 text-zinc-700">
-          <Spinner /> Đang tải dữ liệu...
-        </div>
+        <LoadingSkeleton text="Đang tải dữ liệu..." />
       ) : items.length === 0 ? (
-        <div className="rounded-xl bg-white p-6 text-sm text-zinc-600 shadow-sm">Không có dữ liệu</div>
+        <EmptyState text="Không có dữ liệu" />
       ) : (
         <div className="space-y-3">
-          <Table headers={["Tỉnh", "Hạng bằng", "Tổng học phí", "Mốc >= 50%", "Ghi chú", "Trạng thái", "Ngày tạo", "Hành động"]}>
+          {error ? <ErrorState detail={error} /> : null}
+          <AdminCardList>
             {items.map((item) => (
-              <tr key={item.id} className="border-t border-zinc-100">
-                <td className="px-3 py-2">{item.province}</td>
-                <td className="px-3 py-2">{item.licenseType}</td>
-                <td className="px-3 py-2">{formatCurrencyVnd(item.totalAmount || item.tuition)}</td>
-                <td className="px-3 py-2">{formatCurrencyVnd(item.paid50Amount || Math.floor((item.totalAmount || item.tuition) * 0.5))}</td>
-                <td className="px-3 py-2">{item.note || "-"}</td>
-                <td className="px-3 py-2">
-                  <Badge text={item.isActive ? "Đang áp dụng" : "Ngưng áp dụng"} />
-                </td>
-                <td className="px-3 py-2">{formatDateTimeVi(item.createdAt)}</td>
-                <td className="px-3 py-2">
-                  <Button variant="secondary" onClick={() => openEdit(item)}>
-                    Sửa
-                  </Button>
-                </td>
-              </tr>
+              <AdminCardItem
+                key={`mobile-${item.id}`}
+                title={`${item.province} • ${item.licenseType}`}
+                subtitle={formatDateTimeVi(item.createdAt)}
+                meta={
+                  <div className="space-y-1">
+                    <p>Tổng học phí: {formatCurrencyVnd(item.totalAmount || item.tuition)}</p>
+                    <p>Mốc từ 50%: {formatCurrencyVnd(item.paid50Amount || Math.floor((item.totalAmount || item.tuition) * 0.5))}</p>
+                    <p>Trạng thái: {item.isActive ? "Đang áp dụng" : "Ngưng áp dụng"}</p>
+                  </div>
+                }
+                primaryAction={{ label: "Sửa", onClick: () => openEdit(item) }}
+              />
             ))}
-          </Table>
+          </AdminCardList>
+          <div className="hidden md:block">
+            <Table headers={["Tỉnh", "Hạng bằng", "Tổng học phí", "Mốc >= 50%", "Ghi chú", "Trạng thái", "Ngày tạo", "Hành động"]}>
+              {items.map((item) => (
+                <tr key={item.id} className="border-t border-zinc-100">
+                  <td className="px-3 py-2">{item.province}</td>
+                  <td className="px-3 py-2">{item.licenseType}</td>
+                  <td className="px-3 py-2">{formatCurrencyVnd(item.totalAmount || item.tuition)}</td>
+                  <td className="px-3 py-2">{formatCurrencyVnd(item.paid50Amount || Math.floor((item.totalAmount || item.tuition) * 0.5))}</td>
+                  <td className="px-3 py-2">{item.note || "-"}</td>
+                  <td className="px-3 py-2">
+                    <Badge text={item.isActive ? "Đang áp dụng" : "Ngưng áp dụng"} />
+                  </td>
+                  <td className="px-3 py-2">{formatDateTimeVi(item.createdAt)}</td>
+                  <td className="px-3 py-2">
+                    <Button variant="secondary" onClick={() => openEdit(item)}>
+                      Sửa
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </Table>
+          </div>
           <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
         </div>
       )}

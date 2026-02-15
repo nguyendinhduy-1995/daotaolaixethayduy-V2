@@ -16,7 +16,13 @@ import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Table } from "@/components/ui/table";
+import { MobileTopbar } from "@/components/admin/mobile-topbar";
+import { QuickSearchRow } from "@/components/admin/quick-search-row";
+import { FiltersSheet } from "@/components/admin/filters-sheet";
+import { AdminCardItem, AdminCardList } from "@/components/admin/admin-card-list";
+import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/admin/ui-states";
 import { formatCurrencyVnd, formatDateTimeVi, todayInHoChiMinh } from "@/lib/date-utils";
+import { useAdminListState } from "@/lib/use-admin-list-state";
 
 type Branch = {
   id: string;
@@ -80,6 +86,8 @@ export default function MarketingPage() {
   const [manualMessages, setManualMessages] = useState("0");
   const [manualMeta, setManualMeta] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const listState = useAdminListState({ query: "", filters: {}, paging: { page: 1, pageSize: 20 } });
 
   const query = useMemo(() => {
     const params = new URLSearchParams();
@@ -89,6 +97,18 @@ export default function MarketingPage() {
     if (source) params.set("source", source);
     return params.toString();
   }, [branchId, from, source, to]);
+
+  const filteredItems = useMemo(() => {
+    const q = listState.debouncedQ.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((item) => {
+      return (
+        item.dateKey.toLowerCase().includes(q) ||
+        (item.branch?.name || "toàn hệ thống").toLowerCase().includes(q) ||
+        item.source.toLowerCase().includes(q)
+      );
+    });
+  }, [items, listState.debouncedQ]);
 
   const handleAuthError = useCallback(
     (err: ApiClientError) => {
@@ -186,6 +206,16 @@ export default function MarketingPage() {
 
   return (
     <div className="space-y-4">
+      <MobileTopbar
+        title="Marketing"
+        subtitle="Báo cáo Meta Ads"
+        actionNode={
+          <Button className="min-h-11" onClick={() => setManualOpen(true)}>
+            Nhập tay
+          </Button>
+        }
+      />
+
       <PageHeader
         title="Marketing"
         subtitle="Báo cáo Meta Ads theo ngày"
@@ -201,6 +231,53 @@ export default function MarketingPage() {
 
       {error ? <Alert type="error" message={error} /> : null}
       {success ? <Alert type="success" message={success} /> : null}
+
+      <QuickSearchRow
+        value={listState.q}
+        onChange={listState.setQ}
+        onOpenFilter={() => setMobileFilterOpen(true)}
+        placeholder="Tìm theo ngày/chi nhánh/nguồn"
+        activeFilterCount={[from, to, branchId, source].filter(Boolean).length}
+      />
+
+      <FiltersSheet
+        open={mobileFilterOpen}
+        onOpenChange={setMobileFilterOpen}
+        title="Bộ lọc marketing"
+        onApply={() => void loadData()}
+        onClear={() => {
+          setFrom(daysAgo(today, 29));
+          setTo(today);
+          setBranchId("");
+          setSource("meta");
+        }}
+      >
+        <div className="space-y-3">
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span>Từ ngày</span>
+            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+          </label>
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span>Đến ngày</span>
+            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+          </label>
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span>Chi nhánh</span>
+            <Select value={branchId} onChange={(e) => setBranchId(e.target.value)}>
+              <option value="">Toàn hệ thống</option>
+              {branches.map((branch) => (
+                <option key={branch.id} value={branch.id}>
+                  {branch.name}
+                </option>
+              ))}
+            </Select>
+          </label>
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span>Nguồn</span>
+            <Input value={source} onChange={(e) => setSource(e.target.value.toLowerCase())} />
+          </label>
+        </div>
+      </FiltersSheet>
 
       <FilterCard title="Bộ lọc marketing">
         <div className="grid gap-3 md:grid-cols-5">
@@ -251,18 +328,23 @@ export default function MarketingPage() {
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-slate-900">Danh sách báo cáo</h2>
         {loading ? (
-          <div className="grid gap-2">
-            <Skeleton className="h-20" />
-            <Skeleton className="h-20" />
-            <Skeleton className="h-20" />
-          </div>
-        ) : items.length === 0 ? (
-          <div className="surface p-6 text-sm text-zinc-600">Không có dữ liệu trong khoảng thời gian đã chọn.</div>
+          <>
+            <LoadingSkeleton text="Đang tải báo cáo marketing..." />
+            <div className="hidden md:grid md:gap-2">
+              <Skeleton className="h-20" />
+              <Skeleton className="h-20" />
+              <Skeleton className="h-20" />
+            </div>
+          </>
+        ) : error ? (
+          <ErrorState detail={error} />
+        ) : filteredItems.length === 0 ? (
+          <EmptyState text="Không có dữ liệu trong khoảng thời gian đã chọn." />
         ) : (
           <>
             <div className="hidden md:block">
               <Table headers={["Ngày", "Chi nhánh", "Nguồn", "Chi phí", "Nhắn tin", "CPL", "Cập nhật"]}>
-                {items.map((item) => (
+                {filteredItems.map((item) => (
                   <tr key={item.id}>
                     <td className="px-4 py-3">{item.dateKey}</td>
                     <td className="px-4 py-3">{item.branch?.name || "Toàn hệ thống"}</td>
@@ -275,20 +357,26 @@ export default function MarketingPage() {
                 ))}
               </Table>
             </div>
-            <div className="grid gap-2 md:hidden">
-              {items.map((item) => (
-                <article key={item.id} className="surface p-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-slate-900">{item.dateKey}</p>
-                    <Badge text={item.source} tone="accent" />
-                  </div>
-                  <p className="mt-1 text-sm text-zinc-700">Chi nhánh: {item.branch?.name || "Toàn hệ thống"}</p>
-                  <p className="text-sm text-zinc-700">Chi phí: {formatCurrencyVnd(item.spendVnd)}</p>
-                  <p className="text-sm text-zinc-700">Nhắn tin: {item.messages.toLocaleString("vi-VN")}</p>
-                  <p className="text-sm text-zinc-700">CPL: {formatCurrencyVnd(item.cplVnd)}</p>
-                </article>
+            <AdminCardList>
+              {filteredItems.map((item) => (
+                <AdminCardItem
+                  key={item.id}
+                  title={item.dateKey}
+                  subtitle={item.branch?.name || "Toàn hệ thống"}
+                  meta={
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Badge text={item.source} tone="accent" />
+                        <span className="text-xs text-zinc-500">{formatDateTimeVi(item.updatedAt)}</span>
+                      </div>
+                      <p>Chi phí: {formatCurrencyVnd(item.spendVnd)}</p>
+                      <p>Nhắn tin: {item.messages.toLocaleString("vi-VN")}</p>
+                      <p>CPL: {formatCurrencyVnd(item.cplVnd)}</p>
+                    </div>
+                  }
+                />
               ))}
-            </div>
+            </AdminCardList>
           </>
         )}
       </section>

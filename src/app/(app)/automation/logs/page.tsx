@@ -14,7 +14,13 @@ import { Pagination } from "@/components/ui/pagination";
 import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Table } from "@/components/ui/table";
+import { MobileTopbar } from "@/components/admin/mobile-topbar";
+import { QuickSearchRow } from "@/components/admin/quick-search-row";
+import { FiltersSheet } from "@/components/admin/filters-sheet";
+import { AdminCardItem, AdminCardList } from "@/components/admin/admin-card-list";
+import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/admin/ui-states";
 import { formatDateTimeVi } from "@/lib/date-utils";
+import { useAdminListState } from "@/lib/use-admin-list-state";
 
 type AutomationLog = {
   id: string;
@@ -98,6 +104,8 @@ export default function AutomationLogsPage() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [selected, setSelected] = useState<AutomationLog | null>(null);
   const [tab, setTab] = useState<"input" | "output" | "error">("input");
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const listState = useAdminListState({ query: "", filters: {}, paging: { page: 1, pageSize: 20 } });
 
   const query = useMemo(() => {
     const params = new URLSearchParams();
@@ -109,6 +117,20 @@ export default function AutomationLogsPage() {
     if (to) params.set("to", to);
     return params.toString();
   }, [from, page, pageSize, scope, status, to]);
+
+  const filteredItems = useMemo(() => {
+    const q = listState.debouncedQ.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((item) => {
+      const payload = parsePayload(item.payload);
+      return (
+        item.id.toLowerCase().includes(q) ||
+        scopeLabel(item.milestone).toLowerCase().includes(q) ||
+        statusLabel(item.status).toLowerCase().includes(q) ||
+        shortError(payload).toLowerCase().includes(q)
+      );
+    });
+  }, [items, listState.debouncedQ]);
 
   useEffect(() => {
     const scopeQ = searchParams.get("scope") || "";
@@ -191,6 +213,16 @@ export default function AutomationLogsPage() {
 
   return (
     <div className="space-y-4">
+      <MobileTopbar
+        title="Nhật ký Automation"
+        subtitle="Theo dõi trạng thái chạy tác vụ"
+        actionNode={
+          <Button variant="secondary" className="min-h-11" onClick={loadLogs} disabled={loading}>
+            Làm mới
+          </Button>
+        }
+      />
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold text-zinc-900">Nhật ký Automation</h1>
         <Button variant="secondary" onClick={loadLogs} disabled={loading}>
@@ -206,6 +238,59 @@ export default function AutomationLogsPage() {
 
       {error ? <Alert type="error" message={error} /> : null}
       {success ? <Alert type="success" message={success} /> : null}
+
+      <QuickSearchRow
+        value={listState.q}
+        onChange={listState.setQ}
+        onOpenFilter={() => setMobileFilterOpen(true)}
+        placeholder="Tìm nhanh theo mã log/trạng thái"
+        activeFilterCount={[scope, status, from, to].filter(Boolean).length}
+      />
+
+      <FiltersSheet
+        open={mobileFilterOpen}
+        onOpenChange={setMobileFilterOpen}
+        title="Bộ lọc nhật ký"
+        onApply={() => {
+          setPage(1);
+        }}
+        onClear={() => {
+          setScope("");
+          setStatus("");
+          setFrom("");
+          setTo("");
+          setPage(1);
+        }}
+      >
+        <div className="space-y-3">
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span>Phạm vi</span>
+            <Select value={scope} onChange={(e) => setScope(e.target.value)}>
+              <option value="">Tất cả phạm vi</option>
+              <option value="daily">Hằng ngày</option>
+              <option value="manual">Thủ công</option>
+              <option value="outbound-worker">Worker gửi tin</option>
+            </Select>
+          </label>
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span>Trạng thái</span>
+            <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+              <option value="">Tất cả trạng thái</option>
+              <option value="sent">Đã gửi</option>
+              <option value="failed">Thất bại</option>
+              <option value="skipped">Bỏ qua</option>
+            </Select>
+          </label>
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span>Từ ngày</span>
+            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+          </label>
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span>Đến ngày</span>
+            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+          </label>
+        </div>
+      </FiltersSheet>
 
       <div className="grid gap-2 rounded-xl bg-white p-4 shadow-sm md:grid-cols-5">
         <Select value={scope} onChange={(e) => { setScope(e.target.value); setPage(1); }}>
@@ -230,52 +315,97 @@ export default function AutomationLogsPage() {
       </div>
 
       {loading ? (
-        <div className="rounded-xl bg-white p-6 text-sm text-zinc-600">Đang tải nhật ký automation...</div>
-      ) : items.length === 0 ? (
-        <div className="rounded-xl bg-white p-6 text-sm text-zinc-600">Không có dữ liệu.</div>
+        <LoadingSkeleton text="Đang tải nhật ký automation..." />
+      ) : error ? (
+        <ErrorState detail={error} />
+      ) : filteredItems.length === 0 ? (
+        <EmptyState text="Không có dữ liệu phù hợp bộ lọc." />
       ) : (
-        <Table headers={["Thời gian gửi", "Phạm vi", "Trạng thái", "Runtime", "Đối tượng", "Lỗi", "Hành động"]}>
-          {items.map((item) => {
-            const payload = parsePayload(item.payload);
-            const runtime = payload.runtimeStatus;
-            const canRetry = canRun && (runtime === "failed" || item.status === "failed");
-
-            return (
-              <tr key={item.id} className={`border-t border-zinc-100 ${highlightId === item.id ? "bg-amber-50" : ""}`}>
-                <td className="px-3 py-2 text-sm text-zinc-700">{formatDateTimeVi(item.sentAt)}</td>
-                <td className="px-3 py-2">{scopeLabel(item.milestone)}</td>
-                <td className="px-3 py-2"><Badge text={statusLabel(item.status)} /></td>
-                <td className="px-3 py-2"><Badge text={runtimeLabel(runtime)} /></td>
-                <td className="px-3 py-2 text-xs text-zinc-700">
-                  {item.leadId ? `Khách hàng: ${item.leadId}` : ""}
-                  {item.leadId && item.studentId ? " | " : ""}
-                  {item.studentId ? `Học viên: ${item.studentId}` : "-"}
-                </td>
-                <td className="max-w-[260px] px-3 py-2 text-xs text-zinc-600">{shortError(payload)}</td>
-                <td className="px-3 py-2">
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="secondary"
-                      className="h-7 px-2 py-1 text-xs"
-                      onClick={() => {
-                        setSelected(item);
-                        setTab("input");
-                        setDetailOpen(true);
-                      }}
-                    >
-                      Xem
-                    </Button>
-                    {canRetry ? (
-                      <Button className="h-7 px-2 py-1 text-xs" onClick={() => retryRun(item)}>
+        <>
+          <AdminCardList>
+            {filteredItems.map((item) => {
+              const payload = parsePayload(item.payload);
+              const runtime = payload.runtimeStatus;
+              const canRetry = canRun && (runtime === "failed" || item.status === "failed");
+              return (
+                <AdminCardItem
+                  key={`mobile-${item.id}`}
+                  title={scopeLabel(item.milestone)}
+                  subtitle={formatDateTimeVi(item.sentAt)}
+                  meta={
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap gap-2">
+                        <Badge text={statusLabel(item.status)} />
+                        <Badge text={runtimeLabel(runtime)} />
+                      </div>
+                      <p className="text-xs text-zinc-600">{shortError(payload)}</p>
+                    </div>
+                  }
+                  primaryAction={{
+                    label: "Xem",
+                    onClick: () => {
+                      setSelected(item);
+                      setTab("input");
+                      setDetailOpen(true);
+                    },
+                  }}
+                  overflowActions={
+                    canRetry ? (
+                      <Button variant="secondary" className="h-9 px-2 text-xs" onClick={() => retryRun(item)}>
                         Chạy lại
                       </Button>
-                    ) : null}
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </Table>
+                    ) : null
+                  }
+                />
+              );
+            })}
+          </AdminCardList>
+
+          <div className="hidden md:block">
+            <Table headers={["Thời gian gửi", "Phạm vi", "Trạng thái", "Runtime", "Đối tượng", "Lỗi", "Hành động"]}>
+              {filteredItems.map((item) => {
+                const payload = parsePayload(item.payload);
+                const runtime = payload.runtimeStatus;
+                const canRetry = canRun && (runtime === "failed" || item.status === "failed");
+
+                return (
+                  <tr key={item.id} className={`border-t border-zinc-100 ${highlightId === item.id ? "bg-amber-50" : ""}`}>
+                    <td className="px-3 py-2 text-sm text-zinc-700">{formatDateTimeVi(item.sentAt)}</td>
+                    <td className="px-3 py-2">{scopeLabel(item.milestone)}</td>
+                    <td className="px-3 py-2"><Badge text={statusLabel(item.status)} /></td>
+                    <td className="px-3 py-2"><Badge text={runtimeLabel(runtime)} /></td>
+                    <td className="px-3 py-2 text-xs text-zinc-700">
+                      {item.leadId ? `Khách hàng: ${item.leadId}` : ""}
+                      {item.leadId && item.studentId ? " | " : ""}
+                      {item.studentId ? `Học viên: ${item.studentId}` : "-"}
+                    </td>
+                    <td className="max-w-[260px] px-3 py-2 text-xs text-zinc-600">{shortError(payload)}</td>
+                    <td className="px-3 py-2">
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant="secondary"
+                          className="h-7 px-2 py-1 text-xs"
+                          onClick={() => {
+                            setSelected(item);
+                            setTab("input");
+                            setDetailOpen(true);
+                          }}
+                        >
+                          Xem
+                        </Button>
+                        {canRetry ? (
+                          <Button className="h-7 px-2 py-1 text-xs" onClick={() => retryRun(item)}>
+                            Chạy lại
+                          </Button>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </Table>
+          </div>
+        </>
       )}
 
       <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
