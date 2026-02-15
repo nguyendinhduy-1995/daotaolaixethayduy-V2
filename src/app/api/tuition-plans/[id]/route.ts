@@ -6,11 +6,12 @@ import { requireAdminRole } from "@/lib/admin-auth";
 
 type RouteContext = { params: Promise<{ id: string }> | { id: string } };
 
-const LICENSE_TYPES = ["B", "C1"] as const;
-type LicenseType = (typeof LICENSE_TYPES)[number];
-
-function isLicenseType(value: unknown): value is LicenseType {
-  return typeof value === "string" && LICENSE_TYPES.includes(value as LicenseType);
+function normalizeLicenseType(value: unknown) {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim().toUpperCase();
+  if (!normalized) return undefined;
+  if (normalized.length > 16) return undefined;
+  return normalized;
 }
 
 function parseAmount(value: unknown) {
@@ -55,9 +56,9 @@ export async function PATCH(req: Request, context: RouteContext) {
     if (!body || typeof body !== "object") {
       return jsonError(400, "VALIDATION_ERROR", "Invalid JSON body");
     }
-    if (body.licenseType !== undefined && !isLicenseType(body.licenseType)) {
-      return jsonError(400, "VALIDATION_ERROR", "Invalid licenseType");
-    }
+    const licenseType =
+      body.licenseType !== undefined ? normalizeLicenseType(body.licenseType) : undefined;
+    if (body.licenseType !== undefined && !licenseType) return jsonError(400, "VALIDATION_ERROR", "Invalid licenseType");
     if (body.province !== undefined && (typeof body.province !== "string" || !body.province.trim())) {
       return jsonError(400, "VALIDATION_ERROR", "Invalid province");
     }
@@ -74,7 +75,7 @@ export async function PATCH(req: Request, context: RouteContext) {
       where: { id },
       data: {
         ...(body.province !== undefined ? { province: body.province.trim() } : {}),
-        ...(body.licenseType !== undefined ? { licenseType: body.licenseType } : {}),
+        ...(licenseType !== undefined ? { licenseType } : {}),
         ...(totalAmount !== undefined ? { tuition: totalAmount } : {}),
         ...(body.isActive !== undefined
           ? { isActive: typeof body.isActive === "boolean" ? body.isActive : undefined }

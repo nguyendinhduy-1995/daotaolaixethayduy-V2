@@ -5,11 +5,12 @@ import { jsonError } from "@/lib/api-response";
 import { requireRouteAuth } from "@/lib/route-auth";
 import { requireAdminRole } from "@/lib/admin-auth";
 
-const LICENSE_TYPES = ["B", "C1"] as const;
-type LicenseType = (typeof LICENSE_TYPES)[number];
-
-function isLicenseType(value: unknown): value is LicenseType {
-  return typeof value === "string" && LICENSE_TYPES.includes(value as LicenseType);
+function normalizeLicenseType(value: unknown) {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim().toUpperCase();
+  if (!normalized) return undefined;
+  if (normalized.length > 16) return undefined;
+  return normalized;
 }
 
 function parsePositiveInt(value: string | null, fallback: number, max = 100) {
@@ -44,17 +45,18 @@ export async function GET(req: Request) {
     const page = parsePositiveInt(searchParams.get("page"), 1);
     const pageSize = parsePositiveInt(searchParams.get("pageSize"), 20);
     const province = searchParams.get("province")?.trim();
-    const licenseType = searchParams.get("licenseType");
+    const rawLicenseType = searchParams.get("licenseType");
+    const licenseType = rawLicenseType ? normalizeLicenseType(rawLicenseType) : undefined;
     const isActive = parseBooleanFilter(searchParams.get("isActive"));
     const q = searchParams.get("q")?.trim();
 
-    if (licenseType !== null && !isLicenseType(licenseType)) {
+    if (rawLicenseType && !licenseType) {
       return jsonError(400, "VALIDATION_ERROR", "Invalid licenseType");
     }
 
     const where: Prisma.TuitionPlanWhereInput = {
       ...(province ? { province: { contains: province, mode: "insensitive" } } : {}),
-      ...(licenseType ? { licenseType } : {}),
+      ...(licenseType ? { licenseType: { contains: licenseType, mode: "insensitive" } } : {}),
       ...(isActive !== undefined ? { isActive } : {}),
       ...(q
         ? {
@@ -109,7 +111,8 @@ export async function POST(req: Request) {
     if (!body.province || typeof body.province !== "string") {
       return jsonError(400, "VALIDATION_ERROR", "province is required");
     }
-    if (!isLicenseType(body.licenseType)) {
+    const licenseType = normalizeLicenseType(body.licenseType);
+    if (!licenseType) {
       return jsonError(400, "VALIDATION_ERROR", "Invalid licenseType");
     }
 
@@ -121,7 +124,7 @@ export async function POST(req: Request) {
     const plan = await prisma.tuitionPlan.create({
       data: {
         province: body.province.trim(),
-        licenseType: body.licenseType,
+        licenseType,
         tuition: totalAmount,
         isActive: typeof body.isActive === "boolean" ? body.isActive : true,
       },

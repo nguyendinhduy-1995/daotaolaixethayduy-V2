@@ -20,7 +20,7 @@ import { formatCurrencyVnd, formatDateTimeVi } from "@/lib/date-utils";
 type TuitionPlan = {
   id: string;
   province: string;
-  licenseType: "B" | "C1";
+  licenseType: string;
   totalAmount: number;
   paid50Amount: number;
   tuition: number;
@@ -40,6 +40,10 @@ function parseApiError(error: ApiClientError) {
   return `${error.code}: ${error.message}`;
 }
 
+function normalizeLicenseTypeInput(value: string) {
+  return value.trim().toUpperCase();
+}
+
 export default function TuitionPlansAdminPage() {
   const router = useRouter();
   const [checkingRole, setCheckingRole] = useState(true);
@@ -51,7 +55,7 @@ export default function TuitionPlansAdminPage() {
   const [qInput, setQInput] = useState("");
   const [q, setQ] = useState("");
   const [province, setProvince] = useState("");
-  const [licenseType, setLicenseType] = useState<"" | "B" | "C1">("");
+  const [licenseType, setLicenseType] = useState("");
   const [activeFilter, setActiveFilter] = useState<"" | "true" | "false">("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -61,7 +65,7 @@ export default function TuitionPlansAdminPage() {
   const [createSaving, setCreateSaving] = useState(false);
   const [createForm, setCreateForm] = useState({
     province: "",
-    licenseType: "B" as "B" | "C1",
+    licenseType: "",
     totalAmount: "",
     paid50Amount: "",
     note: "",
@@ -73,7 +77,7 @@ export default function TuitionPlansAdminPage() {
   const [editTarget, setEditTarget] = useState<TuitionPlan | null>(null);
   const [editForm, setEditForm] = useState({
     province: "",
-    licenseType: "B" as "B" | "C1",
+    licenseType: "",
     totalAmount: "",
     paid50Amount: "",
     note: "",
@@ -153,6 +157,11 @@ export default function TuitionPlansAdminPage() {
       setError("Vui lòng nhập tỉnh.");
       return;
     }
+    const normalizedLicenseType = normalizeLicenseTypeInput(createForm.licenseType);
+    if (!normalizedLicenseType || normalizedLicenseType.length > 16) {
+      setError("Hạng bằng không hợp lệ (tối đa 16 ký tự).");
+      return;
+    }
     if (!Number.isInteger(totalAmount) || totalAmount <= 0) {
       setError("Tổng học phí phải là số nguyên dương.");
       return;
@@ -171,7 +180,7 @@ export default function TuitionPlansAdminPage() {
         token,
         body: {
           province: createForm.province.trim(),
-          licenseType: createForm.licenseType,
+          licenseType: normalizedLicenseType,
           totalAmount,
           paid50Amount,
           note: createForm.note || undefined,
@@ -179,7 +188,7 @@ export default function TuitionPlansAdminPage() {
         },
       });
       setCreateOpen(false);
-      setCreateForm({ province: "", licenseType: "B", totalAmount: "", paid50Amount: "", note: "", isActive: true });
+      setCreateForm({ province: "", licenseType: "", totalAmount: "", paid50Amount: "", note: "", isActive: true });
       setSuccess("Tạo bảng học phí thành công.");
       await loadTuitionPlans();
     } catch (e) {
@@ -214,6 +223,11 @@ export default function TuitionPlansAdminPage() {
       setError("Vui lòng nhập tỉnh.");
       return;
     }
+    const normalizedLicenseType = normalizeLicenseTypeInput(editForm.licenseType);
+    if (!normalizedLicenseType || normalizedLicenseType.length > 16) {
+      setError("Hạng bằng không hợp lệ (tối đa 16 ký tự).");
+      return;
+    }
     if (!Number.isInteger(totalAmount) || totalAmount <= 0) {
       setError("Tổng học phí phải là số nguyên dương.");
       return;
@@ -232,7 +246,7 @@ export default function TuitionPlansAdminPage() {
         token,
         body: {
           province: editForm.province.trim(),
-          licenseType: editForm.licenseType,
+          licenseType: normalizedLicenseType,
           totalAmount,
           paid50Amount,
           note: editForm.note || null,
@@ -303,11 +317,7 @@ export default function TuitionPlansAdminPage() {
           </div>
           <div>
             <label className="mb-1 block text-sm text-zinc-600">Hạng bằng</label>
-            <Select value={licenseType} onChange={(e) => setLicenseType(e.target.value as "" | "B" | "C1")}>
-              <option value="">Tất cả</option>
-              <option value="B">B</option>
-              <option value="C1">C1</option>
-            </Select>
+            <Input value={licenseType} onChange={(e) => setLicenseType(e.target.value)} placeholder="VD: B, C1, D, E..." />
           </div>
           <div>
             <label className="mb-1 block text-sm text-zinc-600">Trạng thái</label>
@@ -363,10 +373,12 @@ export default function TuitionPlansAdminPage() {
       <Modal open={createOpen} title="Tạo bảng học phí" onClose={() => setCreateOpen(false)}>
         <div className="space-y-3">
           <Input placeholder="Tỉnh" value={createForm.province} onChange={(e) => setCreateForm((s) => ({ ...s, province: e.target.value }))} />
-          <Select value={createForm.licenseType} onChange={(e) => setCreateForm((s) => ({ ...s, licenseType: e.target.value as "B" | "C1" }))}>
-            <option value="B">B</option>
-            <option value="C1">C1</option>
-          </Select>
+          <Input
+            placeholder="Hạng bằng (VD: B, C1, D, E...)"
+            value={createForm.licenseType}
+            maxLength={16}
+            onChange={(e) => setCreateForm((s) => ({ ...s, licenseType: e.target.value }))}
+          />
           <Input type="number" min={1} placeholder="Tổng học phí" value={createForm.totalAmount} onChange={(e) => setCreateForm((s) => ({ ...s, totalAmount: e.target.value }))} />
           <Input type="number" min={1} placeholder="Mốc >= 50% (để trống sẽ tự tính)" value={createForm.paid50Amount} onChange={(e) => setCreateForm((s) => ({ ...s, paid50Amount: e.target.value }))} />
           <Input placeholder="Ghi chú" value={createForm.note} onChange={(e) => setCreateForm((s) => ({ ...s, note: e.target.value }))} />
@@ -388,10 +400,12 @@ export default function TuitionPlansAdminPage() {
       <Modal open={editOpen} title="Sửa bảng học phí" onClose={() => setEditOpen(false)}>
         <div className="space-y-3">
           <Input placeholder="Tỉnh" value={editForm.province} onChange={(e) => setEditForm((s) => ({ ...s, province: e.target.value }))} />
-          <Select value={editForm.licenseType} onChange={(e) => setEditForm((s) => ({ ...s, licenseType: e.target.value as "B" | "C1" }))}>
-            <option value="B">B</option>
-            <option value="C1">C1</option>
-          </Select>
+          <Input
+            placeholder="Hạng bằng (VD: B, C1, D, E...)"
+            value={editForm.licenseType}
+            maxLength={16}
+            onChange={(e) => setEditForm((s) => ({ ...s, licenseType: e.target.value }))}
+          />
           <Input type="number" min={1} placeholder="Tổng học phí" value={editForm.totalAmount} onChange={(e) => setEditForm((s) => ({ ...s, totalAmount: e.target.value }))} />
           <Input type="number" min={1} placeholder="Mốc >= 50%" value={editForm.paid50Amount} onChange={(e) => setEditForm((s) => ({ ...s, paid50Amount: e.target.value }))} />
           <Input placeholder="Ghi chú" value={editForm.note} onChange={(e) => setEditForm((s) => ({ ...s, note: e.target.value }))} />
