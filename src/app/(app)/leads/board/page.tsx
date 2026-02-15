@@ -9,8 +9,10 @@ import { isAdminRole, isTelesalesRole } from "@/lib/admin-auth";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FilterCard } from "@/components/ui/filter-card";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
+import { PageHeader } from "@/components/ui/page-header";
 import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { formatDateTimeVi } from "@/lib/date-utils";
@@ -38,6 +40,7 @@ type Lead = {
 type LeadListResponse = {
   items: Lead[];
 };
+
 type UserOption = {
   id: string;
   name: string | null;
@@ -45,10 +48,23 @@ type UserOption = {
   role: string;
   isActive: boolean;
 };
+
 type UsersResponse = { items: UserOption[] };
 
 const STATUSES = ["NEW", "HAS_PHONE", "APPOINTED", "ARRIVED", "SIGNED", "STUDYING", "EXAMED", "RESULT", "LOST"];
 const EVENT_OPTIONS = [...STATUSES, "CALLED"];
+
+const STATUS_LABELS: Record<string, string> = {
+  NEW: "Mới",
+  HAS_PHONE: "Đã có SĐT",
+  APPOINTED: "Đã hẹn",
+  ARRIVED: "Đã đến",
+  SIGNED: "Đã ghi danh",
+  STUDYING: "Đang học",
+  EXAMED: "Đã thi",
+  RESULT: "Có kết quả",
+  LOST: "Mất",
+};
 
 type Filters = {
   q: string;
@@ -81,12 +97,19 @@ function dateYmdLocal(date: Date) {
   return `${y}-${m}-${d}`;
 }
 
+function statusTone(status: string): "primary" | "accent" | "neutral" {
+  if (status === "SIGNED" || status === "RESULT") return "accent";
+  if (status === "LOST") return "neutral";
+  return "primary";
+}
+
 export default function LeadsBoardPage() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [canManageOwner, setCanManageOwner] = useState(false);
@@ -102,6 +125,7 @@ export default function LeadsBoardPage() {
   const [eventNote, setEventNote] = useState("");
   const [eventMeta, setEventMeta] = useState("");
   const [eventSaving, setEventSaving] = useState(false);
+
   const [assignLead, setAssignLead] = useState<Lead | null>(null);
   const [assignOwnerId, setAssignOwnerId] = useState("");
   const [assignSaving, setAssignSaving] = useState(false);
@@ -304,181 +328,292 @@ export default function LeadsBoardPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-zinc-900">Bảng Kanban khách hàng</h1>
-        <Button variant="secondary" onClick={loadBoard}>
-          Làm mới
-        </Button>
+      <PageHeader
+        title="Bảng Kanban khách hàng"
+        subtitle="Theo dõi pipeline theo trạng thái"
+        actions={
+          <>
+            {canManageOwner ? <Badge text="Admin · Quản trị" tone="accent" /> : null}
+            <Button onClick={loadBoard}>
+              {loading ? (
+                <span className="inline-flex items-center gap-2">
+                  <Spinner /> Đang tải...
+                </span>
+              ) : (
+                "Làm mới"
+              )}
+            </Button>
+          </>
+        }
+      />
+
+      <div className="sticky top-[68px] z-20 space-y-2 rounded-2xl border border-zinc-200 bg-zinc-100/80 p-2 backdrop-blur md:top-[72px]">
+        <FilterCard
+          actions={
+            <>
+              <Button onClick={() => applyFiltersToUrl(filters)}>Áp dụng</Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setFilters(EMPTY_FILTERS);
+                  applyFiltersToUrl(EMPTY_FILTERS);
+                }}
+              >
+                Xóa
+              </Button>
+            </>
+          }
+        >
+          <div className="grid gap-2 md:grid-cols-6">
+            <div className="md:col-span-2">
+              <Input
+                value={filters.q}
+                placeholder="Tìm kiếm tên/SĐT"
+                onChange={(e) => setFilters((s) => ({ ...s, q: e.target.value }))}
+              />
+            </div>
+            <Input
+              value={filters.source}
+              placeholder="Nguồn"
+              onChange={(e) => setFilters((s) => ({ ...s, source: e.target.value }))}
+            />
+            <Input
+              value={filters.channel}
+              placeholder="Kênh"
+              onChange={(e) => setFilters((s) => ({ ...s, channel: e.target.value }))}
+            />
+            <Input
+              value={filters.licenseType}
+              placeholder="Hạng bằng"
+              onChange={(e) => setFilters((s) => ({ ...s, licenseType: e.target.value }))}
+            />
+            {canManageOwner ? (
+              <Select value={filters.ownerId} onChange={(e) => setFilters((s) => ({ ...s, ownerId: e.target.value }))}>
+                <option value="">Tất cả người phụ trách</option>
+                {owners.map((owner) => (
+                  <option key={owner.id} value={owner.id}>
+                    {owner.name || owner.email}
+                  </option>
+                ))}
+              </Select>
+            ) : !isTelesales ? (
+              <Input
+                value={filters.ownerId}
+                placeholder="Mã người phụ trách"
+                onChange={(e) => setFilters((s) => ({ ...s, ownerId: e.target.value }))}
+              />
+            ) : null}
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Button variant="ghost" onClick={() => setShowAdvancedFilter((v) => !v)}>
+              {showAdvancedFilter ? "Ẩn bộ lọc nâng cao" : "Bộ lọc nâng cao"}
+            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  const today = dateYmdLocal(new Date());
+                  const next = { ...filters, createdFrom: today, createdTo: today };
+                  setFilters(next);
+                  applyFiltersToUrl(next);
+                }}
+              >
+                Hôm nay
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  const now = new Date();
+                  const start = new Date(now);
+                  start.setDate(now.getDate() - 6);
+                  const next = { ...filters, createdFrom: dateYmdLocal(start), createdTo: dateYmdLocal(now) };
+                  setFilters(next);
+                  applyFiltersToUrl(next);
+                }}
+              >
+                Tuần này
+              </Button>
+            </div>
+          </div>
+
+          {showAdvancedFilter ? (
+            <div className="grid gap-2 md:grid-cols-4">
+              <Input
+                type="date"
+                value={filters.createdFrom}
+                onChange={(e) => setFilters((s) => ({ ...s, createdFrom: e.target.value }))}
+              />
+              <Input
+                type="date"
+                value={filters.createdTo}
+                onChange={(e) => setFilters((s) => ({ ...s, createdTo: e.target.value }))}
+              />
+              <div className="md:col-span-2 text-xs text-zinc-500">
+                Gợi ý: dùng bộ lọc ngày để xem lead mới trong ngày/tuần và giảm nhiễu khi theo dõi pipeline.
+              </div>
+            </div>
+          ) : null}
+        </FilterCard>
       </div>
 
       {error ? <Alert type="error" message={error} /> : null}
 
-      <div className="grid gap-2 rounded-xl bg-white p-4 shadow-sm md:grid-cols-4">
-        <Input value={filters.q} placeholder="Tìm kiếm tên/SĐT" onChange={(e) => setFilters((s) => ({ ...s, q: e.target.value }))} />
-        <Input value={filters.source} placeholder="Nguồn" onChange={(e) => setFilters((s) => ({ ...s, source: e.target.value }))} />
-        <Input value={filters.channel} placeholder="Kênh" onChange={(e) => setFilters((s) => ({ ...s, channel: e.target.value }))} />
-        <Input
-          value={filters.licenseType}
-          placeholder="Hạng bằng"
-          onChange={(e) => setFilters((s) => ({ ...s, licenseType: e.target.value }))}
-        />
-        {canManageOwner ? (
-          <Select value={filters.ownerId} onChange={(e) => setFilters((s) => ({ ...s, ownerId: e.target.value }))}>
-            <option value="">Tất cả người phụ trách</option>
-            {owners.map((owner) => (
-              <option key={owner.id} value={owner.id}>
-                {owner.name || owner.email}
-              </option>
-            ))}
-          </Select>
-        ) : !isTelesales ? (
-          <Input value={filters.ownerId} placeholder="Mã người phụ trách" onChange={(e) => setFilters((s) => ({ ...s, ownerId: e.target.value }))} />
-        ) : null}
-        <Input type="date" value={filters.createdFrom} onChange={(e) => setFilters((s) => ({ ...s, createdFrom: e.target.value }))} />
-        <Input type="date" value={filters.createdTo} onChange={(e) => setFilters((s) => ({ ...s, createdTo: e.target.value }))} />
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={() => applyFiltersToUrl(filters)}>Áp dụng</Button>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setFilters(EMPTY_FILTERS);
-              applyFiltersToUrl(EMPTY_FILTERS);
-            }}
-          >
-            Xoá bộ lọc
-          </Button>
-        </div>
-        <div className="md:col-span-4 flex flex-wrap gap-2">
-          <Button
-            variant="secondary"
-            onClick={() => {
-              const today = dateYmdLocal(new Date());
-              const next = { ...filters, createdFrom: today, createdTo: today };
-              setFilters(next);
-              applyFiltersToUrl(next);
-            }}
-          >
-            Hôm nay
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              const now = new Date();
-              const start = new Date(now);
-              start.setDate(now.getDate() - 6);
-              const next = { ...filters, createdFrom: dateYmdLocal(start), createdTo: dateYmdLocal(now) };
-              setFilters(next);
-              applyFiltersToUrl(next);
-            }}
-          >
-            Tuần này
-          </Button>
-        </div>
-      </div>
-
       {loading ? (
-        <div className="rounded-xl bg-white p-6 text-zinc-600">Đang tải bảng Kanban...</div>
+        <div className="rounded-2xl border border-zinc-200 bg-white p-6 text-zinc-600 shadow-sm">Đang tải bảng Kanban...</div>
       ) : (
-        <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-5">
-          {STATUSES.map((status) => (
-            <div
-              key={status}
-              className="rounded-xl border border-zinc-200 bg-white p-3"
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={() => onDrop(status)}
-            >
-              <div className="mb-3 flex items-center justify-between">
-                <Badge text={status} />
-                <span className="text-xs text-zinc-500">{(byStatus[status] || []).length}</span>
-              </div>
-              <div className="space-y-2">
-                {(byStatus[status] || []).length === 0 ? (
-                  <div className="rounded-lg bg-zinc-50 p-3 text-xs text-zinc-500">Không có dữ liệu</div>
-                ) : (
-                  byStatus[status].map((lead) => (
-                    <div
-                      key={lead.id}
-                      draggable
-                      onDragStart={() => setDraggingLead(lead)}
-                      className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-xs"
-                    >
-                      <div className="font-medium text-zinc-900">{lead.fullName || "Chưa có tên"}</div>
-                      <div className="text-zinc-600">{lead.phone || "-"}</div>
-                      <div className="mt-1 text-zinc-500">
-                        {lead.source || "-"} / {lead.channel || "-"}
-                      </div>
-                      <div className="text-zinc-500">Hạng bằng: {lead.licenseType || "-"}</div>
-                      <div className="text-zinc-500">Người phụ trách: {lead.owner?.name || lead.owner?.email || "-"}</div>
-                      <div className="text-zinc-500">
-                        Liên hệ gần nhất: {lead.lastContactAt ? formatDateTimeVi(lead.lastContactAt) : "-"}
-                      </div>
-                      <div className="text-zinc-500">Ngày tạo: {formatDateTimeVi(lead.createdAt)}</div>
-                      <div className="mt-2 space-y-1">
-                        <Select
-                          value={lead.status}
-                          onChange={(e) => changeStatus(lead.id, lead.status, e.target.value)}
-                          disabled={updatingId === lead.id}
-                        >
-                          {STATUSES.map((s) => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
-                          ))}
-                        </Select>
-                        <div className="flex gap-1">
-                          {canManageOwner ? (
-                            <Button
-                              variant="secondary"
-                              className="flex-1"
-                              onClick={() => {
-                                setAssignLead(lead);
-                                setAssignOwnerId(lead.ownerId || "");
-                              }}
-                            >
-                              Gán telesale
-                            </Button>
-                          ) : null}
-                          <Button
-                            variant="secondary"
-                            className="flex-1"
-                            onClick={() => {
-                              setEventLeadId(lead.id);
-                              setEventOpen(true);
-                            }}
-                          >
-                            Thêm sự kiện
-                          </Button>
-                          <Link
-                            href={`/leads/${lead.id}`}
-                            className="flex-1 rounded-lg border border-zinc-300 bg-white px-2 py-2 text-center text-xs font-medium text-zinc-700 hover:bg-zinc-100"
-                          >
-                            Chi tiết
-                          </Link>
-                        </div>
-                      </div>
+        <div className="overflow-x-auto pb-1">
+          <div className="flex min-w-max gap-3">
+            {STATUSES.map((status) => {
+              const items = byStatus[status] || [];
+              return (
+                <section
+                  key={status}
+                  className="w-[320px] shrink-0 rounded-2xl border border-zinc-200 bg-zinc-100/70 p-2"
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => onDrop(status)}
+                >
+                  <div className="sticky top-0 z-10 mb-2 flex items-center justify-between rounded-xl border border-zinc-200 bg-white px-3 py-2 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-slate-900">{STATUS_LABELS[status] || status}</p>
+                      <span className="inline-flex min-w-6 items-center justify-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+                        {items.length}
+                      </span>
                     </div>
-                  ))
-                )}
-              </div>
-            </div>
-          ))}
+                    <Badge text={status} tone={statusTone(status)} />
+                  </div>
+
+                  <div className="space-y-2">
+                    {items.length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-zinc-300 bg-white px-3 py-5 text-center text-xs text-zinc-500">
+                        Chưa có khách trong cột này.
+                        <br />
+                        Thử điều chỉnh bộ lọc để xem thêm dữ liệu.
+                      </div>
+                    ) : (
+                      items.map((lead) => (
+                        <article
+                          key={lead.id}
+                          draggable
+                          onDragStart={() => setDraggingLead(lead)}
+                          className="rounded-xl border border-zinc-200 bg-white p-3 text-xs shadow-sm transition hover:border-slate-300 hover:shadow"
+                        >
+                          <div className="mb-1 flex items-start justify-between gap-2">
+                            <p className="line-clamp-2 text-sm font-semibold text-slate-900">{lead.fullName || "Chưa có tên"}</p>
+                            <div className="flex items-center gap-1">
+                              <Badge text={lead.licenseType || "-"} tone="accent" />
+                            </div>
+                          </div>
+
+                          <p className="font-mono text-sm text-zinc-800">{lead.phone || "-"}</p>
+
+                          <div className="mt-2 grid gap-1 text-zinc-600">
+                            <p>
+                              <span className="text-zinc-500">Nguồn:</span> {lead.source || "-"} · {lead.channel || "-"}
+                            </p>
+                            <p>
+                              <span className="text-zinc-500">Phụ trách:</span> {lead.owner?.name || lead.owner?.email || "-"}
+                            </p>
+                            <p>
+                              <span className="text-zinc-500">Liên hệ gần nhất:</span>{" "}
+                              {lead.lastContactAt ? formatDateTimeVi(lead.lastContactAt) : "-"}
+                            </p>
+                          </div>
+
+                          <div className="mt-3 space-y-2">
+                            <Select
+                              value={lead.status}
+                              onChange={(e) => changeStatus(lead.id, lead.status, e.target.value)}
+                              disabled={updatingId === lead.id}
+                            >
+                              {STATUSES.map((s) => (
+                                <option key={s} value={s}>
+                                  {STATUS_LABELS[s] || s}
+                                </option>
+                              ))}
+                            </Select>
+
+                            <div className="flex items-center justify-between gap-2">
+                              <Link
+                                href={`/leads/${lead.id}`}
+                                className="inline-flex items-center rounded-xl border border-zinc-300 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100"
+                              >
+                                Chi tiết
+                              </Link>
+
+                              <details className="relative">
+                                <summary className="list-none cursor-pointer rounded-xl border border-zinc-300 px-2 py-1 text-sm text-zinc-700 hover:bg-zinc-100">
+                                  ...
+                                </summary>
+                                <div className="absolute right-0 z-20 mt-1 w-40 rounded-xl border border-zinc-200 bg-white p-1 shadow-lg">
+                                  {canManageOwner ? (
+                                    <button
+                                      type="button"
+                                      className="block w-full rounded-lg px-2 py-1.5 text-left text-xs text-zinc-700 hover:bg-zinc-100"
+                                      onClick={() => {
+                                        setAssignLead(lead);
+                                        setAssignOwnerId(lead.ownerId || "");
+                                      }}
+                                    >
+                                      Gán telesale
+                                    </button>
+                                  ) : null}
+                                  <button
+                                    type="button"
+                                    className="block w-full rounded-lg px-2 py-1.5 text-left text-xs text-zinc-700 hover:bg-zinc-100"
+                                    onClick={() => {
+                                      setEventLeadId(lead.id);
+                                      setEventOpen(true);
+                                    }}
+                                  >
+                                    Thêm sự kiện
+                                  </button>
+                                  <Link
+                                    href={`/leads/${lead.id}`}
+                                    className="block w-full rounded-lg px-2 py-1.5 text-left text-xs text-zinc-700 hover:bg-zinc-100"
+                                  >
+                                    Mở chi tiết
+                                  </Link>
+                                </div>
+                              </details>
+                            </div>
+
+                            <p className="text-[11px] text-zinc-500">Tạo: {formatDateTimeVi(lead.createdAt)}</p>
+                          </div>
+                        </article>
+                      ))
+                    )}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
         </div>
       )}
 
-      <Modal open={eventOpen} title="Thêm sự kiện khách hàng" onClose={() => setEventOpen(false)}>
+      <Modal
+        open={eventOpen}
+        title="Thêm sự kiện khách hàng"
+        description="Ghi nhận tương tác để cập nhật timeline xử lý lead"
+        onClose={() => setEventOpen(false)}
+      >
         <div className="space-y-3">
           <Select value={eventType} onChange={(e) => setEventType(e.target.value)}>
             {EVENT_OPTIONS.map((t) => (
               <option key={t} value={t}>
-                {t}
+                {STATUS_LABELS[t] || t}
               </option>
             ))}
           </Select>
           <Input placeholder="Ghi chú" value={eventNote} onChange={(e) => setEventNote(e.target.value)} />
-          <Input placeholder="Dữ liệu JSON (không bắt buộc)" value={eventMeta} onChange={(e) => setEventMeta(e.target.value)} />
+          <Input
+            placeholder="Dữ liệu JSON (không bắt buộc)"
+            value={eventMeta}
+            onChange={(e) => setEventMeta(e.target.value)}
+          />
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setEventOpen(false)}>
-              Huỷ
+              Hủy
             </Button>
             <Button onClick={submitEvent} disabled={eventSaving}>
               {eventSaving ? (
@@ -493,11 +628,14 @@ export default function LeadsBoardPage() {
         </div>
       </Modal>
 
-      <Modal open={Boolean(assignLead)} title="Gán telesale phụ trách" onClose={() => setAssignLead(null)}>
+      <Modal
+        open={Boolean(assignLead)}
+        title="Gán telesale phụ trách"
+        description="Cập nhật người chịu trách nhiệm chính cho lead"
+        onClose={() => setAssignLead(null)}
+      >
         <div className="space-y-3">
-          <p className="text-sm text-zinc-700">
-            {assignLead ? `Khách hàng: ${assignLead.fullName || assignLead.id}` : ""}
-          </p>
+          <p className="text-sm text-zinc-700">{assignLead ? `Khách hàng: ${assignLead.fullName || assignLead.id}` : ""}</p>
           <Select value={assignOwnerId} onChange={(e) => setAssignOwnerId(e.target.value)}>
             <option value="">Chưa gán</option>
             {owners.map((owner) => (
@@ -508,7 +646,7 @@ export default function LeadsBoardPage() {
           </Select>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setAssignLead(null)}>
-              Huỷ
+              Hủy
             </Button>
             <Button onClick={submitAssignOwner} disabled={assignSaving}>
               {assignSaving ? "Đang lưu..." : "Lưu"}
