@@ -282,6 +282,10 @@ curl -sS -X POST http://localhost:3000/api/worker/outbound \
   - API đọc dữ liệu: `GET /api/admin/marketing/reports?from=YYYY-MM-DD&to=YYYY-MM-DD&branchId=&source=meta`
 - API admin nhập tay:
   - `POST /api/admin/marketing/report` (cookie session + admin role)
+- Tương thích ngược (deprecated, vẫn chạy bằng adapter về `MarketingReport`):
+  - `POST /api/marketing/ingest` (chỉ hỗ trợ `grain=DAY`)
+  - `POST /api/admin/marketing/ingest` (chỉ hỗ trợ `grain=DAY`)
+  - `GET /api/marketing/metrics` (chỉ hỗ trợ `grain=DAY`)
 
 ## Vận hành lịch & điểm danh
 
