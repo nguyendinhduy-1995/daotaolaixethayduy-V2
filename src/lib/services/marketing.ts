@@ -60,7 +60,7 @@ async function resolveBranchId(branchId?: string, branchCode?: string) {
   }
   if (branchCode) {
     const branch = await prisma.branch.findFirst({
-      where: { name: { equals: branchCode.trim(), mode: "insensitive" } },
+      where: { code: { equals: branchCode.trim(), mode: "insensitive" } },
       select: { id: true },
     });
     if (branch) return branch.id;
