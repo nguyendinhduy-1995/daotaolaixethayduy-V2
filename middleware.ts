@@ -72,13 +72,37 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (pathname.startsWith("/admin") && payload.role !== "admin") {
+  if (pathname.startsWith("/admin")) {
+    return verifyAdminAccess(req, payload?.role);
+  }
+
+  if (pathname.startsWith("/automation/run") && payload.role !== "admin") {
     const leadsUrl = new URL("/leads", req.url);
     leadsUrl.searchParams.set("err", "forbidden");
     return NextResponse.redirect(leadsUrl);
   }
 
-  if (pathname.startsWith("/automation/run") && payload.role !== "admin") {
+  return NextResponse.next();
+}
+
+async function verifyAdminAccess(req: NextRequest, decodedRole?: string) {
+  // Do not trust decoded JWT role claim for authorization decisions.
+  // Confirm session with server-side auth verification (/api/auth/me).
+  const meRes = await fetch(new URL("/api/auth/me", req.url), {
+    method: "GET",
+    headers: {
+      cookie: req.headers.get("cookie") ?? "",
+    },
+  }).catch(() => null);
+
+  if (!meRes?.ok) {
+    const loginUrl = new URL("/login", req.url);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  const meJson = (await meRes.json().catch(() => null)) as { user?: { role?: string } } | null;
+  const role = meJson?.user?.role ?? decodedRole;
+  if (role !== "admin") {
     const leadsUrl = new URL("/leads", req.url);
     leadsUrl.searchParams.set("err", "forbidden");
     return NextResponse.redirect(leadsUrl);
