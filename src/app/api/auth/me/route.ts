@@ -11,7 +11,7 @@ export async function GET(req: Request) {
     if (error instanceof AuthError) {
       return jsonError(error.status, error.code, error.message);
     }
-    return jsonError(401, "UNAUTHORIZED", "Unauthorized");
+    return jsonError(401, "AUTH_INVALID_TOKEN", "Invalid or expired token");
   }
 
   try {
@@ -21,7 +21,7 @@ export async function GET(req: Request) {
     });
 
     if (!user || !user.isActive) {
-      return jsonError(401, "UNAUTHORIZED", "Unauthorized");
+      return jsonError(401, "AUTH_INVALID_TOKEN", "Invalid or expired token");
     }
 
     return NextResponse.json({

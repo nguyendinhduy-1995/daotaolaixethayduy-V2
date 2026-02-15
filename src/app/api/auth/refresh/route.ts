@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     });
 
     if (!user || !user.isActive) {
-      return jsonError(401, "UNAUTHORIZED", "Unauthorized");
+      return jsonError(401, "AUTH_INVALID_TOKEN", "Invalid or expired token");
     }
 
     const tokenPayload = { sub: user.id, role: user.role, email: user.email };
