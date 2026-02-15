@@ -35,6 +35,7 @@ const MAIN_ITEMS: NavItem[] = [
   { href: "/receipts", label: "Thu tiền", match: (p) => p.startsWith("/receipts") },
   { href: "/notifications", label: "Thông báo", match: (p) => p.startsWith("/notifications") },
   { href: "/outbound", label: "Gửi tin", match: (p) => p.startsWith("/outbound") },
+  { href: "/me/payroll", label: "Lương của tôi", match: (p) => p.startsWith("/me/payroll") },
 ];
 
 const OPS_ITEMS: NavItem[] = [
@@ -51,6 +52,12 @@ const ADMIN_ITEMS: NavItem[] = [
   { href: "/admin/worker", label: "Tiến trình gửi tin", match: (p) => p.startsWith("/admin/worker") },
   { href: "/admin/scheduler", label: "Lập lịch", match: (p) => p.startsWith("/admin/scheduler") },
   { href: "/admin/student-content", label: "Nội dung học viên", match: (p) => p.startsWith("/admin/student-content") },
+];
+
+const HR_ITEMS: NavItem[] = [
+  { href: "/hr/salary-profiles", label: "Hồ sơ lương", match: (p) => p.startsWith("/hr/salary-profiles") },
+  { href: "/hr/attendance", label: "Chấm công", match: (p) => p.startsWith("/hr/attendance") },
+  { href: "/hr/payroll", label: "Bảng lương", match: (p) => p.startsWith("/hr/payroll") },
 ];
 
 function NavLink({ item, pathname, onClick }: { item: NavItem; pathname: string; onClick?: () => void }) {
@@ -84,6 +91,10 @@ function guessPageTitle(pathname: string) {
     { test: (p) => p.startsWith("/receipts"), title: "Thu tiền", subtitle: "Theo dõi phiếu thu và dòng tiền" },
     { test: (p) => p.startsWith("/notifications"), title: "Thông báo", subtitle: "Danh sách việc cần xử lý" },
     { test: (p) => p.startsWith("/outbound"), title: "Gửi tin", subtitle: "Hàng đợi và lịch sử nhắc học viên" },
+    { test: (p) => p.startsWith("/me/payroll"), title: "Lương của tôi", subtitle: "Xem phiếu lương theo tháng" },
+    { test: (p) => p.startsWith("/hr/salary-profiles"), title: "Hồ sơ lương", subtitle: "Quản lý mức lương theo nhân sự" },
+    { test: (p) => p.startsWith("/hr/attendance"), title: "Chấm công", subtitle: "Theo dõi ngày công theo nhân sự" },
+    { test: (p) => p.startsWith("/hr/payroll"), title: "Bảng lương", subtitle: "Tính và chốt lương theo kỳ" },
     { test: (p) => p.startsWith("/automation"), title: "Tự động hóa", subtitle: "Theo dõi tác vụ tự động" },
     { test: (p) => p.startsWith("/admin"), title: "Quản trị", subtitle: "Thiết lập và vận hành hệ thống" },
   ];
@@ -165,6 +176,17 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 </div>
               </div>
             ) : null}
+
+            {isAdmin ? (
+              <div>
+                <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">Nhân sự</p>
+                <div className="space-y-1">
+                  {HR_ITEMS.map((item) => (
+                    <NavLink key={item.href} item={item} pathname={pathname} />
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </nav>
         </aside>
 
@@ -206,6 +228,17 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">Quản trị</p>
                 <div className="space-y-1">
                   {ADMIN_ITEMS.map((item) => (
+                    <NavLink key={item.href} item={item} pathname={pathname} onClick={() => setMenuOpen(false)} />
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {isAdmin ? (
+              <div>
+                <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">Nhân sự</p>
+                <div className="space-y-1">
+                  {HR_ITEMS.map((item) => (
                     <NavLink key={item.href} item={item} pathname={pathname} onClick={() => setMenuOpen(false)} />
                   ))}
                 </div>

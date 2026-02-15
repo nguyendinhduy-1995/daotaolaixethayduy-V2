@@ -141,6 +141,35 @@ enum MarketingGrain {
   YEAR
 }
 
+enum HrAttendanceStatus {
+  PRESENT
+  HALF
+  OFF
+  LEAVE_PAID
+  LEAVE_UNPAID
+  LATE
+  ABSENT
+}
+
+enum HrAttendanceSource {
+  MANUAL
+  IMPORT
+  DEVICE
+}
+
+enum CommissionSourceType {
+  RECEIPT
+  LEAD
+  STUDENT
+  MANUAL_ADJUST
+}
+
+enum PayrollStatus {
+  DRAFT
+  FINAL
+  PAID
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -158,6 +187,11 @@ model User {
   attendanceSessions AttendanceSession[] @relation("AttendanceSessionCreatedBy")
   attendanceRecords AttendanceRecord[] @relation("AttendanceRecordUpdatedBy")
   attendanceAudits AttendanceAudit[] @relation("AttendanceAuditActor")
+  salaryProfiles SalaryProfile[]
+  attendances Attendance[]
+  commissionLedgers CommissionLedger[]
+  payrollItems PayrollItem[]
+  generatedPayrollRuns PayrollRun[] @relation("PayrollGeneratedBy")
 }
 
 model Lead {
@@ -507,4 +541,129 @@ model MarketingMetric {
   @@unique([source, grain, dateKey])
   @@index([grain, dateKey])
   @@index([source, grain, dateKey])
+}
+
+model Branch {
+  id        String   @id @default(cuid())
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  salaryProfiles SalaryProfile[]
+  attendances Attendance[]
+  commissionLedgers CommissionLedger[]
+  payrollRuns PayrollRun[]
+}
+
+model CommissionScheme {
+  id        String   @id @default(cuid())
+  name      String
+  role      String?
+  rulesJson Json
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  salaryProfiles SalaryProfile[]
+}
+
+model SalaryProfile {
+  id                 String   @id @default(cuid())
+  userId             String
+  branchId           String
+  roleTitle          String
+  baseSalaryVnd      Int
+  allowanceVnd       Int      @default(0)
+  standardDays       Int
+  commissionSchemeId String?
+  effectiveFrom      DateTime
+  effectiveTo        DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch             Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  commissionScheme   CommissionScheme? @relation(fields: [commissionSchemeId], references: [id], onDelete: SetNull)
+
+  @@index([userId, effectiveFrom])
+  @@index([branchId, effectiveFrom])
+}
+
+model Attendance {
+  id          String           @id @default(cuid())
+  userId      String
+  branchId    String
+  date        DateTime
+  status      HrAttendanceStatus
+  minutesLate Int?
+  note        String?
+  source      HrAttendanceSource @default(MANUAL)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch      Branch           @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([branchId, date])
+}
+
+model CommissionLedger {
+  id            String               @id @default(cuid())
+  userId        String
+  branchId      String
+  periodMonth   String
+  sourceType    CommissionSourceType
+  sourceId      String?
+  amountBaseVnd Int
+  commissionVnd Int
+  note          String?
+  createdAt     DateTime             @default(now())
+
+  user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch        Branch               @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@index([periodMonth, userId])
+  @@index([branchId, periodMonth])
+}
+
+model PayrollRun {
+  id            String        @id @default(cuid())
+  month         String
+  branchId      String
+  status        PayrollStatus @default(DRAFT)
+  generatedAt   DateTime?
+  generatedById String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  branch        Branch        @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  generatedBy   User?         @relation("PayrollGeneratedBy", fields: [generatedById], references: [id], onDelete: SetNull)
+  items         PayrollItem[]
+
+  @@unique([month, branchId])
+}
+
+model PayrollItem {
+  id              String   @id @default(cuid())
+  payrollRunId    String
+  userId          String
+  baseSalaryVnd   Int
+  allowanceVnd    Int
+  daysWorked      Float
+  standardDays    Int
+  baseProratedVnd Int
+  commissionVnd   Int
+  penaltyVnd      Int
+  bonusVnd        Int
+  totalVnd        Int
+  breakdownJson   Json
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  payrollRun      PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([payrollRunId, userId])
 }

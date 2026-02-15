@@ -258,6 +258,22 @@ curl -sS -X POST http://localhost:3000/api/worker/outbound \
   - `POST /api/student/auth/logout`
   - `GET /api/student/me`
   - `GET /api/student/content`
+
+## Nhân sự: lương tự động + chấm công
+
+- Menu UI:
+  - Admin: `/hr/salary-profiles`, `/hr/attendance`, `/hr/payroll`
+  - Người dùng: `/me/payroll`
+- API admin:
+  - Hồ sơ lương: `GET/POST /api/admin/salary-profiles`, `GET/PATCH /api/admin/salary-profiles/[id]`
+  - Chấm công: `GET/POST /api/admin/attendance`, `PATCH /api/admin/attendance/[id]`
+  - Sổ cái hoa hồng: `GET/POST /api/admin/commissions`
+  - Rebuild hoa hồng từ receipt: `POST /api/admin/commissions/rebuild`
+  - Chạy lương: `POST /api/admin/payroll/generate`, `POST /api/admin/payroll/finalize`, `GET /api/admin/payroll`
+- API nhân sự tự xem:
+  - `GET /api/me/payroll?month=YYYY-MM`
+- Verify:
+  - `npm run verify` đã bao gồm flow tạo hồ sơ lương, chấm công, commission manual, chạy/chốt lương.
 - Auth:
   - Cookie riêng `student_access_token` (httpOnly), không dùng localStorage.
   - Middleware bảo vệ `/student/*` (trừ login/register).

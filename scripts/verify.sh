@@ -72,6 +72,7 @@ ensure_env
 log "Running static checks"
 npm run prisma:validate
 npm run prisma:generate
+npm run db:migrate
 npm run lint
 npm run build
 
@@ -152,6 +153,7 @@ USER_A_ID=""
 USER_B_ID=""
 USER_A_EMAIL=""
 USER_B_EMAIL=""
+BRANCH_ID=""
 FIRST_NOTIFICATION_ID=""
 if route_exists "users"; then
   TS="$(date +%s)"
@@ -184,6 +186,19 @@ if route_exists "users"; then
   log "users create/list telesales OK"
 else
   log "SKIP (route missing): /api/users"
+fi
+
+if route_exists "admin/branches"; then
+  BRANCH_ID="$(
+    curl -sS -X POST "$BASE_URL/api/admin/branches" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H 'Content-Type: application/json' \
+      -d "{\"name\":\"Chi nhánh verify $(date +%s)\",\"isActive\":true}" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.branch?.id){process.exit(1)}; process.stdout.write(o.branch.id);'
+  )"
+  log "branches create OK"
+else
+  log "SKIP (route missing): /api/admin/branches"
 fi
 
 if route_exists "health/db"; then
@@ -589,6 +604,76 @@ if route_exists "automation/run" && route_exists "automation/logs"; then
   log "automation run/logs OK (cookie session)"
 else
   log "SKIP (route missing): /api/automation/run or /api/automation/logs"
+fi
+
+if [[ -n "$BRANCH_ID" && -n "$USER_A_ID" && -f "src/app/api/admin/salary-profiles/route.ts" && -f "src/app/api/admin/attendance/route.ts" && -f "src/app/api/admin/commissions/route.ts" && -f "src/app/api/admin/payroll/generate/route.ts" && -f "src/app/api/admin/payroll/finalize/route.ts" && -f "src/app/api/admin/payroll/route.ts" && -f "src/app/api/me/payroll/route.ts" ]]; then
+  MONTH_HR="$(date +%Y-%m)"
+  DAY1="${MONTH_HR}-01"
+  DAY2="${MONTH_HR}-02"
+  DAY3="${MONTH_HR}-03"
+  DAY4="${MONTH_HR}-04"
+  DAY5="${MONTH_HR}-05"
+
+  curl -sS -X POST "$BASE_URL/api/admin/salary-profiles" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H 'Content-Type: application/json' \
+    -d "{\"userId\":\"$USER_A_ID\",\"branchId\":\"$BRANCH_ID\",\"roleTitle\":\"Telesales\",\"baseSalaryVnd\":7000000,\"allowanceVnd\":500000,\"standardDays\":26,\"effectiveFrom\":\"$DAY1\"}" \
+  | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.profile?.id){process.exit(1)}'
+
+  for DAY in "$DAY1" "$DAY2" "$DAY3" "$DAY4" "$DAY5"; do
+    curl -sS -X POST "$BASE_URL/api/admin/attendance" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H 'Content-Type: application/json' \
+      -d "{\"userId\":\"$USER_A_ID\",\"branchId\":\"$BRANCH_ID\",\"date\":\"$DAY\",\"status\":\"PRESENT\",\"source\":\"MANUAL\"}" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.attendance?.id){process.exit(1)}'
+  done
+
+  curl -sS -X POST "$BASE_URL/api/admin/commissions" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H 'Content-Type: application/json' \
+    -d "{\"userId\":\"$USER_A_ID\",\"branchId\":\"$BRANCH_ID\",\"periodMonth\":\"$MONTH_HR\",\"sourceType\":\"MANUAL_ADJUST\",\"amountBaseVnd\":200000,\"commissionVnd\":200000,\"note\":\"Verify manual adjust\"}" \
+  | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.commission?.id){process.exit(1)}'
+
+  curl -sS -X POST "$BASE_URL/api/admin/payroll/generate" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H 'Content-Type: application/json' \
+    -d "{\"month\":\"$MONTH_HR\",\"branchId\":\"$BRANCH_ID\",\"dryRun\":true}" \
+  | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.dryRun!==true||!Array.isArray(o.items)){process.exit(1)}; if(typeof o.totals?.totalVnd!=="number"){process.exit(1)}'
+
+  curl -sS -X POST "$BASE_URL/api/admin/payroll/generate" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H 'Content-Type: application/json' \
+    -d "{\"month\":\"$MONTH_HR\",\"branchId\":\"$BRANCH_ID\",\"dryRun\":false}" \
+  | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.dryRun!==false||!o.run?.id){process.exit(1)}'
+
+  curl -sS -X POST "$BASE_URL/api/admin/payroll/finalize" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H 'Content-Type: application/json' \
+    -d "{\"month\":\"$MONTH_HR\",\"branchId\":\"$BRANCH_ID\"}" \
+  | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.run?.id||o.run.status!=="FINAL"){process.exit(1)}'
+
+  curl -sS "$BASE_URL/api/admin/payroll?month=$MONTH_HR&branchId=$BRANCH_ID&page=1&pageSize=10" \
+    -H "Authorization: Bearer $TOKEN" \
+  | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!Array.isArray(o.items)||o.items.length===0){process.exit(1)}'
+
+  TOKEN_A_PAYROLL="$(
+    curl -sS -X POST "$BASE_URL/api/auth/login" \
+      -H 'Content-Type: application/json' \
+      -d "{\"email\":\"$USER_A_EMAIL\",\"password\":\"Verify@123456\"}" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); const t=o.accessToken||o.token; if(!t){process.exit(1)}; process.stdout.write(t);'
+  )"
+  curl -sS "$BASE_URL/api/me/payroll?month=$MONTH_HR" \
+    -H "Authorization: Bearer $TOKEN_A_PAYROLL" \
+  | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!Array.isArray(o.items)||o.items.length===0){process.exit(1)}'
+
+  for ROUTE_PATH in "/hr/salary-profiles" "/hr/attendance" "/hr/payroll"; do
+    HTTP_CODE="$(curl -sS -o /tmp/thayduy-crm-verify-hr-page.html -w '%{http_code}' "$BASE_URL$ROUTE_PATH" -b "$COOKIE_JAR")"
+    [[ "$HTTP_CODE" == "200" ]] || fail "HR route $ROUTE_PATH failed with status $HTTP_CODE"
+  done
+
+  log "payroll + attendance verify OK"
+else
+  log "SKIP payroll verify: thiếu route hoặc dữ liệu đầu vào"
 fi
 
 log "VERIFY PASSED"
