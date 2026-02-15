@@ -188,6 +188,51 @@ curl -sS -X POST http://localhost:3000/api/worker/outbound \
   - `WORKER_RATE_LIMIT_PER_MIN=120`
   - `WORKER_RATE_LIMIT_PER_OWNER_PER_MIN=30`
 
+## Marketing Meta Ads via n8n
+
+- Mục tiêu: nhận số liệu chi phí quảng cáo Meta và số lượng tin nhắn để theo dõi CPL.
+- Biến môi trường bắt buộc:
+  - `MARKETING_SECRET`
+- Endpoint ingest (không dùng session):
+  - `POST /api/marketing/ingest`
+  - Header: `x-marketing-secret: <MARKETING_SECRET>`
+- Payload mẫu theo ngày:
+```json
+{
+  "source": "meta_ads",
+  "grain": "DAY",
+  "dateKey": "2026-02-15",
+  "spendVnd": 2500000,
+  "messages": 42,
+  "meta": { "campaign": "Tet Lead Form" }
+}
+```
+- Payload mẫu theo tháng:
+```json
+{
+  "source": "meta_ads",
+  "grain": "MONTH",
+  "dateKey": "2026-02",
+  "spendVnd": 32000000,
+  "messages": 560
+}
+```
+- Payload mẫu theo năm:
+```json
+{
+  "source": "meta_ads",
+  "grain": "YEAR",
+  "dateKey": "2026",
+  "spendVnd": 420000000,
+  "messages": 7200
+}
+```
+- UI báo cáo:
+  - Route: `/marketing`
+  - API đọc dữ liệu: `GET /api/marketing/metrics?grain=DAY&from=YYYY-MM-DD&to=YYYY-MM-DD&source=meta_ads`
+- Nếu cần test nhanh trong UI admin:
+  - `POST /api/admin/marketing/ingest` (cookie session + admin role)
+
 ## Vận hành lịch & điểm danh
 
 - API:

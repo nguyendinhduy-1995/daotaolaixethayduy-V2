@@ -94,6 +94,12 @@ DASHBOARD_HTTP_CODE="$(curl -sS -o /tmp/thayduy-crm-verify-dashboard.html -w '%{
 [[ "$DASHBOARD_HTTP_CODE" == "200" ]] || fail "Dashboard route failed with status $DASHBOARD_HTTP_CODE"
 log "dashboard HTML route OK"
 
+if [[ -f "src/app/(app)/marketing/page.tsx" ]]; then
+  MARKETING_HTTP_CODE="$(curl -sS -o /tmp/thayduy-crm-verify-marketing.html -w '%{http_code}' "$BASE_URL/marketing" -b "$COOKIE_JAR")"
+  [[ "$MARKETING_HTTP_CODE" == "200" ]] || fail "Marketing route failed with status $MARKETING_HTTP_CODE"
+  log "marketing HTML route OK"
+fi
+
 if [[ -f "src/app/(app)/admin/scheduler/page.tsx" ]]; then
   SCHEDULER_HTTP_CODE="$(curl -sS -o /tmp/thayduy-crm-verify-admin-scheduler.html -w '%{http_code}' "$BASE_URL/admin/scheduler" -b "$COOKIE_JAR")"
   [[ "$SCHEDULER_HTTP_CODE" == "200" ]] || fail "Admin scheduler route failed with status $SCHEDULER_HTTP_CODE"
@@ -202,6 +208,34 @@ if route_exists "kpi/daily"; then
   log "kpi/daily OK ($DATE_HCM)"
 else
   log "SKIP (route missing): /api/kpi/daily"
+fi
+
+if route_exists "marketing/metrics"; then
+  curl -sS "$BASE_URL/api/marketing/metrics?grain=DAY&from=$DATE_HCM&to=$DATE_HCM&source=meta_ads" \
+    -H "Authorization: Bearer $TOKEN" \
+  | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!Array.isArray(o.items)||typeof o.totals!=="object"){process.exit(1)}; if(typeof o.totals.spendVnd!=="number"||typeof o.totals.messages!=="number"){process.exit(1)}'
+  log "marketing metrics read OK"
+else
+  log "SKIP (route missing): /api/marketing/metrics"
+fi
+
+if route_exists "marketing/ingest"; then
+  if [[ -n "${MARKETING_SECRET:-}" ]]; then
+    curl -sS -X POST "$BASE_URL/api/marketing/ingest" \
+      -H "x-marketing-secret: $MARKETING_SECRET" \
+      -H 'Content-Type: application/json' \
+      -d "{\"source\":\"meta_ads\",\"grain\":\"DAY\",\"dateKey\":\"$DATE_HCM\",\"spendVnd\":123456,\"messages\":12,\"meta\":{\"source\":\"verify\"}}" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.ok!==true||!o.metric?.id){process.exit(1)}'
+
+    curl -sS "$BASE_URL/api/marketing/metrics?grain=DAY&from=$DATE_HCM&to=$DATE_HCM&source=meta_ads" \
+      -H "Authorization: Bearer $TOKEN" \
+    | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(typeof o.totals.spendVnd!=="number"||typeof o.totals.messages!=="number"){process.exit(1)}; if(o.totals.spendVnd<123456||o.totals.messages<12){process.exit(1)}'
+    log "marketing ingest + totals OK"
+  else
+    log "SKIP marketing ingest: thiếu biến MARKETING_SECRET trong môi trường"
+  fi
+else
+  log "SKIP (route missing): /api/marketing/ingest"
 fi
 
 LEAD_ID=""

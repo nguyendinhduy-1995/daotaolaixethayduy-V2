@@ -135,6 +135,12 @@ enum OutboundPriority {
   LOW
 }
 
+enum MarketingGrain {
+  DAY
+  MONTH
+  YEAR
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -484,4 +490,21 @@ model OutboundMessage {
   @@index([leaseExpiresAt])
   @@index([studentId, createdAt])
   @@index([leadId, createdAt])
+}
+
+model MarketingMetric {
+  id        String         @id @default(cuid())
+  source    String
+  grain     MarketingGrain
+  dateKey   String
+  spendVnd  Int
+  messages  Int
+  cplVnd    Float
+  meta      Json?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@unique([source, grain, dateKey])
+  @@index([grain, dateKey])
+  @@index([source, grain, dateKey])
 }
