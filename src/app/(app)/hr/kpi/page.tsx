@@ -66,6 +66,10 @@ type FormState = {
   appointed: string;
   arrived: string;
   signed: string;
+  calledPctGlobal: string;
+  appointedPctGlobal: string;
+  arrivedPctGlobal: string;
+  signedPctGlobal: string;
 };
 
 const DEFAULT_FORM: FormState = {
@@ -81,6 +85,10 @@ const DEFAULT_FORM: FormState = {
   appointed: "4",
   arrived: "0",
   signed: "0",
+  calledPctGlobal: "100",
+  appointedPctGlobal: "80",
+  arrivedPctGlobal: "80",
+  signedPctGlobal: "100",
 };
 
 function parseApiError(err: ApiClientError) {
@@ -99,7 +107,9 @@ function summarizeTargets(role: Role, targets: Record<string, number>) {
   if (role === "PAGE") {
     return `Data/ngày: ${targets.dataDaily ?? 0} • Open tối đa: ${targets.openMessagesMax ?? 0}`;
   }
-  return `Data: ${targets.data ?? 0} • Gọi: ${targets.called ?? 0} • Hẹn: ${targets.appointed ?? 0} • Đến: ${targets.arrived ?? 0} • Ký: ${targets.signed ?? 0}`;
+  const abs = `Data: ${targets.dataDaily ?? targets.data ?? 0} • Gọi: ${targets.calledDaily ?? targets.called ?? 0} • Hẹn: ${targets.appointedDaily ?? targets.appointed ?? 0} • Đến: ${targets.arrivedDaily ?? targets.arrived ?? 0} • Ký: ${targets.signedDaily ?? targets.signed ?? 0}`;
+  const pct = `Gọi ${targets.calledPctGlobal ?? 0}% • Hẹn ${targets.appointedPctGlobal ?? 0}% • Đến ${targets.arrivedPctGlobal ?? 0}% • Ký ${targets.signedPctGlobal ?? 0}% (MTD)`;
+  return `${abs} • ${pct}`;
 }
 
 function toNumber(value: string) {
@@ -209,11 +219,15 @@ export default function EmployeeKpiPage() {
       isActive: setting.isActive,
       dataDaily: String(setting.targetsJson.dataDaily ?? 4),
       openMessagesMax: String(setting.targetsJson.openMessagesMax ?? 15),
-      data: String(setting.targetsJson.data ?? 4),
-      called: String(setting.targetsJson.called ?? 0),
-      appointed: String(setting.targetsJson.appointed ?? 4),
-      arrived: String(setting.targetsJson.arrived ?? 0),
-      signed: String(setting.targetsJson.signed ?? 0),
+      data: String(setting.targetsJson.dataDaily ?? setting.targetsJson.data ?? 4),
+      called: String(setting.targetsJson.calledDaily ?? setting.targetsJson.called ?? 0),
+      appointed: String(setting.targetsJson.appointedDaily ?? setting.targetsJson.appointed ?? 4),
+      arrived: String(setting.targetsJson.arrivedDaily ?? setting.targetsJson.arrived ?? 0),
+      signed: String(setting.targetsJson.signedDaily ?? setting.targetsJson.signed ?? 0),
+      calledPctGlobal: String(setting.targetsJson.calledPctGlobal ?? 100),
+      appointedPctGlobal: String(setting.targetsJson.appointedPctGlobal ?? 80),
+      arrivedPctGlobal: String(setting.targetsJson.arrivedPctGlobal ?? 80),
+      signedPctGlobal: String(setting.targetsJson.signedPctGlobal ?? 100),
     });
     setModalOpen(true);
   }
@@ -247,11 +261,15 @@ export default function EmployeeKpiPage() {
       } else {
         targetsJson = {};
         const entries: Array<[string, number | undefined]> = [
-          ["data", toNumber(form.data)],
-          ["called", toNumber(form.called)],
-          ["appointed", toNumber(form.appointed)],
-          ["arrived", toNumber(form.arrived)],
-          ["signed", toNumber(form.signed)],
+          ["dataDaily", toNumber(form.data)],
+          ["calledDaily", toNumber(form.called)],
+          ["appointedDaily", toNumber(form.appointed)],
+          ["arrivedDaily", toNumber(form.arrived)],
+          ["signedDaily", toNumber(form.signed)],
+          ["calledPctGlobal", toNumber(form.calledPctGlobal)],
+          ["appointedPctGlobal", toNumber(form.appointedPctGlobal)],
+          ["arrivedPctGlobal", toNumber(form.arrivedPctGlobal)],
+          ["signedPctGlobal", toNumber(form.signedPctGlobal)],
         ];
         for (const [key, value] of entries) {
           if (value !== undefined) targetsJson[key] = value;
@@ -507,7 +525,8 @@ export default function EmployeeKpiPage() {
               </label>
             </div>
           ) : (
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="space-y-4">
+              <div className="grid gap-3 md:grid-cols-3">
               <label className="space-y-1 text-sm text-zinc-700">
                 <span>Data</span>
                 <Input value={form.data} onChange={(e) => setForm((prev) => ({ ...prev, data: e.target.value }))} />
@@ -528,6 +547,42 @@ export default function EmployeeKpiPage() {
                 <span>Đã ký</span>
                 <Input value={form.signed} onChange={(e) => setForm((prev) => ({ ...prev, signed: e.target.value }))} />
               </label>
+              </div>
+
+              <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+                <p className="text-sm font-medium text-zinc-800">KPI % theo Data (tháng)</p>
+                <p className="mt-1 text-xs text-zinc-500">Tính từ ngày 01 đến hiện tại (MTD), tự reset đầu tháng.</p>
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  <label className="space-y-1 text-sm text-zinc-700">
+                    <span>Gọi (% trên Data tháng)</span>
+                    <Input
+                      value={form.calledPctGlobal}
+                      onChange={(e) => setForm((prev) => ({ ...prev, calledPctGlobal: e.target.value }))}
+                    />
+                  </label>
+                  <label className="space-y-1 text-sm text-zinc-700">
+                    <span>Hẹn (% trên Data tháng)</span>
+                    <Input
+                      value={form.appointedPctGlobal}
+                      onChange={(e) => setForm((prev) => ({ ...prev, appointedPctGlobal: e.target.value }))}
+                    />
+                  </label>
+                  <label className="space-y-1 text-sm text-zinc-700">
+                    <span>Đến (% trên Data tháng)</span>
+                    <Input
+                      value={form.arrivedPctGlobal}
+                      onChange={(e) => setForm((prev) => ({ ...prev, arrivedPctGlobal: e.target.value }))}
+                    />
+                  </label>
+                  <label className="space-y-1 text-sm text-zinc-700">
+                    <span>Ký (% trên Data tháng)</span>
+                    <Input
+                      value={form.signedPctGlobal}
+                      onChange={(e) => setForm((prev) => ({ ...prev, signedPctGlobal: e.target.value }))}
+                    />
+                  </label>
+                </div>
+              </div>
             </div>
           )}
 

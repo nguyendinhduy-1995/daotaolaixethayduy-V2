@@ -20,7 +20,24 @@ export type EmployeeKpiListParams = {
 };
 
 const PAGE_KEYS = ["dataDaily", "openMessagesMax"] as const;
-const TELESALES_KEYS = ["data", "called", "appointed", "arrived", "signed"] as const;
+const TELESALES_ABS_KEYS = [
+  "dataDaily",
+  "calledDaily",
+  "appointedDaily",
+  "arrivedDaily",
+  "signedDaily",
+  "data",
+  "called",
+  "appointed",
+  "arrived",
+  "signed",
+] as const;
+const TELESALES_PCT_KEYS = [
+  "calledPctGlobal",
+  "appointedPctGlobal",
+  "arrivedPctGlobal",
+  "signedPctGlobal",
+] as const;
 
 function parseYmd(input: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input)) {
@@ -49,7 +66,18 @@ function normalizeTargetValue(value: unknown, key: string) {
   if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
     throw new EmployeeKpiValidationError(`targetsJson.${key} must be a non-negative number`);
   }
-  return value;
+  return Math.round(value);
+}
+
+function normalizePercentTarget(value: unknown, key: string) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new EmployeeKpiValidationError(`targetsJson.${key} must be a number`);
+  }
+  const rounded = Math.round(value);
+  if (rounded < 0 || rounded > 100) {
+    throw new EmployeeKpiValidationError(`targetsJson.${key} must be between 0 and 100`);
+  }
+  return rounded;
 }
 
 function normalizeTargetsRecord(input: unknown) {
@@ -85,18 +113,25 @@ export function validateTargets(role: EmployeeKpiRole, targetsInput: unknown): E
   }
 
   const normalized: EmployeeKpiTargets = {};
-  let present = 0;
+  let presentAbs = 0;
+  let presentPct = 0;
 
-  for (const key of TELESALES_KEYS) {
+  for (const key of TELESALES_ABS_KEYS) {
     if (raw[key] !== undefined) {
       normalized[key] = normalizeTargetValue(raw[key], key);
-      present += 1;
+      presentAbs += 1;
+    }
+  }
+  for (const key of TELESALES_PCT_KEYS) {
+    if (raw[key] !== undefined) {
+      normalized[key] = normalizePercentTarget(raw[key], key);
+      presentPct += 1;
     }
   }
 
-  if (present === 0) {
+  if (presentAbs === 0 && presentPct === 0) {
     throw new EmployeeKpiValidationError(
-      "TELESALES targetsJson requires at least one of: data, called, appointed, arrived, signed"
+      "TELESALES targetsJson requires at least one abs target or pct target"
     );
   }
 

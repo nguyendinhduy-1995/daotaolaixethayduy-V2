@@ -254,6 +254,10 @@ curl -sS -X POST http://localhost:3000/api/worker/outbound \
 - `computedJson` của Ops Pulse lưu thêm:
   - `resolvedTargets`
   - `targetSource` (`user_setting` | `payload` | `default`)
+  - `period` (MTD), `mtd`, `ratesGlobalActual`, `ratesGlobalTarget` cho KPI % theo tháng
+- KPI % telesales (GLOBAL_DATA_MTD):
+  - `calledPctGlobal`, `appointedPctGlobal`, `arrivedPctGlobal`, `signedPctGlobal`
+  - Tính theo `Data MTD` từ ngày 01 đến hiện tại, reset đầu tháng.
 
 ## Marketing Meta Ads via n8n
 

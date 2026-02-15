@@ -258,9 +258,34 @@ if route_exists "ops/pulse" && route_exists "admin/ops/pulse"; then
       curl -sS -X POST "$BASE_URL/api/admin/employee-kpi" \
         -H "Authorization: Bearer $TOKEN" \
         -H 'Content-Type: application/json' \
-        -d "{\"userId\":\"$USER_A_ID\",\"role\":\"TELESALES\",\"effectiveFrom\":\"$DATE_HCM\",\"targetsJson\":{\"called\":10,\"appointed\":6},\"isActive\":true}" \
+        -d "{\"userId\":\"$USER_A_ID\",\"role\":\"TELESALES\",\"effectiveFrom\":\"$DATE_HCM\",\"targetsJson\":{\"calledPctGlobal\":100,\"appointedPctGlobal\":80,\"arrivedPctGlobal\":80,\"signedPctGlobal\":100},\"isActive\":true}" \
       | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.setting?.id){process.exit(1)}'
       log "employee-kpi setting create OK"
+    fi
+
+    if route_exists "leads" && route_exists "leads/[id]" && route_exists "leads/[id]/events" && [[ -n "$USER_A_ID" ]]; then
+      OPS_LEAD_PHONE="0988$(date +%s | tail -c 7)"
+      OPS_LEAD_ID="$(
+        curl -sS -X POST "$BASE_URL/api/leads" \
+          -H "Authorization: Bearer $TOKEN" \
+          -H 'Content-Type: application/json' \
+          -d "{\"fullName\":\"Ops KPI Verify\",\"phone\":\"$OPS_LEAD_PHONE\",\"source\":\"manual\",\"channel\":\"manual\"}" \
+        | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.lead?.id){process.exit(1)}; process.stdout.write(o.lead.id);'
+      )"
+
+      curl -sS -X PATCH "$BASE_URL/api/leads/$OPS_LEAD_ID" \
+        -H "Authorization: Bearer $TOKEN" \
+        -H 'Content-Type: application/json' \
+        -d "{\"ownerId\":\"$USER_A_ID\"}" \
+      | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.lead?.id){process.exit(1)}'
+
+      for EVT in HAS_PHONE CALLED APPOINTED; do
+        curl -sS -X POST "$BASE_URL/api/leads/$OPS_LEAD_ID/events" \
+          -H "Authorization: Bearer $TOKEN" \
+          -H 'Content-Type: application/json' \
+          -d "{\"type\":\"$EVT\",\"note\":\"ops verify\"}" \
+        | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(!o.event?.id){process.exit(1)}'
+      done
     fi
 
     curl -sS -X POST "$BASE_URL/api/ops/pulse" \
@@ -273,8 +298,8 @@ if route_exists "ops/pulse" && route_exists "admin/ops/pulse"; then
       curl -sS -X POST "$BASE_URL/api/ops/pulse" \
         -H "x-ops-secret: $OPS_SECRET_VALUE" \
         -H 'Content-Type: application/json' \
-        -d "{\"role\":\"TELESALES\",\"ownerId\":\"$USER_A_ID\",\"dateKey\":\"$DATE_HCM\",\"windowMinutes\":10,\"metrics\":{\"data\":4,\"called\":3,\"appointed\":1,\"arrived\":0,\"signed\":0},\"targets\":{\"called\":1,\"appointed\":1}}" \
-      | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.ok!==true||!o.id||!o.status||!o.computedJson){process.exit(1)}; const rt=o.computedJson?.resolvedTargets||{}; if(rt.called!==10){process.exit(1)}'
+        -d "{\"role\":\"TELESALES\",\"ownerId\":\"$USER_A_ID\",\"dateKey\":\"$DATE_HCM\",\"windowMinutes\":10,\"metrics\":{\"data\":4,\"called\":3,\"appointed\":1,\"arrived\":0,\"signed\":0},\"targets\":{\"calledPctGlobal\":1,\"appointedPctGlobal\":1}}" \
+      | node -e 'const fs=require("fs"); const o=JSON.parse(fs.readFileSync(0,"utf8")); if(o.ok!==true||!o.id||!o.status||!o.computedJson){process.exit(1)}; const tgt=o.computedJson?.ratesGlobalTarget||{}; const act=o.computedJson?.ratesGlobalActual||{}; if(tgt.calledPctGlobal!==100){process.exit(1)}; if(typeof act.calledPctGlobalActual!=="number" && act.calledPctGlobalActual!==null){process.exit(1)}'
     fi
 
     curl -sS "$BASE_URL/api/admin/ops/pulse?dateKey=$DATE_HCM&limit=20" -H "Authorization: Bearer $TOKEN" \
