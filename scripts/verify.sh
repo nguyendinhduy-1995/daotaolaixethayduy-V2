@@ -78,6 +78,14 @@ npm run db:migrate
 npm run lint
 npm run build
 
+if rg -n "model MarketingMetric|enum MarketingGrain" prisma/schema.prisma >/dev/null 2>&1; then
+  fail "Legacy MarketingMetric/MarketingGrain still exists in prisma/schema.prisma"
+fi
+
+if rg -n "marketing-metrics" src >/dev/null 2>&1; then
+  fail "Legacy marketing-metrics service import still exists in src/"
+fi
+
 if curl -sS "$BASE_URL/api/health/db" | grep -q '"ok":true'; then
   log "Dev server already running on :$VERIFY_PORT (reuse)"
 else
