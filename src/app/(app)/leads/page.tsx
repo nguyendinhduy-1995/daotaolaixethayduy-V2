@@ -14,6 +14,9 @@ import { Pagination } from "@/components/ui/pagination";
 import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Table } from "@/components/ui/table";
+import { DataTable } from "@/components/ui/data-table";
+import { FilterCard } from "@/components/ui/filter-card";
+import { PageHeader } from "@/components/ui/page-header";
 import { formatDateTimeVi } from "@/lib/date-utils";
 
 type Lead = {
@@ -338,14 +341,39 @@ export default function LeadsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-zinc-900">Khách hàng</h1>
-        <Button onClick={() => setCreateOpen(true)}>Tạo mới</Button>
-      </div>
+      <PageHeader
+        title="Khách hàng"
+        subtitle="Quản lý dữ liệu lead và theo dõi trạng thái chuyển đổi"
+        actions={<Button onClick={() => setCreateOpen(true)}>Tạo mới</Button>}
+      />
 
       {error ? <Alert type="error" message={error} /> : null}
 
-      <div className="grid gap-2 rounded-xl bg-white p-4 shadow-sm md:grid-cols-4">
+      <FilterCard
+        actions={
+          <>
+            <Button
+              onClick={() => {
+                setPage(1);
+                setFilters(filtersDraft);
+              }}
+            >
+              Áp dụng bộ lọc
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setFiltersDraft(INITIAL_FILTERS);
+                setFilters(INITIAL_FILTERS);
+                setPage(1);
+              }}
+            >
+              Làm mới
+            </Button>
+          </>
+        }
+      >
+        <div className="grid gap-2 md:grid-cols-4">
         <Input
           placeholder="Tìm kiếm tên/SĐT"
           value={filtersDraft.q}
@@ -427,35 +455,18 @@ export default function LeadsPage() {
             <option value="50">50 / trang</option>
             <option value="100">100 / trang</option>
           </Select>
-          <Button
-            onClick={() => {
-              setPage(1);
-              setFilters(filtersDraft);
-            }}
-          >
-            Áp dụng bộ lọc
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setFiltersDraft(INITIAL_FILTERS);
-              setFilters(INITIAL_FILTERS);
-              setPage(1);
-            }}
-          >
-            Đặt lại
-          </Button>
         </div>
-      </div>
+        </div>
+      </FilterCard>
 
-      {loading ? (
-        <div className="rounded-xl bg-white p-6 text-zinc-500">Đang tải danh sách khách hàng...</div>
-      ) : items.length === 0 ? (
-        <div className="rounded-xl bg-white p-6 text-zinc-500">Không có dữ liệu khách hàng.</div>
-      ) : (
+      <DataTable
+        loading={loading}
+        isEmpty={!loading && items.length === 0}
+        emptyText="Không có dữ liệu khách hàng."
+      >
         <Table headers={["Khách hàng", "SĐT", "Trạng thái", "Người phụ trách", "Nguồn/Kênh", "Ngày tạo", "Hành động"]}>
           {items.map((lead) => (
-            <tr key={lead.id} className="border-t border-zinc-100">
+            <tr key={lead.id}>
               <td className="px-3 py-2">
                 <div className="font-medium text-zinc-900">{lead.fullName || "Chưa có tên"}</div>
                 <div className="text-xs text-zinc-500">{lead.id}</div>
@@ -497,7 +508,7 @@ export default function LeadsPage() {
             </tr>
           ))}
         </Table>
-      )}
+      </DataTable>
 
       <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
 

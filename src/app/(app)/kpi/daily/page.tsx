@@ -14,6 +14,8 @@ import { Modal } from "@/components/ui/modal";
 import { Pagination } from "@/components/ui/pagination";
 import { Spinner } from "@/components/ui/spinner";
 import { Table } from "@/components/ui/table";
+import { FilterCard } from "@/components/ui/filter-card";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   firstDayOfMonthYmd,
   formatCurrencyVnd,
@@ -414,35 +416,33 @@ export default function KpiDailyPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-zinc-900">Báo cáo KPI ngày</h1>
-          <p className="text-sm text-zinc-500">
-            {lastUpdated ? `Cập nhật lần cuối: ${formatTimeHms(lastUpdated)}` : "Chưa có dữ liệu cập nhật"}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="secondary" onClick={loadData} disabled={loading}>
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <Spinner /> Đang tải...
-              </span>
-            ) : (
-              "Làm mới"
-            )}
-          </Button>
-          <Button variant="secondary" onClick={exportCsv} disabled={exporting}>
-            {exporting ? "Đang xuất..." : "Xuất CSV"}
-          </Button>
-          {canRunAutomation ? (
-            <Button onClick={runAutomationToday} disabled={automationRunning}>
-              {automationRunning ? "Đang chạy..." : "Chạy Automation hôm nay"}
+      <PageHeader
+        title="Báo cáo KPI ngày"
+        subtitle={lastUpdated ? `Cập nhật lần cuối: ${formatTimeHms(lastUpdated)}` : "Chưa có dữ liệu cập nhật"}
+        actions={
+          <>
+            <Button variant="secondary" onClick={loadData} disabled={loading}>
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <Spinner /> Đang tải...
+                </span>
+              ) : (
+                "Làm mới"
+              )}
             </Button>
-          ) : null}
-        </div>
-      </div>
+            <Button variant="secondary" onClick={exportCsv} disabled={exporting}>
+              {exporting ? "Đang xuất..." : "Xuất CSV"}
+            </Button>
+            {canRunAutomation ? (
+              <Button onClick={runAutomationToday} disabled={automationRunning}>
+                {automationRunning ? "Đang chạy..." : "Chạy Automation hôm nay"}
+              </Button>
+            ) : null}
+          </>
+        }
+      />
 
-      <div className="rounded-xl bg-white p-4 shadow-sm">
+      <FilterCard>
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-1">
             <label className="text-sm text-zinc-700">Chế độ thời gian</label>
@@ -539,7 +539,7 @@ export default function KpiDailyPage() {
             Tháng này
           </Button>
         </div>
-      </div>
+      </FilterCard>
 
       {exporting && mode === "range" ? (
         <Alert

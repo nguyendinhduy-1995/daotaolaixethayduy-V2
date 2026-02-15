@@ -13,6 +13,8 @@ import { Modal } from "@/components/ui/modal";
 import { Pagination } from "@/components/ui/pagination";
 import { Spinner } from "@/components/ui/spinner";
 import { Table } from "@/components/ui/table";
+import { PageHeader } from "@/components/ui/page-header";
+import { SectionCard } from "@/components/ui/section-card";
 import {
   formatCurrencyVnd,
   formatDateTimeVi,
@@ -334,29 +336,27 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-zinc-900">Tổng quan hôm nay</h1>
-          <p className="text-sm text-zinc-600">
-            Ngày {today} {lastUpdated ? `• Cập nhật lần cuối: ${formatTimeHms(lastUpdated)}` : ""}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700">
-            <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />
-            Tự làm mới 60 giây
-          </label>
-          <Button variant="secondary" onClick={loadSnapshot} disabled={loading}>
-            {loading ? (
-              <span className="inline-flex items-center gap-2">
-                <Spinner /> Đang tải...
-              </span>
-            ) : (
-              "Làm mới"
-            )}
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Tổng quan hôm nay"
+        subtitle={`Ngày ${today}${lastUpdated ? ` • Cập nhật lần cuối: ${formatTimeHms(lastUpdated)}` : ""}`}
+        actions={
+          <>
+            <label className="flex items-center gap-2 rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-700">
+              <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />
+              Tự làm mới 60 giây
+            </label>
+            <Button variant="secondary" onClick={loadSnapshot} disabled={loading}>
+              {loading ? (
+                <span className="inline-flex items-center gap-2">
+                  <Spinner /> Đang tải...
+                </span>
+              ) : (
+                "Làm mới"
+              )}
+            </Button>
+          </>
+        }
+      />
 
       {error ? <Alert type="error" message={`Có lỗi xảy ra: ${error}`} /> : null}
 
@@ -365,11 +365,11 @@ export default function DashboardPage() {
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-base font-semibold text-zinc-900">Khách hàng hôm nay</h2>
-            <Badge text="Khách hàng" />
-          </div>
+        <SectionCard
+          title="Khách hàng hôm nay"
+          rightAction={<Badge text="Khách hàng" tone="accent" />}
+          className="p-4"
+        >
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {(
               [
@@ -392,13 +392,9 @@ export default function DashboardPage() {
               </button>
             ))}
           </div>
-        </section>
+        </SectionCard>
 
-        <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-base font-semibold text-zinc-900">Telesales hôm nay</h2>
-            <Badge text="KPI" />
-          </div>
+        <SectionCard title="Telesales hôm nay" rightAction={<Badge text="KPI" tone="primary" />} className="p-4">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <button type="button" onClick={() => openDrilldown("HAS_PHONE", "Đã gọi")} className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-left hover:bg-zinc-100">
               <p className="text-xs uppercase tracking-wide text-zinc-500">Đã gọi</p>
@@ -417,13 +413,9 @@ export default function DashboardPage() {
               <p className="text-xl font-semibold text-zinc-900">{kpi?.telesale.signed ?? 0}</p>
             </button>
           </div>
-        </section>
+        </SectionCard>
 
-        <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-base font-semibold text-zinc-900">Tài chính hôm nay</h2>
-            <Badge text="Thu tiền" />
-          </div>
+        <SectionCard title="Tài chính hôm nay" rightAction={<Badge text="Thu tiền" tone="accent" />} className="p-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
               <p className="text-xs uppercase tracking-wide text-zinc-500">Tổng thu</p>
@@ -449,18 +441,14 @@ export default function DashboardPage() {
           <div className="mt-3">
             <Link
               href={`/receipts?from=${today}&to=${today}`}
-              className="inline-flex items-center rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
+              className="inline-flex items-center rounded-xl border border-zinc-300 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
             >
               Mở danh sách phiếu thu hôm nay
             </Link>
           </div>
-        </section>
+        </SectionCard>
 
-        <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-base font-semibold text-zinc-900">Automation hôm nay</h2>
-            <Badge text="Vận hành" />
-          </div>
+        <SectionCard title="Automation hôm nay" rightAction={<Badge text="Vận hành" tone="primary" />} className="p-4">
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
               <p className="text-xs uppercase tracking-wide text-zinc-500">Đã gửi</p>
@@ -478,18 +466,14 @@ export default function DashboardPage() {
           <div className="mt-3">
             <Link
               href={`/automation/logs?status=failed&from=${today}&to=${today}`}
-              className="inline-flex items-center rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
+              className="inline-flex items-center rounded-xl border border-zinc-300 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
             >
               Xem lỗi
             </Link>
           </div>
-        </section>
+        </SectionCard>
 
-        <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-base font-semibold text-zinc-900">Việc cần làm</h2>
-            <Badge text="Thông báo" />
-          </div>
+        <SectionCard title="Việc cần làm" rightAction={<Badge text="Thông báo" tone="accent" />} className="p-4">
           <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
             <p className="text-xs uppercase tracking-wide text-zinc-500">Mới + Đang xử lý</p>
             <p className="text-2xl font-semibold text-zinc-900">{todoCount}</p>
@@ -497,12 +481,12 @@ export default function DashboardPage() {
           <div className="mt-3">
             <Link
               href="/notifications"
-              className="inline-flex items-center rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
+              className="inline-flex items-center rounded-xl border border-zinc-300 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
             >
               Mở hàng đợi thông báo
             </Link>
           </div>
-        </section>
+        </SectionCard>
       </div>
 
       <div className="space-y-2">
