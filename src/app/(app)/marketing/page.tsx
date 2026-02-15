@@ -3,78 +3,92 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchJson, type ApiClientError } from "@/lib/api-client";
-import { clearToken, getToken } from "@/lib/auth-client";
+import { clearToken, fetchMe, getToken } from "@/lib/auth-client";
+import { isAdminRole } from "@/lib/admin-auth";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { FilterCard } from "@/components/ui/filter-card";
 import { Input } from "@/components/ui/input";
+import { Modal } from "@/components/ui/modal";
 import { PageHeader } from "@/components/ui/page-header";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { Table } from "@/components/ui/table";
 import { formatCurrencyVnd, formatDateTimeVi, todayInHoChiMinh } from "@/lib/date-utils";
 
-type MarketingMetric = {
+type Branch = {
   id: string;
-  source: string;
-  grain: "DAY" | "MONTH" | "YEAR";
+  name: string;
+};
+
+type MarketingReport = {
+  id: string;
+  date: string;
   dateKey: string;
+  branchId: string | null;
+  source: string;
   spendVnd: number;
   messages: number;
   cplVnd: number;
-  createdAt: string;
   updatedAt: string;
+  branch: { id: string; name: string } | null;
 };
 
-type MetricsResponse = {
-  items: MarketingMetric[];
+type ReportsResponse = {
+  items: MarketingReport[];
   totals: { spendVnd: number; messages: number; cplVnd: number };
+  tz: string;
 };
-
-type Grain = "DAY" | "MONTH" | "YEAR";
 
 function parseApiError(error: ApiClientError) {
   return `${error.code}: ${error.message}`;
 }
 
-function dateToMonthKey(value: string) {
-  return value.slice(0, 7);
-}
-
-function dateToYearKey(value: string) {
-  return value.slice(0, 4);
+function daysAgo(ymd: string, days: number) {
+  const date = new Date(`${ymd}T00:00:00`);
+  date.setDate(date.getDate() - days);
+  return date.toISOString().slice(0, 10);
 }
 
 export default function MarketingPage() {
   const router = useRouter();
   const today = useMemo(() => todayInHoChiMinh(), []);
-  const [grain, setGrain] = useState<Grain>("DAY");
-  const [from, setFrom] = useState(today);
+
+  const [checkingRole, setCheckingRole] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  const [from, setFrom] = useState(daysAgo(today, 29));
   const [to, setTo] = useState(today);
+  const [branchId, setBranchId] = useState("");
+  const [source, setSource] = useState("meta");
+
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [items, setItems] = useState<MarketingReport[]>([]);
+  const [totals, setTotals] = useState({ spendVnd: 0, messages: 0, cplVnd: 0 });
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [items, setItems] = useState<MarketingMetric[]>([]);
-  const [totals, setTotals] = useState({ spendVnd: 0, messages: 0, cplVnd: 0 });
+  const [success, setSuccess] = useState("");
+
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualDate, setManualDate] = useState(today);
+  const [manualBranchId, setManualBranchId] = useState("");
+  const [manualSource, setManualSource] = useState("meta");
+  const [manualSpend, setManualSpend] = useState("0");
+  const [manualMessages, setManualMessages] = useState("0");
+  const [manualMeta, setManualMeta] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const query = useMemo(() => {
     const params = new URLSearchParams();
-    params.set("source", "meta_ads");
-    params.set("grain", grain);
-    if (grain === "DAY") {
-      params.set("from", from);
-      params.set("to", to);
-    } else if (grain === "MONTH") {
-      params.set("from", dateToMonthKey(from));
-      params.set("to", dateToMonthKey(to));
-    } else {
-      params.set("from", dateToYearKey(from));
-      params.set("to", dateToYearKey(to));
-    }
+    params.set("from", from);
+    params.set("to", to);
+    if (branchId) params.set("branchId", branchId);
+    if (source) params.set("source", source);
     return params.toString();
-  }, [from, grain, to]);
+  }, [branchId, from, source, to]);
 
   const handleAuthError = useCallback(
     (err: ApiClientError) => {
@@ -88,15 +102,20 @@ export default function MarketingPage() {
     [router]
   );
 
-  const loadMetrics = useCallback(async () => {
+  const loadData = useCallback(async () => {
     const token = getToken();
     if (!token) return;
+
     setLoading(true);
     setError("");
     try {
-      const data = await fetchJson<MetricsResponse>(`/api/marketing/metrics?${query}`, { token });
-      setItems(data.items);
-      setTotals(data.totals);
+      const [reportsRes, branchesRes] = await Promise.all([
+        fetchJson<ReportsResponse>(`/api/admin/marketing/reports?${query}`, { token }),
+        fetchJson<{ items: Branch[] }>("/api/admin/branches", { token }),
+      ]);
+      setItems(reportsRes.items);
+      setTotals(reportsRes.totals);
+      setBranches(branchesRes.items);
     } catch (e) {
       const err = e as ApiClientError;
       if (!handleAuthError(err)) setError(parseApiError(err));
@@ -106,52 +125,110 @@ export default function MarketingPage() {
   }, [handleAuthError, query]);
 
   useEffect(() => {
-    loadMetrics();
-  }, [loadMetrics]);
+    fetchMe()
+      .then((data) => setIsAdmin(isAdminRole(data.user.role)))
+      .catch(() => {
+        clearToken();
+        router.replace("/login");
+      })
+      .finally(() => setCheckingRole(false));
+  }, [router]);
+
+  useEffect(() => {
+    if (isAdmin) void loadData();
+  }, [isAdmin, loadData]);
+
+  async function submitManual() {
+    const token = getToken();
+    if (!token) return;
+    setSubmitting(true);
+    setError("");
+    setSuccess("");
+    try {
+      let meta: unknown = undefined;
+      if (manualMeta.trim()) {
+        meta = JSON.parse(manualMeta);
+      }
+      await fetchJson<{ ok: boolean; item: MarketingReport }>("/api/admin/marketing/report", {
+        method: "POST",
+        token,
+        body: {
+          date: manualDate,
+          branchId: manualBranchId || undefined,
+          source: manualSource,
+          spendVnd: Number(manualSpend),
+          messages: Number(manualMessages),
+          meta,
+        },
+      });
+      setSuccess("Đã lưu báo cáo marketing.");
+      setManualOpen(false);
+      await loadData();
+    } catch (e) {
+      const err = e as ApiClientError;
+      if (!handleAuthError(err)) setError(parseApiError(err));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (checkingRole) {
+    return (
+      <div className="flex items-center gap-2 text-zinc-700">
+        <Spinner /> Đang kiểm tra quyền...
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return <Alert type="error" message="Bạn không có quyền truy cập trang Marketing." />;
+  }
 
   return (
     <div className="space-y-4">
       <PageHeader
         title="Marketing"
-        subtitle="Báo cáo Meta Ads"
+        subtitle="Báo cáo Meta Ads theo ngày"
         actions={
-          <Button variant="secondary" onClick={loadMetrics}>
-            Làm mới
-          </Button>
+          <>
+            <Button variant="secondary" onClick={() => void loadData()}>
+              Làm mới
+            </Button>
+            <Button onClick={() => setManualOpen(true)}>Nhập tay</Button>
+          </>
         }
       />
 
       {error ? <Alert type="error" message={error} /> : null}
+      {success ? <Alert type="success" message={success} /> : null}
 
-      <FilterCard
-        actions={
-          <>
-            <Button onClick={loadMetrics}>Áp dụng</Button>
-            <Button variant="secondary" onClick={() => setFilterOpen(true)}>
-              Bộ lọc
-            </Button>
-          </>
-        }
-      >
-        <div className="grid gap-2 md:grid-cols-4">
-          <div>
-            <label className="mb-1 block text-sm text-zinc-600">Mức thời gian</label>
-            <Select value={grain} onChange={(e) => setGrain(e.target.value as Grain)}>
-              <option value="DAY">Ngày</option>
-              <option value="MONTH">Tháng</option>
-              <option value="YEAR">Năm</option>
-            </Select>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-zinc-600">Từ</label>
+      <FilterCard title="Bộ lọc marketing">
+        <div className="grid gap-3 md:grid-cols-5">
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span>Từ ngày</span>
             <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-zinc-600">Đến</label>
+          </label>
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span>Đến ngày</span>
             <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-          </div>
+          </label>
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span>Chi nhánh</span>
+            <Select value={branchId} onChange={(e) => setBranchId(e.target.value)}>
+              <option value="">Toàn hệ thống</option>
+              {branches.map((branch) => (
+                <option key={branch.id} value={branch.id}>
+                  {branch.name}
+                </option>
+              ))}
+            </Select>
+          </label>
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span>Nguồn</span>
+            <Input value={source} onChange={(e) => setSource(e.target.value.toLowerCase())} />
+          </label>
           <div className="flex items-end">
-            <Badge text="Nguồn: meta_ads" tone="accent" />
+            <Button onClick={() => void loadData()}>Áp dụng</Button>
           </div>
         </div>
       </FilterCard>
@@ -166,13 +243,13 @@ export default function MarketingPage() {
           <p className="mt-2 text-2xl font-semibold text-slate-900">{totals.messages.toLocaleString("vi-VN")}</p>
         </article>
         <article className="surface p-4">
-          <p className="text-xs uppercase tracking-wide text-zinc-500">CPL</p>
-          <p className="mt-2 text-2xl font-semibold text-slate-900">{formatCurrencyVnd(Math.round(totals.cplVnd))}</p>
+          <p className="text-xs uppercase tracking-wide text-zinc-500">Chi phí / 1 học viên liên hệ</p>
+          <p className="mt-2 text-2xl font-semibold text-slate-900">{formatCurrencyVnd(totals.cplVnd)}</p>
         </article>
       </div>
 
       <section className="space-y-3">
-        <h2 className="text-base font-semibold text-slate-900">Chi tiết theo kỳ</h2>
+        <h2 className="text-base font-semibold text-slate-900">Danh sách báo cáo</h2>
         {loading ? (
           <div className="grid gap-2">
             <Skeleton className="h-20" />
@@ -180,17 +257,19 @@ export default function MarketingPage() {
             <Skeleton className="h-20" />
           </div>
         ) : items.length === 0 ? (
-          <div className="surface p-6 text-sm text-zinc-600">Không có dữ liệu marketing trong khoảng thời gian đã chọn.</div>
+          <div className="surface p-6 text-sm text-zinc-600">Không có dữ liệu trong khoảng thời gian đã chọn.</div>
         ) : (
           <>
             <div className="hidden md:block">
-              <Table headers={["Kỳ", "Chi phí", "Nhắn tin", "CPL", "Cập nhật lúc"]}>
+              <Table headers={["Ngày", "Chi nhánh", "Nguồn", "Chi phí", "Nhắn tin", "CPL", "Cập nhật"]}>
                 {items.map((item) => (
                   <tr key={item.id}>
                     <td className="px-4 py-3">{item.dateKey}</td>
+                    <td className="px-4 py-3">{item.branch?.name || "Toàn hệ thống"}</td>
+                    <td className="px-4 py-3">{item.source}</td>
                     <td className="px-4 py-3">{formatCurrencyVnd(item.spendVnd)}</td>
                     <td className="px-4 py-3">{item.messages.toLocaleString("vi-VN")}</td>
-                    <td className="px-4 py-3">{formatCurrencyVnd(Math.round(item.cplVnd))}</td>
+                    <td className="px-4 py-3">{formatCurrencyVnd(item.cplVnd)}</td>
                     <td className="px-4 py-3">{formatDateTimeVi(item.updatedAt)}</td>
                   </tr>
                 ))}
@@ -200,13 +279,13 @@ export default function MarketingPage() {
               {items.map((item) => (
                 <article key={item.id} className="surface p-3">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-slate-900">Kỳ {item.dateKey}</p>
-                    <Badge text={item.grain} tone="primary" />
+                    <p className="text-sm font-semibold text-slate-900">{item.dateKey}</p>
+                    <Badge text={item.source} tone="accent" />
                   </div>
-                  <p className="mt-1 text-sm text-zinc-700">Chi phí: {formatCurrencyVnd(item.spendVnd)}</p>
+                  <p className="mt-1 text-sm text-zinc-700">Chi nhánh: {item.branch?.name || "Toàn hệ thống"}</p>
+                  <p className="text-sm text-zinc-700">Chi phí: {formatCurrencyVnd(item.spendVnd)}</p>
                   <p className="text-sm text-zinc-700">Nhắn tin: {item.messages.toLocaleString("vi-VN")}</p>
-                  <p className="text-sm text-zinc-700">CPL: {formatCurrencyVnd(Math.round(item.cplVnd))}</p>
-                  <p className="mt-1 text-xs text-zinc-500">Cập nhật: {formatDateTimeVi(item.updatedAt)}</p>
+                  <p className="text-sm text-zinc-700">CPL: {formatCurrencyVnd(item.cplVnd)}</p>
                 </article>
               ))}
             </div>
@@ -216,66 +295,77 @@ export default function MarketingPage() {
 
       <section className="surface p-4">
         <h2 className="text-base font-semibold text-slate-900">Hướng dẫn n8n</h2>
-        <p className="mt-1 text-sm text-zinc-600">Dùng webhook để đẩy số liệu Meta Ads vào CRM.</p>
+        <p className="mt-1 text-sm text-zinc-600">Dùng webhook secret để đẩy báo cáo Meta Ads vào CRM.</p>
         <div className="mt-3 space-y-2 text-sm text-zinc-700">
           <p>
-            Endpoint: <code>/api/marketing/ingest</code>
+            Endpoint: <code>/api/marketing/report</code>
           </p>
           <p>
             Header: <code>x-marketing-secret: MARKETING_SECRET</code>
           </p>
           <pre className="overflow-x-auto rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs">
 {`{
-  "source": "meta_ads",
-  "grain": "DAY",
-  "dateKey": "2026-02-15",
+  "date": "2026-02-15",
+  "source": "meta",
+  "branchCode": "HCM",
   "spendVnd": 2500000,
   "messages": 42,
-  "meta": { "campaign": "Tet Lead Form" }
+  "meta": { "campaign": "Lead Form" }
 }`}
           </pre>
         </div>
       </section>
 
-      <BottomSheet
-        open={filterOpen}
-        onOpenChange={setFilterOpen}
-        title="Bộ lọc marketing"
-        footer={
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setFilterOpen(false)}>
-              Đóng
-            </Button>
-            <Button
-              onClick={() => {
-                setFilterOpen(false);
-                loadMetrics();
-              }}
-            >
-              Áp dụng
-            </Button>
-          </div>
-        }
-      >
+      <Modal open={manualOpen} onClose={() => setManualOpen(false)} title="Nhập báo cáo marketing thủ công">
         <div className="space-y-3">
-          <div>
-            <label className="mb-1 block text-sm text-zinc-600">Mức thời gian</label>
-            <Select value={grain} onChange={(e) => setGrain(e.target.value as Grain)}>
-              <option value="DAY">Ngày</option>
-              <option value="MONTH">Tháng</option>
-              <option value="YEAR">Năm</option>
-            </Select>
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="space-y-1 text-sm text-zinc-700">
+              <span>Ngày</span>
+              <Input type="date" value={manualDate} onChange={(e) => setManualDate(e.target.value)} />
+            </label>
+            <label className="space-y-1 text-sm text-zinc-700">
+              <span>Nguồn</span>
+              <Input value={manualSource} onChange={(e) => setManualSource(e.target.value.toLowerCase())} />
+            </label>
+            <label className="space-y-1 text-sm text-zinc-700">
+              <span>Chi nhánh</span>
+              <Select value={manualBranchId} onChange={(e) => setManualBranchId(e.target.value)}>
+                <option value="">Toàn hệ thống</option>
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </option>
+                ))}
+              </Select>
+            </label>
+            <label className="space-y-1 text-sm text-zinc-700">
+              <span>Chi phí (VND)</span>
+              <Input type="number" min={0} value={manualSpend} onChange={(e) => setManualSpend(e.target.value)} />
+            </label>
+            <label className="space-y-1 text-sm text-zinc-700">
+              <span>Nhắn tin</span>
+              <Input type="number" min={0} value={manualMessages} onChange={(e) => setManualMessages(e.target.value)} />
+            </label>
           </div>
-          <div>
-            <label className="mb-1 block text-sm text-zinc-600">Từ</label>
-            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-zinc-600">Đến</label>
-            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span>Meta JSON (tùy chọn)</span>
+            <textarea
+              value={manualMeta}
+              onChange={(e) => setManualMeta(e.target.value)}
+              className="min-h-24 w-full rounded-xl border border-[var(--border)] p-3 text-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-[var(--ring)]"
+              placeholder='{"campaign":"Lead Form"}'
+            />
+          </label>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setManualOpen(false)}>
+              Hủy
+            </Button>
+            <Button onClick={submitManual} disabled={submitting}>
+              Lưu báo cáo
+            </Button>
           </div>
         </div>
-      </BottomSheet>
+      </Modal>
     </div>
   );
 }

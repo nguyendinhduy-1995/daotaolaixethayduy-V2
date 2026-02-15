@@ -557,6 +557,7 @@ model Branch {
   attendances Attendance[]
   commissionLedgers CommissionLedger[]
   payrollRuns PayrollRun[]
+  marketingReports MarketingReport[]
 }
 
 model CommissionScheme {
@@ -673,4 +674,24 @@ model PayrollItem {
   user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([payrollRunId, userId])
+}
+
+model MarketingReport {
+  id        String   @id @default(cuid())
+  date      DateTime
+  dateKey   String
+  branchId  String?
+  source    String
+  spendVnd  Int
+  messages  Int
+  cplVnd    Int
+  metaJson  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  branch    Branch?  @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@unique([dateKey, branchId, source])
+  @@index([dateKey])
+  @@index([branchId, dateKey])
 }

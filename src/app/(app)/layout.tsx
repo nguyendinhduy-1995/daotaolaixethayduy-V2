@@ -28,7 +28,6 @@ const MAIN_ITEMS: NavItem[] = [
   { href: "/leads", label: "Khách hàng", match: (p) => (p === "/leads" || p.startsWith("/leads/")) && !p.startsWith("/leads/board") },
   { href: "/leads/board", label: "Bảng Kanban", match: (p) => p.startsWith("/leads/board") },
   { href: "/kpi/daily", label: "KPI ngày", match: (p) => p.startsWith("/kpi/daily") },
-  { href: "/marketing", label: "Marketing", match: (p) => p.startsWith("/marketing") },
   { href: "/students", label: "Học viên", match: (p) => p === "/students" || p.startsWith("/students/") },
   { href: "/courses", label: "Khóa học", match: (p) => p === "/courses" || p.startsWith("/courses/") },
   { href: "/schedule", label: "Lịch học", match: (p) => p === "/schedule" || p.startsWith("/schedule/") },
@@ -36,6 +35,10 @@ const MAIN_ITEMS: NavItem[] = [
   { href: "/notifications", label: "Thông báo", match: (p) => p.startsWith("/notifications") },
   { href: "/outbound", label: "Gửi tin", match: (p) => p.startsWith("/outbound") },
   { href: "/me/payroll", label: "Lương của tôi", match: (p) => p.startsWith("/me/payroll") },
+];
+
+const MARKETING_ITEMS: NavItem[] = [
+  { href: "/marketing", label: "Báo cáo Meta Ads", match: (p) => p.startsWith("/marketing") },
 ];
 
 const OPS_ITEMS: NavItem[] = [
@@ -168,6 +171,17 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
             {isAdmin ? (
               <div>
+                <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">Marketing</p>
+                <div className="space-y-1">
+                  {MARKETING_ITEMS.map((item) => (
+                    <NavLink key={item.href} item={item} pathname={pathname} />
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {isAdmin ? (
+              <div>
                 <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">Quản trị</p>
                 <div className="space-y-1">
                   {ADMIN_ITEMS.map((item) => (
@@ -222,6 +236,17 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 ))}
               </div>
             </div>
+
+            {isAdmin ? (
+              <div>
+                <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">Marketing</p>
+                <div className="space-y-1">
+                  {MARKETING_ITEMS.map((item) => (
+                    <NavLink key={item.href} item={item} pathname={pathname} onClick={() => setMenuOpen(false)} />
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             {isAdmin ? (
               <div>
