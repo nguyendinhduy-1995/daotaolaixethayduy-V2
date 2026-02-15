@@ -1,8 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { BottomSheet } from "@/components/ui/bottom-sheet";
-import { Button } from "@/components/ui/button";
+import { FiltersSheet } from "@/components/admin/filters-sheet";
 
 type MobileFiltersSheetProps = {
   open: boolean;
@@ -22,35 +21,14 @@ export function MobileFiltersSheet({
   children,
 }: MobileFiltersSheetProps) {
   return (
-    <BottomSheet
+    <FiltersSheet
       open={open}
       onOpenChange={onOpenChange}
       title={title}
-      footer={
-        <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            className="flex-1"
-            onClick={() => {
-              onReset();
-              onOpenChange(false);
-            }}
-          >
-            Xóa lọc
-          </Button>
-          <Button
-            className="flex-1"
-            onClick={() => {
-              onApply();
-              onOpenChange(false);
-            }}
-          >
-            Áp dụng
-          </Button>
-        </div>
-      }
+      onApply={onApply}
+      onClear={onReset}
     >
       {children}
-    </BottomSheet>
+    </FiltersSheet>
   );
 }

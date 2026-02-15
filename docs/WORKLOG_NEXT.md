@@ -42,3 +42,17 @@
 - Hoàn thiện runbook migration:
   - Bổ sung checklist rollback/an toàn dữ liệu cho các migration enum/idempotency mới.
 
+## 4) Mobile Admin UI Pattern (shared)
+- Shared components:
+  - `src/components/admin/mobile-topbar.tsx`
+  - `src/components/admin/quick-search-row.tsx`
+  - `src/components/admin/filters-sheet.tsx`
+  - `src/components/admin/admin-card-list.tsx`
+  - `src/components/admin/ui-states.tsx`
+- Shared state hook:
+  - `src/lib/use-admin-list-state.ts` (debounce `q` = 250ms).
+- Compatibility layer:
+  - `MobileHeader`, `MobileToolbar`, `MobileFiltersSheet` đã map sang shared pattern để tái sử dụng trên các trang admin hiện có.
+- Chuẩn UI:
+  - Mobile-first, tap target tối thiểu 44px.
+  - Header sticky, filter dạng bottom sheet, card list trên mobile; desktop giữ table hiện có.
