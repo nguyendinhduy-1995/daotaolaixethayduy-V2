@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import type { Prisma } from "@prisma/client";
+import type { AutomationStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-response";
 import { requireRouteAuth } from "@/lib/route-auth";
@@ -30,18 +30,10 @@ function isDeliveryStatus(value: string | null): value is DeliveryStatus {
   return value === "sent" || value === "skipped" || value === "failed";
 }
 
-function getRuntimeStatus(payload: unknown, fallback: string) {
-  if (
-    payload &&
-    typeof payload === "object" &&
-    "runtimeStatus" in payload &&
-    typeof (payload as { runtimeStatus?: unknown }).runtimeStatus === "string"
-  ) {
-    return (payload as { runtimeStatus: string }).runtimeStatus;
-  }
-
-  if (fallback === "failed") return "failed";
-  return "success";
+function toDeliveryStatus(value: DeliveryStatus): AutomationStatus {
+  if (value === "sent") return "sent";
+  if (value === "skipped") return "skipped";
+  return "failed";
 }
 
 export async function GET(req: Request) {
@@ -71,7 +63,7 @@ export async function GET(req: Request) {
     if (from) sentAtFilter.gte = dayRangeInHoChiMinh(resolveKpiDateParam(from)).start;
     if (to) sentAtFilter.lte = dayRangeInHoChiMinh(resolveKpiDateParam(to)).end;
 
-    const where: Prisma.AutomationLogWhereInput = {
+    let where: Prisma.AutomationLogWhereInput = {
       ...(scope ? { milestone: scope } : {}),
       ...(leadId ? { leadId } : {}),
       ...(studentId ? { studentId } : {}),
@@ -86,23 +78,63 @@ export async function GET(req: Request) {
         : {}),
     };
 
-    const logs = await prisma.automationLog.findMany({
-      where,
-      orderBy: { sentAt: "desc" },
-    });
+    if (status) {
+      if (status === "sent" || status === "skipped") {
+        where = { ...where, status: toDeliveryStatus(status) };
+      } else if (status === "queued" || status === "running") {
+        where = {
+          ...where,
+          payload: {
+            path: ["runtimeStatus"],
+            equals: status,
+          },
+        };
+      } else if (status === "failed") {
+        where = {
+          AND: [
+            where,
+            {
+              OR: [
+                { status: "failed" },
+                {
+                  payload: {
+                    path: ["runtimeStatus"],
+                    equals: "failed",
+                  },
+                },
+              ],
+            },
+          ],
+        };
+      } else if (status === "success") {
+        where = {
+          AND: [
+            where,
+            {
+              OR: [
+                { status: { in: ["sent", "skipped"] } },
+                {
+                  payload: {
+                    path: ["runtimeStatus"],
+                    equals: "success",
+                  },
+                },
+              ],
+            },
+          ],
+        };
+      }
+    }
 
-    const filtered = status
-      ? logs.filter((log) => {
-          if (isRuntimeStatus(status)) {
-            return getRuntimeStatus(log.payload, log.status) === status;
-          }
-          return log.status === status;
-        })
-      : logs;
-
-    const total = filtered.length;
-    const start = (page - 1) * pageSize;
-    const items = filtered.slice(start, start + pageSize);
+    const [items, total] = await Promise.all([
+      prisma.automationLog.findMany({
+        where,
+        orderBy: { sentAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.automationLog.count({ where }),
+    ]);
 
     return NextResponse.json({ items, page, pageSize, total });
   } catch (error) {
