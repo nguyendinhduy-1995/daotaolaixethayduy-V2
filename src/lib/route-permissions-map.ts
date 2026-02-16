@@ -35,11 +35,12 @@ export const ROUTE_PERMISSION_RULES: RoutePermissionRule[] = [
   { method: "POST", pattern: /^\/api\/kpi\/targets$/, module: "kpi_targets", action: "EDIT" },
   { method: "GET", pattern: /^\/api\/goals$/, module: "goals", action: "VIEW" },
   { method: "POST", pattern: /^\/api\/goals$/, module: "goals", action: "EDIT" },
-  { method: "GET", pattern: /^\/api\/ai\/suggestions$/, module: "ai_kpi_coach", action: "VIEW" },
-  { method: "POST", pattern: /^\/api\/ai\/suggestions$/, module: "ai_kpi_coach", action: "CREATE" },
-  { method: "POST", pattern: /^\/api\/ai\/suggestions\/[^/]+\/feedback$/, module: "ai_kpi_coach", action: "UPDATE" },
+  { method: "GET", pattern: /^\/api\/ai\/suggestions$/, module: "ai_suggestions", action: "VIEW" },
+  { method: "POST", pattern: /^\/api\/ai\/suggestions$/, module: "ai_suggestions", action: "CREATE" },
+  { method: "POST", pattern: /^\/api\/ai\/suggestions\/[^/]+\/feedback$/, module: "ai_suggestions", action: "FEEDBACK" },
   { method: "GET", pattern: /^\/api\/tasks$/, module: "notifications", action: "VIEW" },
   { method: "POST", pattern: /^\/api\/tasks$/, module: "notifications", action: "CREATE" },
+  { method: "PATCH", pattern: /^\/api\/tasks\/[^/]+$/, module: "notifications", action: "UPDATE" },
   { method: "GET", pattern: /^\/api\/me\/payroll$/, module: "my_payroll", action: "VIEW" },
 
   { method: "GET", pattern: /^\/api\/users$/, module: "admin_users", action: "VIEW" },
@@ -76,7 +77,7 @@ export const ROUTE_PERMISSION_RULES: RoutePermissionRule[] = [
 
   { method: "GET", pattern: /^\/api\/outbound\/messages$/, module: "messaging", action: "VIEW" },
   { method: "POST", pattern: /^\/api\/outbound\/messages$/, module: "messaging", action: "CREATE" },
-  { method: "POST", pattern: /^\/api\/outbound\/jobs$/, module: "messaging", action: "RUN" },
+  { method: "POST", pattern: /^\/api\/outbound\/jobs$/, module: "messaging", action: "CREATE" },
   { method: "POST", pattern: /^\/api\/outbound\/dispatch$/, module: "messaging", action: "RUN" },
 
   { method: "GET", pattern: /^\/api\/leads$/, module: "leads", action: "VIEW" },

@@ -25,9 +25,9 @@ export const N8N_SECURITY_GUIDELINES: string[] = [
 ];
 
 export const N8N_DEFINITIONS: string[] = [
-  "PAGE: dataToday = số LeadEvent type HAS_PHONE trong ngày theo ownerId.",
-  "PAGE: messagesToday = tổng inbound messages trong ngày do n8n tổng hợp theo ownerId + dateKey.",
-  "TELESALES: data/called/appointed/arrived/signed lấy từ LeadEvent trong ngày theo ownerId.",
+  "TRỰC PAGE: denominator = tổng tin nhắn chưa có số theo ownerId từ lúc nhận lead.",
+  "TRỰC PAGE: numerator = số lead chuyển sang trạng thái có số trong ngày theo ownerId.",
+  "TƯ VẤN: Hẹn/Data = APPOINTED/HAS_PHONE, Đến/Hẹn = ARRIVED/APPOINTED, Ký/Đến = SIGNED/ARRIVED.",
   "dateKey = YYYY-MM-DD theo múi giờ Asia/Ho_Chi_Minh; windowMinutes mặc định 10.",
 ];
 
@@ -102,8 +102,8 @@ export const N8N_WORKFLOWS: N8nWorkflow[] = [
     schedule: "Mỗi 10 phút (n8n Cron)",
     inputSources: ["Pancake/Meta inbox", "Owner mapping nội bộ"],
     transformLogic: [
-      "Tổng hợp messagesToday theo ownerId + dateKey.",
-      "Tính dataToday (HAS_PHONE) hoặc gửi từ ETL đã chuẩn hóa.",
+      "Lấy và tổng hợp messagesToday theo ownerId + dateKey từ Pancake API.",
+      "Tính dataToday = count LeadEvent HAS_PHONE theo ownerId + dateKey (HCM).",
       "Gửi snapshot role=PAGE, windowMinutes=10.",
     ],
     apiCalls: [
@@ -260,5 +260,36 @@ export const N8N_WORKFLOWS: N8nWorkflow[] = [
     retryBackoff: "Nếu callback fail 5xx thì provider retry; CRM trả code chuẩn để n8n xử lý.",
     expectedResult: "UI /outbound và /automation/logs phản ánh trạng thái gửi thực tế.",
   },
+  {
+    id: "W7",
+    name: "Áp dụng đề xuất + học từ phản hồi",
+    objective: "Biến đề xuất thành việc thực tế và học lại từ phản hồi người dùng.",
+    trigger: "manual",
+    schedule: "Theo thao tác người dùng + job đồng bộ mỗi 30 phút",
+    inputSources: ["/api/ai/suggestions", "/api/tasks", "/api/automation/logs", "feedback của người dùng"],
+    transformLogic: [
+      "Người dùng bấm Áp dụng để tạo việc hoặc danh sách gọi nhắc.",
+      "Khi việc hoàn thành, CRM nhắc phản hồi Hữu ích/Chưa đúng.",
+      "n8n đọc phản hồi + kết quả thực tế để điều chỉnh luật gợi ý.",
+    ],
+    apiCalls: [
+      { method: "POST", endpoint: "/api/tasks", headers: ["Authorization: Bearer", "Content-Type: application/json"] },
+      {
+        method: "POST",
+        endpoint: "/api/outbound/jobs",
+        headers: ["Authorization: Bearer", "Idempotency-Key", "Content-Type: application/json"],
+      },
+      { method: "POST", endpoint: "/api/ai/suggestions/{id}/feedback", headers: ["Authorization: Bearer", "Content-Type: application/json"] },
+    ],
+    samplePayload: `{
+  "title":"Gọi lại nhóm khách hẹn",
+  "message":"Ưu tiên xử lý trước 16h",
+  "type":"TASK",
+  "suggestionId":"sug_xxx",
+  "actionKey":"CREATE_TASK"
+}`,
+    idempotency: "Các lệnh tạo danh sách gọi dùng Idempotency-Key để tránh tạo trùng.",
+    retryBackoff: "Retry 3 lần với backoff tăng dần ở node HTTP của n8n.",
+    expectedResult: "Tỷ lệ áp dụng và tỷ lệ hữu ích tăng dần theo từng tuần.",
+  },
 ];
-
