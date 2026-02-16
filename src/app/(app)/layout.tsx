@@ -60,6 +60,7 @@ const OPS_ITEMS: NavItem[] = [
 const ADMIN_ITEMS: NavItem[] = [
   { href: "/admin/guide", label: "Hướng dẫn vận hành", match: (p) => p.startsWith("/admin/guide") },
   { href: "/admin/huong-dan-ai", label: "Hướng dẫn Trợ lý công việc", match: (p) => p.startsWith("/admin/huong-dan-ai") },
+  { href: "/admin/huong-dan-van-hanh", label: "Sổ tay vận hành", match: (p) => p.startsWith("/admin/huong-dan-van-hanh") },
   { href: "/admin/branches", label: "Chi nhánh", match: (p) => p.startsWith("/admin/branches") },
   { href: "/admin/users", label: "Người dùng", match: (p) => p.startsWith("/admin/users") },
   { href: "/admin/phan-quyen", label: "Phân quyền", match: (p) => p.startsWith("/admin/phan-quyen") },
@@ -126,6 +127,7 @@ function guessPageTitle(pathname: string) {
     { test: (p) => p.startsWith("/admin/phan-quyen"), title: "Phân quyền", subtitle: "Thiết lập nhóm quyền và override theo người dùng" },
     { test: (p) => p.startsWith("/admin/guide"), title: "Hướng dẫn vận hành", subtitle: "Tổng hợp module, quy trình và checklist theo vai trò" },
     { test: (p) => p.startsWith("/admin/huong-dan-ai"), title: "Hướng dẫn Trợ lý công việc", subtitle: "Cách đọc KPI phần trăm và dùng gợi ý hằng ngày" },
+    { test: (p) => p.startsWith("/admin/huong-dan-van-hanh"), title: "Sổ tay vận hành", subtitle: "Quy trình thao tác hằng ngày theo từng vai trò" },
     { test: (p) => p.startsWith("/admin/branches"), title: "Chi nhánh", subtitle: "Quản trị danh sách chi nhánh" },
     { test: (p) => p.startsWith("/automation"), title: "Tự động hóa", subtitle: "Theo dõi tác vụ tự động" },
     { test: (p) => p.startsWith("/admin"), title: "Quản trị", subtitle: "Thiết lập và vận hành hệ thống" },

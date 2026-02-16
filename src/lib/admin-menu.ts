@@ -249,6 +249,14 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     icon: "dot",
   },
   {
+    key: "admin-ops-guide",
+    label: "Sổ tay vận hành",
+    href: "/admin/huong-dan-van-hanh",
+    group: "Quản trị",
+    keywords: ["so tay", "huong dan van hanh", "quy trinh", "van hanh"],
+    icon: "dot",
+  },
+  {
     key: "api-hub",
     label: "API Hub",
     href: "/api-hub",

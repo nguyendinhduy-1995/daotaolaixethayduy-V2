@@ -32,6 +32,7 @@ const UI_ROUTE_MODULE: Array<{ match: (path: string) => boolean; module: ModuleK
   { match: (path) => path.startsWith("/admin/branches"), module: "admin_branches" },
   { match: (path) => path.startsWith("/admin/guide"), module: "overview" },
   { match: (path) => path.startsWith("/admin/huong-dan-ai"), module: "ai_kpi_coach" },
+  { match: (path) => path.startsWith("/admin/huong-dan-van-hanh"), module: "overview" },
   { match: (path) => path.startsWith("/admin/users"), module: "admin_users" },
   { match: (path) => path.startsWith("/admin/phan-quyen"), module: "admin_users" },
   { match: (path) => path.startsWith("/admin/assign-leads"), module: "admin_segments" },
