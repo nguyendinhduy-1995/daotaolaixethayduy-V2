@@ -92,6 +92,17 @@ enum ScheduleType {
   reminder
 }
 
+enum ScheduleSource {
+  AUTO
+  MANUAL
+}
+
+enum ScheduleManualStatus {
+  PLANNED
+  DONE
+  CANCELLED
+}
+
 enum AttendanceStatus {
   PRESENT
   ABSENT
@@ -191,18 +202,88 @@ enum PayrollStatus {
   PAID
 }
 
+enum PermissionModule {
+  overview
+  leads
+  leads_board
+  kpi_daily
+  kpi_targets
+  goals
+  ai_kpi_coach
+  students
+  courses
+  schedule
+  receipts
+  notifications
+  messaging
+  my_payroll
+  ops_ai_hr
+  ops_n8n
+  automation_logs
+  automation_run
+  marketing_meta_ads
+  admin_branches
+  admin_users
+  admin_segments
+  admin_tuition
+  admin_notification_admin
+  admin_automation_admin
+  admin_send_progress
+  admin_plans
+  admin_student_content
+  hr_kpi
+  hr_payroll_profiles
+  hr_attendance
+  hr_total_payroll
+  api_hub
+  expenses
+  salary
+  insights
+}
+
+enum PermissionAction {
+  VIEW
+  CREATE
+  UPDATE
+  EDIT
+  DELETE
+  EXPORT
+  ASSIGN
+  RUN
+  INGEST
+}
+
+enum GoalPeriodType {
+  DAILY
+  MONTHLY
+}
+
+enum AiSuggestionStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum AiScoreColor {
+  RED
+  YELLOW
+  GREEN
+}
+
 model User {
   id        String   @id @default(cuid())
+  username  String   @unique
   email     String   @unique
   name      String?
   password  String
   role      Role     @default(viewer)
   isActive  Boolean  @default(true)
   branchId  String?
+  groupId   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   branch    Branch?   @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  permissionGroup PermissionGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
   leads     Lead[]    @relation("OwnerLeads")
   receipts  Receipt[] @relation("ReceiptCreatedBy")
   events    LeadEvent[] @relation("EventCreatedBy")
@@ -217,8 +298,59 @@ model User {
   generatedPayrollRuns PayrollRun[] @relation("PayrollGeneratedBy")
   opsPulses OpsPulse[]
   employeeKpiSettings EmployeeKpiSetting[]
+  permissionOverrides UserPermissionOverride[]
+  branchBaseSalaries BranchBaseSalary[]
+  expenseDailyCreated BranchExpenseDaily[]
+  goalSettingsCreated GoalSetting[]
+  aiSuggestionsOwned AiSuggestion[]
+  aiSuggestionFeedbacks AiSuggestionFeedback[]
+  aiLearningHistories AiLearningHistory[]
+  kpiTargetsOwned KpiTarget[]
 
   @@index([branchId])
+  @@index([groupId])
+}
+
+model PermissionGroup {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rules       PermissionRule[]
+  users       User[]
+}
+
+model PermissionRule {
+  id        String           @id @default(cuid())
+  groupId   String
+  module    PermissionModule
+  action    PermissionAction
+  allowed   Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  group     PermissionGroup  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, module, action])
+  @@index([groupId, module])
+}
+
+model UserPermissionOverride {
+  id        String           @id @default(cuid())
+  userId    String
+  module    PermissionModule
+  action    PermissionAction
+  allowed   Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, module, action])
+  @@index([userId, module])
 }
 
 model Lead {
@@ -231,8 +363,10 @@ model Lead {
   channel     String?
   status      LeadStatus @default(NEW)
 
+  branchId    String
   ownerId     String?
   owner       User?      @relation("OwnerLeads", fields: [ownerId], references: [id])
+  branch      Branch     @relation(fields: [branchId], references: [id], onDelete: Restrict)
 
   callOutcome    CallOutcome?
   apptOutcome    AppointmentOutcome?
@@ -252,6 +386,7 @@ model Lead {
   notifications Notification[]
 
   @@index([ownerId, createdAt])
+  @@index([branchId, createdAt])
 }
 
 model LeadMessage {
@@ -319,27 +454,35 @@ model Course {
 model CourseScheduleItem {
   id        String       @id @default(cuid())
   courseId  String
+  branchId  String
   type      ScheduleType
   title     String
   startAt   DateTime
   endAt     DateTime?
+  source    ScheduleSource       @default(AUTO)
+  status    ScheduleManualStatus @default(PLANNED)
+  location  String?
+  note      String?
   rule      Json?
   isActive  Boolean      @default(true)
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
   course    Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  branch    Branch       @relation(fields: [branchId], references: [id], onDelete: Restrict)
   attendanceSession AttendanceSession?
   attendanceRecords AttendanceRecord[]
   attendanceAudits AttendanceAudit[]
 
   @@index([courseId, startAt])
+  @@index([branchId, startAt])
 }
 
 model Student {
   id              String       @id @default(cuid())
   leadId          String       @unique
   courseId        String?
+  branchId        String
 
   tuitionPlanId   String?
   tuitionPlan     TuitionPlan? @relation(fields: [tuitionPlanId], references: [id])
@@ -358,6 +501,7 @@ model Student {
 
   lead            Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
   course          Course?      @relation(fields: [courseId], references: [id])
+  branch          Branch       @relation(fields: [branchId], references: [id], onDelete: Restrict)
 
   receipts        Receipt[]
   commissionLedgers CommissionLedger[]
@@ -368,6 +512,7 @@ model Student {
   account       StudentAccount?
 
   @@index([courseId])
+  @@index([branchId])
 }
 
 model StudentAccount {
@@ -443,6 +588,7 @@ model AttendanceAudit {
 model Receipt {
   id          String        @id @default(cuid())
   studentId   String
+  branchId    String
   amount      Int
   method      ReceiptMethod @default(cash)
   note        String?
@@ -453,14 +599,17 @@ model Receipt {
   createdBy   User?         @relation("ReceiptCreatedBy", fields: [createdById], references: [id])
 
   student     Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  branch      Branch        @relation(fields: [branchId], references: [id], onDelete: Restrict)
 
   @@index([studentId, receivedAt])
+  @@index([branchId, receivedAt])
 }
 
 model AutomationLog {
   id          String           @id @default(cuid())
   leadId      String?
   studentId   String?
+  branchId    String
   channel     String
   templateKey String?
   milestone   String?
@@ -470,9 +619,11 @@ model AutomationLog {
 
   lead        Lead?            @relation(fields: [leadId], references: [id], onDelete: Cascade)
   student     Student?         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  branch      Branch           @relation(fields: [branchId], references: [id], onDelete: Restrict)
 
   @@index([leadId, sentAt])
   @@index([studentId, sentAt])
+  @@index([branchId, sentAt])
 }
 
 model Notification {
@@ -535,6 +686,7 @@ model OutboundMessage {
   leadId         String?
   studentId      String?
   notificationId String?
+  branchId       String
   retryCount     Int             @default(0)
   nextAttemptAt  DateTime?
   providerMessageId String?
@@ -547,11 +699,13 @@ model OutboundMessage {
   lead           Lead?           @relation(fields: [leadId], references: [id], onDelete: Cascade)
   student        Student?        @relation(fields: [studentId], references: [id], onDelete: Cascade)
   notification   Notification?   @relation(fields: [notificationId], references: [id], onDelete: SetNull)
+  branch         Branch          @relation(fields: [branchId], references: [id], onDelete: Restrict)
 
   @@index([status, nextAttemptAt])
   @@index([leaseExpiresAt])
   @@index([studentId, createdAt])
   @@index([leadId, createdAt])
+  @@index([branchId, createdAt])
 }
 
 model Branch {
@@ -564,12 +718,222 @@ model Branch {
   updatedAt DateTime @updatedAt
 
   users     User[]
+  leads     Lead[]
+  students  Student[]
+  receipts  Receipt[]
+  scheduleItems CourseScheduleItem[]
+  automationLogs AutomationLog[]
+  outboundMessages OutboundMessage[]
   salaryProfiles SalaryProfile[]
   attendances Attendance[]
   commissionLedgers CommissionLedger[]
   payrollRuns PayrollRun[]
   marketingReports MarketingReport[]
   opsPulses OpsPulse[]
+  expenseCategories ExpenseCategory[]
+  expensesDaily BranchExpenseDaily[]
+  baseSalaries BranchBaseSalary[]
+  expenseInsights ExpenseInsight[]
+  kpiTargets KpiTarget[]
+  goalSettings GoalSetting[]
+  aiSuggestions AiSuggestion[]
+}
+
+model KpiTarget {
+  id          String   @id @default(cuid())
+  branchId    String
+  role        Role
+  ownerId     String?
+  metricKey   String
+  targetValue Int
+  dayOfWeek   Int      @default(-1)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  branch      Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  owner       User?    @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+
+  @@unique([branchId, role, metricKey, dayOfWeek, ownerId])
+  @@index([branchId, role, isActive])
+  @@index([ownerId])
+}
+
+model GoalSetting {
+  id            String         @id @default(cuid())
+  branchId      String?
+  branchScopeKey String        @default("")
+  periodType    GoalPeriodType
+  dateKey       String         @default("")
+  monthKey      String         @default("")
+  revenueTarget Int            @default(0)
+  dossierTarget Int            @default(0)
+  costTarget    Int            @default(0)
+  note          String?
+  createdById   String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  branch        Branch?        @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  createdBy     User           @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@unique([branchScopeKey, periodType, dateKey, monthKey])
+  @@index([branchId, periodType, dateKey])
+  @@index([branchId, periodType, monthKey])
+}
+
+model AiSuggestion {
+  id           String            @id @default(cuid())
+  dateKey      String
+  role         Role
+  branchId     String?
+  ownerId      String?
+  status       AiSuggestionStatus @default(ACTIVE)
+  title        String
+  content      String
+  scoreColor   AiScoreColor
+  actionsJson  Json?
+  metricsJson  Json?
+  source       String
+  runId        String?
+  payloadHash  String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  branch       Branch?           @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  owner        User?             @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  feedbacks    AiSuggestionFeedback[]
+
+  @@index([dateKey, role, branchId, ownerId])
+  @@index([runId])
+}
+
+model AiSuggestionFeedback {
+  id           String       @id @default(cuid())
+  suggestionId String
+  userId       String
+  rating       Int
+  applied      Boolean      @default(false)
+  note         String?
+  createdAt    DateTime     @default(now())
+
+  suggestion   AiSuggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([suggestionId, createdAt])
+  @@index([userId, createdAt])
+}
+
+model AiLearningHistory {
+  id            String   @id @default(cuid())
+  moduleKey     String
+  useCaseKey    String
+  actorId       String?
+  source        String?
+  runId         String?
+  inputJson     Json?
+  outputJson    Json?
+  feedbackScore Int?
+  applied       Boolean?
+  note          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  actor         User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([moduleKey, createdAt])
+  @@index([useCaseKey, createdAt])
+  @@index([actorId, createdAt])
+  @@index([runId])
+}
+
+model ExpenseCategory {
+  id        String   @id @default(cuid())
+  branchId  String
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  dailyExpenses BranchExpenseDaily[]
+
+  @@unique([branchId, name])
+  @@index([branchId, isActive])
+}
+
+model BranchExpenseDaily {
+  id         String   @id @default(cuid())
+  branchId   String
+  date       DateTime
+  dateKey    String
+  categoryId String
+  amountVnd  Int
+  note       String?
+  createdById String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  branch     Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  category   ExpenseCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdBy  User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([branchId, dateKey, categoryId])
+  @@index([branchId, dateKey])
+  @@index([categoryId])
+}
+
+model BranchBaseSalary {
+  id            String   @id @default(cuid())
+  branchId      String
+  userId        String
+  monthKey      String
+  baseSalaryVnd Int
+  note          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  branch        Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, monthKey, branchId])
+  @@index([branchId, monthKey])
+  @@index([monthKey])
+}
+
+model ExpenseInsight {
+  id         String   @id @default(cuid())
+  branchId   String?
+  dateKey    String
+  monthKey   String
+  summary    String
+  payloadJson Json?
+  source     String   @default("manual")
+  runId      String?
+  payloadHash String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  branch     Branch?  @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@index([branchId, dateKey])
+  @@index([monthKey])
+  @@index([runId])
+}
+
+model IdempotencyRequest {
+  id           String   @id @default(cuid())
+  key          String
+  route        String
+  actorType    String
+  actorId      String
+  requestHash  String
+  responseJson Json
+  statusCode   Int
+  createdAt    DateTime @default(now())
+
+  @@unique([key, route, actorType, actorId])
+  @@index([createdAt])
 }
 
 model CommissionScheme {
