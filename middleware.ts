@@ -63,18 +63,24 @@ export function middleware(req: NextRequest) {
   }
 
   if (isStudentProtectedPath(pathname)) {
-    const token = req.cookies.get(STUDENT_ACCESS_TOKEN_COOKIE)?.value || "";
-    if (!token) {
-      const loginUrl = new URL("/student/login", req.url);
-      return NextResponse.redirect(loginUrl);
-    }
-    const payload = decodeJwtPayload(token);
+    const studentToken = req.cookies.get(STUDENT_ACCESS_TOKEN_COOKIE)?.value || "";
+    const crmToken = req.cookies.get(ACCESS_TOKEN_COOKIE)?.value || "";
     const nowSec = Math.floor(Date.now() / 1000);
-    if (!payload?.exp || payload.exp <= nowSec) {
-      const loginUrl = new URL("/student/login", req.url);
-      return NextResponse.redirect(loginUrl);
+
+    // Allow if valid student token
+    if (studentToken) {
+      const payload = decodeJwtPayload(studentToken);
+      if (payload?.exp && payload.exp > nowSec) return NextResponse.next();
     }
-    return NextResponse.next();
+
+    // Also allow if valid CRM admin/staff token (e.g. admin viewing student portal)
+    if (crmToken) {
+      const payload = decodeJwtPayload(crmToken);
+      if (payload?.exp && payload.exp > nowSec) return NextResponse.next();
+    }
+
+    const loginUrl = new URL("/student/login", req.url);
+    return NextResponse.redirect(loginUrl);
   }
 
   const token = req.cookies.get(ACCESS_TOKEN_COOKIE)?.value || "";
