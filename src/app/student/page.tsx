@@ -577,7 +577,7 @@ export default function StudentDashboardPage() {
             <div className="grid gap-3 md:grid-cols-3">
               {/* Static suggestion cards */}
               <a
-                href="https://taplai.com/hoc-ly-thuyet-600-cau-lai-xe-o-to-truc-tuyen-moi-nhat.html"
+                href="https://taplai.thayduydaotaolaixe.com/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="group rounded-xl border border-slate-200/80 bg-gradient-to-br from-blue-50/50 to-white p-4 transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md"

@@ -22,13 +22,16 @@ export default function LeadForm() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ fullName, phone, province, licenseType }),
             });
+            const data = await res.json().catch(() => null);
             if (!res.ok) {
-                const data = await res.json().catch(() => null);
-                setError(data?.error?.message || "Gửi thất bại. Vui lòng thử lại.");
+                const msg = data?.error?.message || `Gửi thất bại (${res.status}). Vui lòng thử lại.`;
+                console.error("[LeadForm] submit error", res.status, data);
+                setError(msg);
                 return;
             }
             setSubmitted(true);
-        } catch {
+        } catch (err) {
+            console.error("[LeadForm] network error", err);
             setError("Lỗi kết nối. Vui lòng thử lại.");
         } finally {
             setLoading(false);

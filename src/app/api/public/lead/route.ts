@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-response";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 /**
  * POST /api/public/lead
@@ -8,6 +9,9 @@ import { jsonError } from "@/lib/api-response";
  * Creates a new lead from the landing page form.
  */
 export async function POST(req: Request) {
+    const rateLimited = checkRateLimit(req, { name: "public-lead", maxRequests: 10, windowSec: 60 });
+    if (rateLimited) return rateLimited;
+
     try {
         const body = await req.json().catch(() => null);
         if (!body || typeof body !== "object") {
@@ -19,18 +23,31 @@ export async function POST(req: Request) {
         const province = typeof body.province === "string" ? body.province.trim() : "";
         const licenseType = typeof body.licenseType === "string" ? body.licenseType.trim().toUpperCase() : "";
 
-        if (!phone || !/^0\d{8,10}$/.test(phone)) {
-            return jsonError(400, "VALIDATION_ERROR", "Số điện thoại không hợp lệ");
-        }
-
         // Honeypot: if hidden field present, silently ignore (anti-spam)
         if (body._hp) {
             return NextResponse.json({ ok: true, message: "Đã ghi nhận thông tin. Chúng tôi sẽ liên hệ bạn sớm!" });
         }
 
-        // Check for duplicate phone
+        if (!fullName) {
+            return jsonError(400, "VALIDATION_ERROR", "Vui lòng nhập họ và tên");
+        }
+
+        if (!phone || !/^0\d{8,10}$/.test(phone)) {
+            return jsonError(400, "VALIDATION_ERROR", "Số điện thoại không hợp lệ");
+        }
+
+        // Check for duplicate phone – touch updatedAt so it surfaces in admin
         const existing = await prisma.lead.findUnique({ where: { phone } });
         if (existing) {
+            await prisma.lead.update({
+                where: { id: existing.id },
+                data: {
+                    updatedAt: new Date(),
+                    ...(fullName && !existing.fullName ? { fullName } : {}),
+                    ...(province && !existing.province ? { province } : {}),
+                    ...(licenseType && !existing.licenseType ? { licenseType } : {}),
+                },
+            });
             // Still return success to the user (don't reveal existence)
             return NextResponse.json({ ok: true, message: "Đã ghi nhận thông tin. Chúng tôi sẽ liên hệ bạn sớm!" });
         }
@@ -43,12 +60,13 @@ export async function POST(req: Request) {
         });
 
         if (!defaultBranch) {
-            return jsonError(500, "INTERNAL_ERROR", "Hệ thống chưa sẵn sàng");
+            console.error("[public.lead] No active branch found – cannot create lead");
+            return jsonError(500, "INTERNAL_ERROR", "Hệ thống chưa sẵn sàng. Vui lòng liên hệ hotline.");
         }
 
         await prisma.lead.create({
             data: {
-                fullName: fullName || null,
+                fullName,
                 phone,
                 province: province || null,
                 licenseType: licenseType || null,
@@ -61,7 +79,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ ok: true, message: "Đã ghi nhận thông tin. Chúng tôi sẽ liên hệ bạn sớm!" });
     } catch (err) {
-    console.error("[public.lead]", err);
-        return jsonError(500, "INTERNAL_ERROR", "Lỗi hệ thống");
+        console.error("[public.lead]", err);
+        return jsonError(500, "INTERNAL_ERROR", "Lỗi hệ thống. Vui lòng thử lại sau.");
     }
 }
