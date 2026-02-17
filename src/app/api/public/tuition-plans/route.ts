@@ -61,43 +61,61 @@ async function autoSeedIfEmpty() {
 /**
  * GET /api/public/tuition-plans
  * Public endpoint – no auth required.
- * Auto-seeds if DB is empty (non-production or ALLOW_AUTO_SEED=true).
+ * Tries DB first. Falls back to hardcoded SEED_PLANS when DB is unreachable.
  */
 export async function GET(req: Request) {
+    const { searchParams } = new URL(req.url);
+    const province = searchParams.get("province")?.trim() || undefined;
+    const licenseType = searchParams.get("licenseType")?.trim().toUpperCase() || undefined;
+
+    // Attempt DB fetch
     try {
         await autoSeedIfEmpty();
-
-        const { searchParams } = new URL(req.url);
-        const province = searchParams.get("province")?.trim() || undefined;
-        const licenseType = searchParams.get("licenseType")?.trim().toUpperCase() || undefined;
 
         const items = await prisma.tuitionPlan.findMany({
             where: {
                 isActive: true,
-                ...(province ? { province: { equals: province, mode: "insensitive" } } : {}),
-                ...(licenseType ? { licenseType: { equals: licenseType, mode: "insensitive" } } : {}),
+                ...(province ? { province: { equals: province, mode: "insensitive" as const } } : {}),
+                ...(licenseType ? { licenseType: { equals: licenseType, mode: "insensitive" as const } } : {}),
             },
             orderBy: [{ province: "asc" }, { licenseType: "asc" }],
             select: { id: true, province: true, licenseType: true, tuition: true },
         });
 
-        return NextResponse.json(
-            {
-                items: items.map((p) => ({
-                    id: p.id,
-                    province: p.province,
-                    licenseType: p.licenseType,
-                    tuition: p.tuition,
-                    tuitionFormatted: new Intl.NumberFormat("vi-VN").format(p.tuition),
-                })),
-            },
-            {
-                headers: {
-                    "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+        if (items.length > 0) {
+            return NextResponse.json(
+                {
+                    items: items.map((p) => ({
+                        id: p.id,
+                        province: p.province,
+                        licenseType: p.licenseType,
+                        tuition: p.tuition,
+                        tuitionFormatted: new Intl.NumberFormat("vi-VN").format(p.tuition),
+                    })),
                 },
-            }
-        );
-    } catch {
-        return jsonError(500, "INTERNAL_ERROR", "Lỗi hệ thống");
+                { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" } }
+            );
+        }
+    } catch (err) {
+        console.warn("[tuition-plans] DB unavailable, using fallback data:", (err as Error).message);
     }
+
+    // Fallback: serve from hardcoded SEED_PLANS
+    let fallback = SEED_PLANS;
+    if (province) fallback = fallback.filter((p) => p.province.toLowerCase() === province.toLowerCase());
+    if (licenseType) fallback = fallback.filter((p) => p.licenseType.toLowerCase() === licenseType.toLowerCase());
+
+    return NextResponse.json(
+        {
+            items: fallback.map((p, idx) => ({
+                id: `seed-${idx}`,
+                province: p.province,
+                licenseType: p.licenseType,
+                tuition: p.tuition,
+                tuitionFormatted: new Intl.NumberFormat("vi-VN").format(p.tuition),
+            })),
+        },
+        { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" } }
+    );
 }
+
