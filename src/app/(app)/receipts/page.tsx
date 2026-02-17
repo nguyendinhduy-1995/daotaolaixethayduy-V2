@@ -115,6 +115,10 @@ export default function ReceiptsPage() {
   const [studentQuery, setStudentQuery] = useState("");
   const [studentOptions, setStudentOptions] = useState<StudentOption[]>([]);
 
+  const [modalStudentQuery, setModalStudentQuery] = useState("");
+  const [modalStudentOptions, setModalStudentOptions] = useState<StudentOption[]>([]);
+  const [modalStudentsLoading, setModalStudentsLoading] = useState(false);
+
   const [createOpen, setCreateOpen] = useState(false);
   const [createSaving, setCreateSaving] = useState(false);
   const [canCreateReceipt, setCanCreateReceipt] = useState(false);
@@ -152,7 +156,7 @@ export default function ReceiptsPage() {
     return params.toString();
   }, [date, from, method, mode, page, pageSize, q, studentId, to]);
 
-  const fetchStudents = useCallback(
+  const fetchStudentsForFilter = useCallback(
     async (keyword: string) => {
       const token = getToken();
       if (!token) return;
@@ -168,6 +172,27 @@ export default function ReceiptsPage() {
         if (!handleAuthError(err)) setError(`Có lỗi xảy ra: ${parseApiError(err)}`);
       } finally {
         setStudentsLoading(false);
+      }
+    },
+    [handleAuthError]
+  );
+
+  const fetchStudentsForModal = useCallback(
+    async (keyword: string) => {
+      const token = getToken();
+      if (!token) return;
+      setModalStudentsLoading(true);
+      try {
+        const params = new URLSearchParams();
+        params.set("pageSize", "20");
+        if (keyword.trim()) params.set("q", keyword.trim());
+        const data = await fetchJson<StudentListResponse>(`/api/students?${params.toString()}`, { token });
+        setModalStudentOptions(data.items);
+      } catch (e) {
+        const err = e as ApiClientError;
+        if (!handleAuthError(err)) setError(`Có lỗi xảy ra: ${parseApiError(err)}`);
+      } finally {
+        setModalStudentsLoading(false);
       }
     },
     [handleAuthError]
@@ -209,10 +234,26 @@ export default function ReceiptsPage() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchStudents(studentQuery);
+      fetchStudentsForFilter(studentQuery);
     }, 250);
     return () => clearTimeout(timer);
-  }, [fetchStudents, studentQuery]);
+  }, [fetchStudentsForFilter, studentQuery]);
+
+  useEffect(() => {
+    if (!createOpen) return;
+    const timer = setTimeout(() => {
+      fetchStudentsForModal(modalStudentQuery);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [fetchStudentsForModal, modalStudentQuery, createOpen]);
+
+  useEffect(() => {
+    if (createOpen) {
+      setModalStudentQuery("");
+      fetchStudentsForModal("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [createOpen]);
 
   async function submitCreate() {
     const token = getToken();
@@ -555,13 +596,15 @@ export default function ReceiptsPage() {
         <div className="space-y-3">
           <div>
             <label className="mb-1 block text-sm text-zinc-600">Tìm học viên</label>
-            <Input value={studentQuery} onChange={(e) => setStudentQuery(e.target.value)} placeholder="Nhập tên hoặc SĐT" />
+            <Input value={modalStudentQuery} onChange={(e) => setModalStudentQuery(e.target.value)} placeholder="Nhập tên hoặc SĐT" />
           </div>
           <div>
-            <label className="mb-1 block text-sm text-zinc-600">Học viên</label>
+            <label className="mb-1 block text-sm text-zinc-600">
+              Học viên {modalStudentsLoading ? <span className="text-xs text-zinc-400">(đang tải...)</span> : <span className="text-xs text-zinc-400">({modalStudentOptions.length} kết quả)</span>}
+            </label>
             <Select value={createForm.studentId} onChange={(e) => setCreateForm((s) => ({ ...s, studentId: e.target.value }))}>
               <option value="">Chọn học viên</option>
-              {studentOptions.map((option) => (
+              {modalStudentOptions.map((option) => (
                 <option key={option.id} value={option.id}>
                   {option.lead.fullName || "Không tên"} - {option.lead.phone || "Không SĐT"}
                 </option>
