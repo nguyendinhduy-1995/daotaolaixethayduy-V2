@@ -153,6 +153,14 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     icon: "dot",
   },
   {
+    key: "instructors",
+    label: "Giáo viên thực hành",
+    href: "/admin/instructors",
+    group: "Học viên & Lịch",
+    keywords: ["giao vien", "instructor", "thuc hanh", "gv"],
+    icon: "dot",
+  },
+  {
     key: "automation-run",
     label: "Tự động hóa",
     href: "/automation/run",

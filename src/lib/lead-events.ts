@@ -13,7 +13,7 @@ export const LEAD_STATUS_TYPES = [
   "LOST",
 ] as const;
 
-export const LEAD_EVENT_TYPES = [...LEAD_STATUS_TYPES, "CALLED", "OWNER_CHANGED", "ASSIGNED_OWNER"] as const;
+export const LEAD_EVENT_TYPES = [...LEAD_STATUS_TYPES, "CALLED", "OWNER_CHANGED", "ASSIGNED_OWNER", "INSTRUCTOR_CHANGED"] as const;
 
 export const STATUS_TRANSITION_EVENT_TYPES = [
   "APPOINTED",
@@ -61,9 +61,9 @@ export async function logLeadEvent(
   const payload =
     note !== undefined || meta !== undefined
       ? {
-          ...(note !== undefined ? { note } : {}),
-          ...(meta !== undefined ? { meta } : {}),
-        }
+        ...(note !== undefined ? { note } : {}),
+        ...(meta !== undefined ? { meta } : {}),
+      }
       : undefined;
 
   return db.leadEvent.create({

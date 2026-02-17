@@ -39,6 +39,7 @@ enum LeadEventType {
   CALLED
   OWNER_CHANGED
   ASSIGNED_OWNER
+  INSTRUCTOR_CHANGED
   OTHER
 }
 
@@ -172,6 +173,26 @@ enum EmployeeKpiRole {
   TELESALES
 }
 
+enum InstructorStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum LessonType {
+  SA_HINH
+  DUONG_TRUONG
+  DAT
+  CABIN
+  OTHER
+}
+
+enum LessonStatus {
+  SCHEDULED
+  DONE
+  CANCELED
+  NO_SHOW
+}
+
 enum HrAttendanceStatus {
   PRESENT
   HALF
@@ -233,6 +254,7 @@ enum PermissionModule {
   admin_send_progress
   admin_plans
   admin_student_content
+  admin_instructors
   hr_kpi
   hr_payroll_profiles
   hr_attendance
@@ -508,6 +530,7 @@ model Student {
   tuitionSnapshot Int?
   signedAt        DateTime?
   arrivedAt       DateTime?
+  instructorId    String?
 
   studyStatus     StudyStatus  @default(studying)
   examDate        DateTime?
@@ -520,6 +543,7 @@ model Student {
   lead            Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
   course          Course?      @relation(fields: [courseId], references: [id])
   branch          Branch       @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  instructor      Instructor?  @relation(fields: [instructorId], references: [id], onDelete: SetNull)
 
   receipts        Receipt[]
   commissionLedgers CommissionLedger[]
@@ -527,10 +551,13 @@ model Student {
   automationLogs  AutomationLog[]
   notifications   Notification[]
   attendanceRecords AttendanceRecord[]
-  account       StudentAccount?
+  account         StudentAccount?
+  practicalLessons PracticalLesson[]
+  examPlan        StudentExamPlan?
 
   @@index([courseId])
   @@index([branchId])
+  @@index([instructorId])
 }
 
 model StudentAccount {
@@ -1170,4 +1197,53 @@ model EmployeeKpiSetting {
 
   @@index([userId, role, effectiveFrom])
   @@index([role, isActive])
+}
+
+model Instructor {
+  id        String           @id @default(cuid())
+  name      String
+  phone     String?          @unique
+  status    InstructorStatus @default(ACTIVE)
+  note      String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  students         Student[]
+  practicalLessons PracticalLesson[]
+
+  @@index([status, createdAt])
+}
+
+model PracticalLesson {
+  id           String       @id @default(cuid())
+  studentId    String
+  instructorId String
+  startAt      DateTime
+  endAt        DateTime?
+  location     String?
+  lessonType   LessonType
+  status       LessonStatus @default(SCHEDULED)
+  note         String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  student    Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  instructor Instructor @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+
+  @@index([instructorId, startAt])
+  @@index([studentId, startAt])
+}
+
+model StudentExamPlan {
+  id                     String    @id @default(cuid())
+  studentId              String    @unique
+  estimatedGraduationAt  DateTime?
+  estimatedExamAt        DateTime?
+  note                   String?
+  updatedByUserId        String?
+  updatedAt              DateTime  @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
 }

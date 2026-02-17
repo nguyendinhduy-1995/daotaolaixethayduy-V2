@@ -46,3 +46,7 @@ next-env.d.ts
 .token.json
 
 .token.json
+
+# playwright test results
+/test-results/
+/docs/e2e-snapshots/

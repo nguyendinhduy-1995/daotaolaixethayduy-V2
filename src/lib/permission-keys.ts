@@ -29,6 +29,7 @@ export const MODULE_KEYS = [
   "admin_send_progress",
   "admin_plans",
   "admin_student_content",
+  "admin_instructors",
   "hr_kpi",
   "hr_payroll_profiles",
   "hr_attendance",

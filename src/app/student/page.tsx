@@ -8,6 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { formatCurrencyVnd, formatDateTimeVi } from "@/lib/date-utils";
 
+type InstructorInfo = { id: string; name: string; phone: string | null; status: string } | null;
+type PracticalLessonItem = { id: string; startAt: string; endAt: string | null; location: string | null; lessonType: string; instructorName: string; note: string | null };
+type ExamPlanInfo = { estimatedGraduationAt: string | null; estimatedExamAt: string | null; note: string | null };
+
+
 type MeResponse = {
   student: {
     fullName: string | null;
@@ -52,6 +57,9 @@ export default function StudentDashboardPage() {
   const [error, setError] = useState("");
   const [data, setData] = useState<MeResponse | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
+  const [instructor, setInstructor] = useState<InstructorInfo>(null);
+  const [practicalLessons, setPracticalLessons] = useState<PracticalLessonItem[]>([]);
+  const [examPlan, setExamPlan] = useState<ExamPlanInfo | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -71,6 +79,16 @@ export default function StudentDashboardPage() {
       setData(body);
       setLastUpdatedAt(new Date().toISOString());
       setLoading(false);
+
+      // Fetch instructor module data
+      const [instrRes, schedRes, examRes] = await Promise.all([
+        fetch("/api/student/me/instructor", { credentials: "include" }).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch("/api/student/me/schedule", { credentials: "include" }).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch("/api/student/me/exam-plan", { credentials: "include" }).then(r => r.ok ? r.json() : null).catch(() => null),
+      ]);
+      if (instrRes?.instructor) setInstructor(instrRes.instructor);
+      if (schedRes?.items) setPracticalLessons(schedRes.items);
+      if (examRes) setExamPlan(examRes);
     })();
     return () => {
       active = false;
@@ -95,11 +113,10 @@ export default function StudentDashboardPage() {
             {mapStudyStatus(data.student.studyStatus)}
           </span>
           <span
-            className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${
-              data.finance.paid50
+            className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${data.finance.paid50
                 ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                 : "border-amber-200 bg-amber-50 text-amber-700"
-            }`}
+              }`}
           >
             {data.finance.paid50 ? "Đạt mốc 50%" : "Chưa đạt mốc 50%"}
           </span>
@@ -251,6 +268,90 @@ export default function StudentDashboardPage() {
             ))}
           </div>
         )}
+      </section>
+
+      {/* Instructor Module Widgets */}
+      <section className="grid gap-3 lg:grid-cols-3">
+        {/* Instructor Info */}
+        <article className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <h2 className="text-base font-semibold text-zinc-900">Giáo viên phụ trách</h2>
+          {instructor ? (
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-600 text-sm font-bold text-white">
+                  {instructor.name.split(" ").slice(-2).map(p => p[0]).join("").toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-zinc-900">{instructor.name}</p>
+                  <p className="text-xs text-zinc-500">Giáo viên thực hành</p>
+                </div>
+              </div>
+              {instructor.phone ? (
+                <a href={`tel:${instructor.phone}`} className="mt-2 inline-flex items-center rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50">
+                  📞 {instructor.phone}
+                </a>
+              ) : null}
+            </div>
+          ) : (
+            <div className="mt-3 rounded-xl border border-dashed border-amber-300 bg-amber-50 px-4 py-4 text-center">
+              <p className="text-sm font-medium text-amber-800">Chưa có giáo viên phụ trách</p>
+              <p className="mt-1 text-xs text-amber-600">Liên hệ trung tâm để được gán giáo viên.</p>
+            </div>
+          )}
+        </article>
+
+        {/* Practical Lessons */}
+        <article className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <h2 className="text-base font-semibold text-zinc-900">Lịch thực hành (14 ngày tới)</h2>
+          {practicalLessons.length === 0 ? (
+            <div className="mt-3 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-4 text-center">
+              <p className="text-sm font-medium text-zinc-700">Chưa có lịch thực hành</p>
+              <p className="mt-1 text-xs text-zinc-500">Lịch mới sẽ hiển thị khi được giáo viên lên lịch.</p>
+            </div>
+          ) : (
+            <div className="mt-3 space-y-2">
+              {practicalLessons.slice(0, 5).map((l) => (
+                <div key={l.id} className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2">
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex rounded-full border border-zinc-300 bg-white px-2 py-0.5 text-xs font-medium text-zinc-700">
+                      {l.lessonType === "SA_HINH" ? "Sa hình" : l.lessonType === "DUONG_TRUONG" ? "Đường trường" : l.lessonType === "DAT" ? "Đất" : l.lessonType === "CABIN" ? "Cabin" : "Khác"}
+                    </span>
+                    <span className="text-xs text-zinc-500">{l.instructorName}</span>
+                  </div>
+                  <p className="mt-1 text-sm font-medium text-zinc-900">{formatDateTimeVi(l.startAt)}</p>
+                  {l.location ? <p className="text-xs text-zinc-600">📍 {l.location}</p> : null}
+                </div>
+              ))}
+            </div>
+          )}
+        </article>
+
+        {/* Exam Plan */}
+        <article className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <h2 className="text-base font-semibold text-zinc-900">Lịch thi dự kiến</h2>
+          {examPlan?.estimatedExamAt || examPlan?.estimatedGraduationAt ? (
+            <div className="mt-3 space-y-3">
+              {examPlan.estimatedGraduationAt ? (
+                <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+                  <p className="text-xs uppercase tracking-wide text-zinc-500">Dự kiến hoàn thành</p>
+                  <p className="mt-1 text-lg font-semibold text-zinc-900">{formatDateTimeVi(examPlan.estimatedGraduationAt)}</p>
+                </div>
+              ) : null}
+              {examPlan.estimatedExamAt ? (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                  <p className="text-xs uppercase tracking-wide text-emerald-700">Ngày thi dự kiến</p>
+                  <p className="mt-1 text-lg font-semibold text-emerald-900">{formatDateTimeVi(examPlan.estimatedExamAt)}</p>
+                </div>
+              ) : null}
+              {examPlan.note ? <p className="text-xs text-zinc-500">📝 {examPlan.note}</p> : null}
+            </div>
+          ) : (
+            <div className="mt-3 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-4 text-center">
+              <p className="text-sm font-medium text-zinc-700">Chưa có lịch thi dự kiến</p>
+              <p className="mt-1 text-xs text-zinc-500">Thông tin sẽ được cập nhật sau khi hoàn thành các bước học.</p>
+            </div>
+          )}
+        </article>
       </section>
     </div>
   );

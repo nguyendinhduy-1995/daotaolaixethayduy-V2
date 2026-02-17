@@ -5,11 +5,15 @@
   "scripts": {
     "seed:admin": "ts-node --transpile-only scripts/seed-admin.ts",
     "seed:templates": "ts-node --transpile-only scripts/seed-templates.ts",
+    "seed:tuition": "ts-node --transpile-only scripts/seed-tuition-plans.ts",
     "dev": "node scripts/dev.mjs",
     "dev:stable": "node scripts/dev-stable.mjs",
     "build": "next build",
     "start": "node scripts/start.mjs",
     "lint": "eslint",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report",
     "db:up": "docker compose up -d postgres redis",
     "db:down": "docker compose down",
     "db:reset": "prisma migrate reset --force",
@@ -23,8 +27,7 @@
     "worker:outbound:dry": "bash scripts/worker-outbound.sh dry",
     "worker:outbound": "bash scripts/worker-outbound.sh run",
     "log:session": "node scripts/log-session.mjs",
-    "test:e2e": "node scripts/run-e2e.mjs",
-    "test:e2e:local": "node scripts/run-e2e.mjs tests/hardening-v2.spec.ts"
+    "test:e2e:hardening": "node scripts/run-e2e.mjs tests/hardening-v2.spec.ts"
   },
   "prisma": {
     "seed": "ts-node --transpile-only prisma/seed.ts"

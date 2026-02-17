@@ -14,16 +14,40 @@ export async function POST(req: Request) {
   try {
     await ensureStudentPortalSchema();
     const body = await req.json().catch(() => null);
-    const phone = typeof body?.phone === "string" ? normalizePhone(body.phone) : "";
+
+    // Accept both `identifier` and legacy `phone` field
+    const rawIdentifier = typeof body?.identifier === "string"
+      ? body.identifier
+      : typeof body?.phone === "string"
+        ? body.phone
+        : "";
+    const identifier = normalizePhone(rawIdentifier);
     const password = typeof body?.password === "string" ? body.password : "";
-    if (!phone || !password) {
+
+    if (!identifier || !password) {
       return jsonError(400, "VALIDATION_ERROR", "Thiếu số điện thoại/mật khẩu");
     }
 
-    const account = await prisma.studentAccount.findUnique({
-      where: { phone },
+    // 1) Try direct lookup by StudentAccount.phone
+    let account = await prisma.studentAccount.findUnique({
+      where: { phone: identifier },
       include: { student: { include: { lead: true } } },
     });
+
+    // 2) Fallback: look up Lead by phone, then find linked StudentAccount
+    if (!account) {
+      const lead = await prisma.lead.findUnique({
+        where: { phone: identifier },
+        select: { student: { select: { account: true, id: true, lead: true } } },
+      });
+      if (lead?.student?.account) {
+        account = await prisma.studentAccount.findUnique({
+          where: { id: lead.student.account.id },
+          include: { student: { include: { lead: true } } },
+        });
+      }
+    }
+
     if (!account) return jsonError(401, "AUTH_INVALID_TOKEN", "Thông tin đăng nhập không hợp lệ");
     const ok = await bcrypt.compare(password, account.passwordHash);
     if (!ok) return jsonError(401, "AUTH_INVALID_TOKEN", "Thông tin đăng nhập không hợp lệ");
@@ -51,3 +75,4 @@ export async function POST(req: Request) {
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }
+

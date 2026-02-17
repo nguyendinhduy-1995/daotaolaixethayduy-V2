@@ -1,34 +1,27 @@
-import { defineConfig } from '@playwright/test';
-
-const BASE_URL = process.env.BASE_URL;
-if (!BASE_URL) {
-  throw new Error(
-    'Thiếu BASE_URL cho Playwright. Hãy chạy `npm run test:e2e` hoặc set BASE_URL thủ công.'
-  );
-}
+import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
-  testDir: './tests',
-  timeout: 60_000,
-  expect: { timeout: 10_000 },
-  fullyParallel: false,
-  reporter: [['list'], ['html', { outputFolder: 'playwright-report', open: 'never' }]],
+  testDir: "./tests/e2e",
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: [["html", { open: "never" }]],
   use: {
-    baseURL: BASE_URL,
-    trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    baseURL: process.env.BASE_URL || "http://localhost:3000",
+    trace: "on-first-retry",
+    screenshot: "on",
   },
   projects: [
     {
-      name: 'mobile-chromium',
-      use: {
-        browserName: 'chromium',
-        viewport: { width: 390, height: 844 },
-        isMobile: true,
-        hasTouch: true,
-        deviceScaleFactor: 3,
-      },
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
     },
   ],
+  webServer: {
+    command: "npm run dev",
+    url: "http://localhost:3000",
+    reuseExistingServer: true,
+    timeout: 30_000,
+  },
 });

@@ -16,6 +16,9 @@ export const PUBLIC_API_ROUTES: Array<{ method?: string; pattern: RegExp }> = [
   { method: "GET", pattern: /^\/api\/student\/me$/ },
   { method: "GET", pattern: /^\/api\/student\/content$/ },
   { pattern: /^\/api\/templates(\/|$)/ },
+  { method: "GET", pattern: /^\/api\/public\/tuition-plans$/ },
+  { method: "POST", pattern: /^\/api\/public\/lead$/ },
+  { method: "POST", pattern: /^\/api\/public\/seed-tuition$/ },
 ];
 
 export const SECRET_AUTH_ROUTES: Array<{ method?: string; pattern: RegExp }> = [
