@@ -3,14 +3,13 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useMemo } from "react";
-import { Button } from "@/components/ui/button";
 import { APP_SHORT } from "@/lib/app-meta";
 
 const NAV = [
-  { href: "/student", label: "Tổng quan" },
-  { href: "/student/schedule", label: "Lịch học" },
-  { href: "/student/content", label: "Tài liệu" },
-  { href: "/student/finance", label: "Học phí" },
+  { href: "/student", label: "Tổng quan", icon: "🏠" },
+  { href: "/student/schedule", label: "Lịch học", icon: "📅" },
+  { href: "/student/content", label: "Tài liệu", icon: "📄" },
+  { href: "/student/finance", label: "Học phí", icon: "💰" },
 ];
 
 export default function StudentLayout({ children }: { children: ReactNode }) {
@@ -30,36 +29,61 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
   if (isAuthPage) return <>{children}</>;
 
   return (
-    <div className="min-h-screen bg-zinc-100/80">
-      <header className="sticky top-0 z-20 border-b border-zinc-200/80 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
-          <div>
-            <p className="text-base font-semibold text-zinc-900">Cổng học viên</p>
-            <p className="text-xs text-zinc-500">Tổng quan học tập</p>
+    <div className="relative min-h-screen bg-slate-50">
+      {/* Decorative blur blobs */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
+        <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-amber-400/[0.06] blur-3xl" />
+        <div className="absolute -left-24 top-1/3 h-80 w-80 rounded-full bg-slate-900/[0.04] blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 h-64 w-64 rounded-full bg-amber-400/[0.04] blur-3xl" />
+      </div>
+
+      {/* Navy header */}
+      <header className="sticky top-0 z-30 border-b border-slate-800 bg-slate-900/95 backdrop-blur-md">
+        <div className="mx-auto flex max-w-[1120px] items-center justify-between gap-3 px-4 py-3 md:px-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500 text-sm font-bold text-slate-900">
+              TD
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-white">Cổng học viên</p>
+              <p className="text-xs text-slate-400">{APP_SHORT}</p>
+            </div>
           </div>
-          <Button type="button" variant="secondary" onClick={logout} aria-label="Đăng xuất tài khoản học viên">
+          <button
+            type="button"
+            onClick={logout}
+            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:bg-slate-700 hover:text-white"
+            aria-label="Đăng xuất tài khoản học viên"
+          >
             Đăng xuất
-          </Button>
+          </button>
         </div>
       </header>
-      <nav className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-3 py-2">
-          {NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition ${
-                pathname === item.href
-                  ? "bg-zinc-900 text-white shadow-sm"
-                  : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
-              }`}
-            >
-              {item.label}
-            </Link>
-          ))}
+
+      {/* Sticky nav tabs */}
+      <nav className="sticky top-[57px] z-20 border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
+        <div className="mx-auto flex max-w-[1120px] gap-1 overflow-x-auto px-3 py-2 md:px-5">
+          {NAV.map((item) => {
+            const active = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-all ${active
+                    ? "bg-slate-900 text-white shadow-sm"
+                    : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                  }`}
+              >
+                <span className="text-xs">{item.icon}</span>
+                {item.label}
+              </Link>
+            );
+          })}
         </div>
       </nav>
-      <main className="mx-auto max-w-6xl p-4 md:p-6">{children}</main>
+
+      {/* Content */}
+      <main className="relative mx-auto max-w-[1120px] px-4 py-5 md:px-6 md:py-6">{children}</main>
     </div>
   );
 }
