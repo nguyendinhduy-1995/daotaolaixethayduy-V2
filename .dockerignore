@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+.gitignore
+.DS_Store
+*.md
+docs
+tests
+test-results
+playwright-report
+playwright.config.ts
+.env
+.env.*
+!.env.example
+.token.json
+thayduy-crm.tar.gz
+artifacts
