@@ -1,24 +1,15 @@
 import { NextResponse } from "next/server";
 import type { LeadStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { AuthError, requireAuth } from "@/lib/auth";
 import { jsonError } from "@/lib/api-response";
-import { isTelesalesRole, requireLeadRole } from "@/lib/admin-auth";
+import { API_ERROR_VI } from "@/lib/api-error-vi";
+import { isTelesalesRole } from "@/lib/admin-auth";
 import { isLeadStatusType, logLeadEvent } from "@/lib/lead-events";
+import { requirePermissionRouteAuth } from "@/lib/route-auth";
+import { applyScopeToWhere, resolveScope, resolveWriteBranchId } from "@/lib/scope";
 
 type SortField = "createdAt" | "updatedAt" | "lastContactAt";
 type SortOrder = "asc" | "desc";
-
-function assertAuth(req: Request) {
-  try {
-    return requireAuth(req);
-  } catch (error) {
-    if (error instanceof AuthError) {
-      return { error: jsonError(error.status, error.code, error.message) };
-    }
-    return { error: jsonError(401, "AUTH_MISSING_BEARER", "Missing or invalid Authorization Bearer token") };
-  }
-}
 
 function parsePagination(value: string | null, fallback: number, max?: number) {
   if (value === null) return fallback;
@@ -48,10 +39,9 @@ function validateTags(tags: unknown) {
 }
 
 export async function GET(req: Request) {
-  const auth = assertAuth(req);
-  if ("error" in auth) return auth.error;
-  const roleError = requireLeadRole(auth.role);
-  if (roleError) return roleError;
+  const authResult = await requirePermissionRouteAuth(req, { module: "leads", action: "VIEW" });
+  if (authResult.error) return authResult.error;
+  const auth = authResult.auth;
 
   try {
     const { searchParams } = new URL(req.url);
@@ -69,27 +59,26 @@ export async function GET(req: Request) {
     const order = (searchParams.get("order") ?? "desc") as SortOrder;
 
     if (status && !isLeadStatusType(status)) {
-      return jsonError(400, "VALIDATION_ERROR", "Invalid status");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
     if (!["createdAt", "updatedAt", "lastContactAt"].includes(sort)) {
-      return jsonError(400, "VALIDATION_ERROR", "Invalid sort field");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
     if (!["asc", "desc"].includes(order)) {
-      return jsonError(400, "VALIDATION_ERROR", "Invalid order");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
 
     const createdAtFilter: Prisma.DateTimeFilter = {};
     if (createdFrom) createdAtFilter.gte = parseDateYmd(createdFrom);
     if (createdTo) createdAtFilter.lte = parseDateYmd(createdTo, true);
 
-    const scopedOwnerId = isTelesalesRole(auth.role) ? auth.sub : ownerId;
-
-    const where: Prisma.LeadWhereInput = {
+    const scope = await resolveScope(auth);
+    const whereBase: Prisma.LeadWhereInput = {
       ...(status ? { status: status as LeadStatus } : {}),
       ...(source ? { source } : {}),
       ...(channel ? { channel } : {}),
       ...(licenseType ? { licenseType } : {}),
-      ...(scopedOwnerId ? { ownerId: scopedOwnerId } : {}),
+      ...(ownerId ? { ownerId } : {}),
       ...(createdFrom || createdTo ? { createdAt: createdAtFilter } : {}),
       ...(q
         ? {
@@ -100,6 +89,7 @@ export async function GET(req: Request) {
           }
         : {}),
     };
+    const where = applyScopeToWhere(whereBase, scope, "lead");
 
     const [items, total] = await Promise.all([
       prisma.lead.findMany({
@@ -122,27 +112,29 @@ export async function GET(req: Request) {
     });
   } catch (error) {
     if (error instanceof Error && (error.message === "INVALID_DATE" || error.message === "INVALID_PAGINATION")) {
-      return jsonError(400, "VALIDATION_ERROR", "Invalid query params");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
-    return jsonError(500, "INTERNAL_ERROR", "Internal server error");
+    return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }
 
 export async function POST(req: Request) {
-  const auth = assertAuth(req);
-  if ("error" in auth) return auth.error;
-  const roleError = requireLeadRole(auth.role);
-  if (roleError) return roleError;
+  const authResult = await requirePermissionRouteAuth(req, { module: "leads", action: "CREATE" });
+  if (authResult.error) return authResult.error;
+  const auth = authResult.auth;
 
   try {
     const body = await req.json().catch(() => null);
     if (!body || typeof body !== "object") {
-      return jsonError(400, "VALIDATION_ERROR", "Invalid JSON body");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
     if (body.tags !== undefined && !validateTags(body.tags)) {
-      return jsonError(400, "VALIDATION_ERROR", "tags must be an array of strings");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
 
+    const requestedBranchId =
+      typeof body.branchId === "string" && body.branchId.trim().length > 0 ? body.branchId.trim() : null;
+    const branchId = await resolveWriteBranchId(auth, [requestedBranchId]);
     const phone = typeof body.phone === "string" ? body.phone.trim() : "";
     const lead = await prisma.$transaction(async (tx) => {
       const created = await tx.lead.create({
@@ -156,6 +148,7 @@ export async function POST(req: Request) {
           status: phone ? "HAS_PHONE" : "NEW",
           note: typeof body.note === "string" ? body.note : null,
           tags: body.tags ?? [],
+          branchId,
           ...(isTelesalesRole(auth.role) ? { ownerId: auth.sub } : {}),
         },
       });
@@ -178,6 +171,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ lead });
   } catch {
-    return jsonError(500, "INTERNAL_ERROR", "Internal server error");
+    return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

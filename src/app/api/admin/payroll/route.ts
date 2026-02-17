@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-response";
-import { requireAdminRole } from "@/lib/admin-auth";
-import { requireRouteAuth } from "@/lib/route-auth";
+import { requirePermissionRouteAuth } from "@/lib/route-auth";
+import { API_ERROR_VI } from "@/lib/api-error-vi";
+import { resolveScope } from "@/lib/scope";
 
 function parsePositiveInt(value: string | null, fallback: number, max = 100) {
   if (value === null) return fallback;
@@ -13,12 +14,11 @@ function parsePositiveInt(value: string | null, fallback: number, max = 100) {
 }
 
 export async function GET(req: Request) {
-  const auth = requireRouteAuth(req);
+  const auth = await requirePermissionRouteAuth(req, { module: "hr_total_payroll", action: "VIEW" });
   if (auth.error) return auth.error;
-  const adminError = requireAdminRole(auth.auth.role);
-  if (adminError) return adminError;
 
   try {
+    const scope = await resolveScope(auth.auth);
     const { searchParams } = new URL(req.url);
     const page = parsePositiveInt(searchParams.get("page"), 1);
     const pageSize = parsePositiveInt(searchParams.get("pageSize"), 20);
@@ -28,6 +28,7 @@ export async function GET(req: Request) {
     const where: Prisma.PayrollRunWhereInput = {
       ...(month ? { month } : {}),
       ...(branchId ? { branchId } : {}),
+      ...(scope.mode === "BRANCH" && scope.branchId ? { branchId: scope.branchId } : {}),
     };
 
     const [items, total] = await Promise.all([
@@ -53,6 +54,6 @@ export async function GET(req: Request) {
     if (error instanceof Error && error.message === "INVALID_PAGINATION") {
       return jsonError(400, "VALIDATION_ERROR", "Phân trang không hợp lệ");
     }
-    return jsonError(500, "INTERNAL_ERROR", "Internal server error");
+    return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

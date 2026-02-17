@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-response";
-import { requireRouteAuth } from "@/lib/route-auth";
+import { requireMappedRoutePermissionAuth } from "@/lib/route-auth";
 import { listReports } from "@/lib/services/marketing";
 
 export async function GET(req: Request) {
-  const authResult = requireRouteAuth(req);
+  const authResult = await requireMappedRoutePermissionAuth(req);
   if (authResult.error) return authResult.error;
 
   try {

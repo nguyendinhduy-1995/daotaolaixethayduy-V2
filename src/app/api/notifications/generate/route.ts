@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-response";
-import { requireRouteAuth } from "@/lib/route-auth";
+import { requireMappedRoutePermissionAuth } from "@/lib/route-auth";
 import { requireAdminRole } from "@/lib/admin-auth";
 import { isGenerateScope, runNotificationGenerate } from "@/lib/services/notification-generate";
 
 export async function POST(req: Request) {
-  const authResult = requireRouteAuth(req);
+  const authResult = await requireMappedRoutePermissionAuth(req);
   if (authResult.error) return authResult.error;
   const adminError = requireAdminRole(authResult.auth.role);
   if (adminError) return adminError;

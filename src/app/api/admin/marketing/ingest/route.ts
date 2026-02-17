@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-response";
-import { requireRouteAuth } from "@/lib/route-auth";
+import { requireMappedRoutePermissionAuth } from "@/lib/route-auth";
 import { requireAdminRole } from "@/lib/admin-auth";
 import { upsertDailyReport, validateReportInput } from "@/lib/services/marketing";
 
 export async function POST(req: Request) {
-  const authResult = requireRouteAuth(req);
+  const authResult = await requireMappedRoutePermissionAuth(req);
   if (authResult.error) return authResult.error;
   const roleError = requireAdminRole(authResult.auth.role);
   if (roleError) return roleError;

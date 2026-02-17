@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import type { ExamResult, StudyStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-response";
-import { requireRouteAuth } from "@/lib/route-auth";
-import { isAdminRole } from "@/lib/admin-auth";
+import { requireMappedRoutePermissionAuth } from "@/lib/route-auth";
+import { API_ERROR_VI } from "@/lib/api-error-vi";
+import { applyScopeToWhere, resolveScope } from "@/lib/scope";
 
 type RouteContext = { params: Promise<{ id: string }> | { id: string } };
 
@@ -28,13 +29,14 @@ function isExamResult(value: unknown): value is ExamResult {
 }
 
 export async function GET(req: Request, context: RouteContext) {
-  const authResult = requireRouteAuth(req);
+  const authResult = await requireMappedRoutePermissionAuth(req);
   if (authResult.error) return authResult.error;
 
   try {
     const { id } = await Promise.resolve(context.params);
-    const student = await prisma.student.findUnique({
-      where: { id },
+    const scope = await resolveScope(authResult.auth);
+    const student = await prisma.student.findFirst({
+      where: applyScopeToWhere({ id }, scope, "student"),
       include: {
         lead: { select: { id: true, fullName: true, phone: true, status: true, ownerId: true } },
         course: { select: { id: true, code: true } },
@@ -44,52 +46,47 @@ export async function GET(req: Request, context: RouteContext) {
       },
     });
 
-    if (!student) return jsonError(404, "NOT_FOUND", "Student not found");
-    if (!isAdminRole(authResult.auth.role) && student.lead.ownerId !== authResult.auth.sub) {
-      return jsonError(403, "AUTH_FORBIDDEN", "Forbidden");
-    }
+    if (!student) return jsonError(404, "NOT_FOUND", API_ERROR_VI.notFoundStudent);
     return NextResponse.json({ student });
   } catch {
-    return jsonError(500, "INTERNAL_ERROR", "Internal server error");
+    return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }
 
 export async function PATCH(req: Request, context: RouteContext) {
-  const authResult = requireRouteAuth(req);
+  const authResult = await requireMappedRoutePermissionAuth(req);
   if (authResult.error) return authResult.error;
 
   try {
     const { id } = await Promise.resolve(context.params);
     const body = await req.json().catch(() => null);
     if (!body || typeof body !== "object") {
-      return jsonError(400, "VALIDATION_ERROR", "Invalid JSON body");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
     if (body.studyStatus !== undefined && !isStudyStatus(body.studyStatus)) {
-      return jsonError(400, "VALIDATION_ERROR", "Invalid studyStatus");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
     if (body.examResult !== undefined && body.examResult !== null && !isExamResult(body.examResult)) {
-      return jsonError(400, "VALIDATION_ERROR", "Invalid examResult");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
 
-    const exists = await prisma.student.findUnique({
-      where: { id },
+    const scope = await resolveScope(authResult.auth);
+    const exists = await prisma.student.findFirst({
+      where: applyScopeToWhere({ id }, scope, "student"),
       select: { id: true, lead: { select: { ownerId: true } } },
     });
-    if (!exists) return jsonError(404, "NOT_FOUND", "Student not found");
-    if (!isAdminRole(authResult.auth.role) && exists.lead.ownerId !== authResult.auth.sub) {
-      return jsonError(403, "AUTH_FORBIDDEN", "Forbidden");
-    }
+    if (!exists) return jsonError(404, "NOT_FOUND", API_ERROR_VI.notFoundStudent);
 
     if (body.courseId) {
       const course = await prisma.course.findUnique({ where: { id: body.courseId }, select: { id: true } });
-      if (!course) return jsonError(404, "NOT_FOUND", "Course not found");
+      if (!course) return jsonError(404, "NOT_FOUND", API_ERROR_VI.required);
     }
     if (body.tuitionPlanId) {
       const plan = await prisma.tuitionPlan.findUnique({
         where: { id: body.tuitionPlanId },
         select: { id: true, tuition: true },
       });
-      if (!plan) return jsonError(404, "NOT_FOUND", "Tuition plan not found");
+      if (!plan) return jsonError(404, "NOT_FOUND", API_ERROR_VI.required);
     }
 
     if (body.tuitionTotal !== undefined) {
@@ -134,8 +131,8 @@ export async function PATCH(req: Request, context: RouteContext) {
     return NextResponse.json({ student });
   } catch (error) {
     if (error instanceof Error && error.message === "INVALID_DATE") {
-      return jsonError(400, "VALIDATION_ERROR", "Invalid date");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
-    return jsonError(500, "INTERNAL_ERROR", "Internal server error");
+    return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

@@ -3,7 +3,7 @@ import type { ModuleKey } from "@/lib/permission-keys";
 export function hasUiPermission(
   permissions: string[] | undefined,
   module: ModuleKey,
-  action: "VIEW" | "CREATE" | "UPDATE" | "EDIT" | "DELETE" | "EXPORT" | "ASSIGN" | "RUN" | "INGEST"
+  action: "VIEW" | "CREATE" | "UPDATE" | "FEEDBACK" | "EDIT" | "DELETE" | "EXPORT" | "ASSIGN" | "RUN" | "INGEST"
 ) {
   if (!permissions || permissions.length === 0) return false;
   return permissions.includes(`${module}:${action}`);
@@ -16,7 +16,7 @@ const UI_ROUTE_MODULE: Array<{ match: (path: string) => boolean; module: ModuleK
   { match: (path) => path.startsWith("/kpi/daily"), module: "kpi_daily" },
   { match: (path) => path.startsWith("/kpi/targets"), module: "kpi_targets" },
   { match: (path) => path.startsWith("/goals"), module: "goals" },
-  { match: (path) => path.startsWith("/ai/kpi-coach"), module: "ai_kpi_coach" },
+  { match: (path) => path.startsWith("/ai/kpi-coach"), module: "ai_suggestions" },
   { match: (path) => path.startsWith("/students"), module: "students" },
   { match: (path) => path.startsWith("/courses"), module: "courses" },
   { match: (path) => path.startsWith("/schedule"), module: "schedule" },
@@ -26,12 +26,13 @@ const UI_ROUTE_MODULE: Array<{ match: (path: string) => boolean; module: ModuleK
   { match: (path) => path.startsWith("/me/payroll"), module: "my_payroll" },
   { match: (path) => path.startsWith("/admin/ops"), module: "ops_ai_hr" },
   { match: (path) => path.startsWith("/admin/n8n"), module: "ops_n8n" },
+  { match: (path) => path.startsWith("/admin/automation-monitor"), module: "ops_n8n" },
   { match: (path) => path.startsWith("/automation/logs"), module: "automation_logs" },
   { match: (path) => path.startsWith("/automation/run"), module: "automation_run" },
   { match: (path) => path.startsWith("/marketing"), module: "marketing_meta_ads" },
   { match: (path) => path.startsWith("/admin/branches"), module: "admin_branches" },
   { match: (path) => path.startsWith("/admin/guide"), module: "overview" },
-  { match: (path) => path.startsWith("/admin/huong-dan-ai"), module: "ai_kpi_coach" },
+  { match: (path) => path.startsWith("/admin/huong-dan-ai"), module: "ai_suggestions" },
   { match: (path) => path.startsWith("/admin/huong-dan-van-hanh"), module: "overview" },
   { match: (path) => path.startsWith("/admin/users"), module: "admin_users" },
   { match: (path) => path.startsWith("/admin/phan-quyen"), module: "admin_users" },

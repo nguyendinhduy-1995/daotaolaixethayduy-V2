@@ -1,20 +1,25 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { ACCESS_TOKEN_COOKIE, STUDENT_ACCESS_TOKEN_COOKIE } from "@/lib/jwt";
+import { isAllowlistedApiRoute, resolveRoutePermission } from "@/lib/route-permissions-map";
 
 function isProtectedPath(pathname: string) {
   return (
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/leads") ||
     pathname.startsWith("/kpi") ||
+    pathname.startsWith("/goals") ||
+    pathname.startsWith("/ai") ||
     pathname.startsWith("/students") ||
     pathname.startsWith("/schedule") ||
     pathname.startsWith("/courses") ||
     pathname.startsWith("/receipts") ||
+    pathname.startsWith("/expenses") ||
     pathname.startsWith("/notifications") ||
     pathname.startsWith("/outbound") ||
     pathname.startsWith("/automation") ||
-    pathname.startsWith("/admin")
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/api-hub")
   );
 }
 
@@ -39,6 +44,19 @@ function decodeJwtPayload(token: string) {
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  const method = req.method.toUpperCase();
+
+  if (pathname.startsWith("/api")) {
+    if (method === "OPTIONS") return NextResponse.next();
+    if (isAllowlistedApiRoute(pathname, method)) return NextResponse.next();
+    if (!resolveRoutePermission(pathname, method)) {
+      return NextResponse.json(
+        { ok: false, error: { code: "AUTH_FORBIDDEN", message: "Bạn không có quyền thực hiện" } },
+        { status: 403 }
+      );
+    }
+    return NextResponse.next();
+  }
 
   if (!isProtectedPath(pathname) && !isStudentProtectedPath(pathname)) {
     return NextResponse.next();
@@ -72,8 +90,11 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (pathname.startsWith("/admin")) {
-    return verifyAdminAccess(req, payload?.role);
+  if (pathname.startsWith("/admin") && payload.role !== "admin") {
+    // Page-level guard only: API routes independently verify JWT signatures.
+    const leadsUrl = new URL("/leads", req.url);
+    leadsUrl.searchParams.set("err", "forbidden");
+    return NextResponse.redirect(leadsUrl);
   }
 
   if (pathname.startsWith("/automation/run") && payload.role !== "admin") {
@@ -85,32 +106,6 @@ export function middleware(req: NextRequest) {
   return NextResponse.next();
 }
 
-async function verifyAdminAccess(req: NextRequest, decodedRole?: string) {
-  // Do not trust decoded JWT role claim for authorization decisions.
-  // Confirm session with server-side auth verification (/api/auth/me).
-  const meRes = await fetch(new URL("/api/auth/me", req.url), {
-    method: "GET",
-    headers: {
-      cookie: req.headers.get("cookie") ?? "",
-    },
-  }).catch(() => null);
-
-  if (!meRes?.ok) {
-    const loginUrl = new URL("/login", req.url);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  const meJson = (await meRes.json().catch(() => null)) as { user?: { role?: string } } | null;
-  const role = meJson?.user?.role ?? decodedRole;
-  if (role !== "admin") {
-    const leadsUrl = new URL("/leads", req.url);
-    leadsUrl.searchParams.set("err", "forbidden");
-    return NextResponse.redirect(leadsUrl);
-  }
-
-  return NextResponse.next();
-}
-
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

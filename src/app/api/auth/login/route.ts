@@ -8,17 +8,23 @@ import { signAccessToken, signRefreshToken } from "@/lib/jwt";
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => null);
-    if (!body?.email || !body?.password) {
-      return jsonError(400, "VALIDATION_ERROR", "Missing email/password");
+    const account = String(body?.account ?? body?.email ?? "").trim();
+    const password = String(body?.password ?? "");
+    if (!account || !password) {
+      return jsonError(400, "VALIDATION_ERROR", "Thiếu tài khoản hoặc mật khẩu");
     }
 
-    const user = await prisma.user.findUnique({ where: { email: body.email } });
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [{ email: account }, { username: account }],
+      },
+    });
     if (!user || !user.isActive) {
-      return jsonError(401, "AUTH_UNAUTHORIZED", "Invalid credentials");
+      return jsonError(401, "AUTH_UNAUTHORIZED", "Thông tin đăng nhập không chính xác");
     }
 
-    const ok = await bcrypt.compare(body.password, user.password);
-    if (!ok) return jsonError(401, "AUTH_UNAUTHORIZED", "Invalid credentials");
+    const ok = await bcrypt.compare(password, user.password);
+    if (!ok) return jsonError(401, "AUTH_UNAUTHORIZED", "Thông tin đăng nhập không chính xác");
 
     const payload = { sub: user.id, role: user.role, email: user.email };
     const accessToken = signAccessToken(payload);
@@ -28,11 +34,11 @@ export async function POST(req: Request) {
       token: accessToken,
       accessToken,
       tokenType: "Bearer",
-      user: { id: user.id, email: user.email, name: user.name, role: user.role },
+      user: { id: user.id, email: user.email, username: user.username, name: user.name, role: user.role },
     });
     setAuthCookies(response, accessToken, refreshToken);
     return response;
   } catch {
-    return jsonError(500, "INTERNAL_ERROR", "Internal server error");
+    return jsonError(500, "INTERNAL_ERROR", "Lỗi hệ thống");
   }
 }

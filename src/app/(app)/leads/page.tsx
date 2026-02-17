@@ -22,9 +22,11 @@ import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { DataCard } from "@/components/mobile/DataCard";
 import { EmptyState } from "@/components/mobile/EmptyState";
 import { MobileFiltersSheet } from "@/components/mobile/MobileFiltersSheet";
-import { MobileHeader } from "@/components/app/mobile-header";
 import { MobileToolbar } from "@/components/app/mobile-toolbar";
+import { MobileShell } from "@/components/mobile/MobileShell";
+import { SuggestedChecklist } from "@/components/mobile/SuggestedChecklist";
 import { formatDateTimeVi } from "@/lib/date-utils";
+import { hasUiPermission } from "@/lib/ui-permissions";
 
 type Lead = {
   id: string;
@@ -132,6 +134,7 @@ export default function LeadsPage() {
   const [error, setError] = useState("");
   const [canManageOwner, setCanManageOwner] = useState(false);
   const [isTelesales, setIsTelesales] = useState(false);
+  const [canCreateLead, setCanCreateLead] = useState(false);
   const [owners, setOwners] = useState<UserOption[]>([]);
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -210,10 +213,12 @@ export default function LeadsPage() {
       .then((data) => {
         setCanManageOwner(isAdminRole(data.user.role));
         setIsTelesales(isTelesalesRole(data.user.role));
+        setCanCreateLead(hasUiPermission(data.user.permissions, "leads", "CREATE"));
       })
       .catch(() => {
         setCanManageOwner(false);
         setIsTelesales(false);
+        setCanCreateLead(false);
       });
   }, []);
 
@@ -371,22 +376,40 @@ export default function LeadsPage() {
   const activeFilterCount = Object.values(filtersDraft).filter(Boolean).length;
 
   return (
-    <div className="space-y-4">
-      <MobileHeader
-        title="Khách hàng"
-        subtitle="Danh sách và chuyển đổi trạng thái"
-        rightActions={<Button onClick={() => setCreateOpen(true)}>Tạo</Button>}
-      />
+    <MobileShell
+      title="Khách hàng"
+      subtitle="Danh sách và chuyển đổi trạng thái"
+      rightAction={
+        canCreateLead ? (
+          <button
+            type="button"
+            className="tap-feedback rounded-xl border border-zinc-200 bg-white/80 px-3 py-2 text-xs font-medium text-zinc-700"
+            onClick={() => setCreateOpen(true)}
+          >
+            + Thêm
+          </button>
+        ) : null
+      }
+    >
+    <div className="space-y-4 pb-24 md:pb-0">
 
       <div className="hidden md:block">
         <PageHeader
           title="Khách hàng"
-          subtitle="Quản lý dữ liệu lead và theo dõi trạng thái chuyển đổi"
-          actions={<Button onClick={() => setCreateOpen(true)}>Tạo mới</Button>}
+          subtitle="Quản lý dữ liệu khách hàng và theo dõi trạng thái chuyển đổi"
+          actions={canCreateLead ? <Button onClick={() => setCreateOpen(true)}>Tạo mới</Button> : null}
         />
       </div>
 
       {error ? <Alert type="error" message={error} /> : null}
+      <SuggestedChecklist
+        storageKey="leads-mobile-checklist"
+        items={[
+          { id: "search", label: "Rà khách mới theo từ khóa", hint: "Ưu tiên khách phát sinh hôm nay" },
+          { id: "assign", label: "Gán phụ trách khách mới", hint: "Giảm khách chưa owner", actionHref: "/admin/assign-leads", actionLabel: "Mở" },
+          { id: "event", label: "Cập nhật sự kiện gọi/hẹn", hint: "Giữ pipeline sạch và đúng trạng thái" },
+        ]}
+      />
 
       <div className="sticky top-[116px] z-20 rounded-2xl border border-zinc-200 bg-zinc-100/90 p-2 backdrop-blur md:hidden">
         <MobileToolbar
@@ -917,5 +940,6 @@ export default function LeadsPage() {
         </div>
       </Modal>
     </div>
+    </MobileShell>
   );
 }

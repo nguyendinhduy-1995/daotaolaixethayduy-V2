@@ -6,8 +6,11 @@ export type MeResponse = {
   user: {
     id: string;
     email: string;
+    username?: string;
     name: string | null;
     role: string;
+    groupId?: string | null;
+    permissions?: string[];
   };
 };
 

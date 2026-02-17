@@ -1,50 +1,49 @@
-import crypto from "node:crypto";
-import { type AiScoreColor, type GoalPeriodType, OutboundPriority, type OutboundChannel, type Role, Prisma } from "@prisma/client";
+import {
+  type AiScoreColor,
+  type AiSuggestionFeedbackType,
+  type GoalPeriodType,
+  OutboundPriority,
+  type OutboundChannel,
+  type Role,
+  Prisma,
+} from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { AuthPayload } from "@/lib/auth";
 import { API_ERROR_VI } from "@/lib/api-error-vi";
 import { ensureOutboundSchema, renderTemplate } from "@/lib/outbound-db";
 import { enforceBranchScope, getAllowedBranchIds, resolveScope, resolveWriteBranchId } from "@/lib/scope";
 import { KPI_METRICS_CATALOG, getMetricDef, getMetricLabelVi, isMetricAllowedForRole, roleLabelVi } from "@/lib/kpi-metrics-catalog";
+import { todayInHoChiMinh as todayHcm, dayRangeInHoChiMinh, monthRangeInHoChiMinh as monthRangeHcm, addDays, isYmd, isYm } from "@/lib/utils/date";
+import { hashPayload } from "@/lib/utils/hash";
 
 const TARGET_ROLES: Role[] = ["direct_page", "telesales"];
 const SUGGESTION_COLORS: AiScoreColor[] = ["RED", "YELLOW", "GREEN"];
 const OUTBOUND_CHANNELS: OutboundChannel[] = ["ZALO", "FB", "SMS", "CALL_NOTE"];
 const KPI_METRIC_KEYS = KPI_METRICS_CATALOG.map((item) => item.key);
+const FEEDBACK_TYPES: AiSuggestionFeedbackType[] = ["HELPFUL", "NOT_HELPFUL", "DONE"];
+const FEEDBACK_REASON_KEYS = [
+  "dung_trong_luc_can",
+  "de_lam_theo",
+  "chua_sat_thuc_te",
+  "thieu_du_lieu",
+  "uu_tien_khac",
+  "khac",
+] as const;
+type FeedbackReasonKey = (typeof FEEDBACK_REASON_KEYS)[number];
 
-export class AiCoachValidationError extends Error {}
-export class AiCoachForbiddenError extends Error {}
+export class AiCoachValidationError extends Error { }
+export class AiCoachForbiddenError extends Error { }
 
 function todayInHoChiMinh() {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Ho_Chi_Minh",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date());
-  const y = parts.find((p) => p.type === "year")?.value;
-  const m = parts.find((p) => p.type === "month")?.value;
-  const d = parts.find((p) => p.type === "day")?.value;
-  return `${y}-${m}-${d}`;
-}
-
-function stableStringify(value: unknown): string {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map((v) => stableStringify(v)).join(",")}]`;
-  const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b));
-  return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${stableStringify(v)}`).join(",")}}`;
-}
-
-function hashPayload(value: unknown) {
-  return crypto.createHash("sha256").update(stableStringify(value)).digest("hex");
+  return todayHcm().dateKey;
 }
 
 function ensureYmd(dateKey: string) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) throw new AiCoachValidationError("dateKey phải có dạng YYYY-MM-DD");
+  if (!isYmd(dateKey)) throw new AiCoachValidationError("dateKey phải có dạng YYYY-MM-DD");
 }
 
 function ensureYm(monthKey: string) {
-  if (!/^\d{4}-\d{2}$/.test(monthKey)) throw new AiCoachValidationError("monthKey phải có dạng YYYY-MM");
+  if (!isYm(monthKey)) throw new AiCoachValidationError("monthKey phải có dạng YYYY-MM");
 }
 
 function parseRole(value: unknown, allowAll = false): Role {
@@ -58,6 +57,31 @@ function parseColor(value: unknown): AiScoreColor {
   const color = String(value || "").trim().toUpperCase() as AiScoreColor;
   if (!SUGGESTION_COLORS.includes(color)) throw new AiCoachValidationError("Màu đánh giá không hợp lệ");
   return color;
+}
+
+function parseFeedbackType(value: unknown): AiSuggestionFeedbackType {
+  const type = String(value || "").trim().toUpperCase() as AiSuggestionFeedbackType;
+  if (!FEEDBACK_TYPES.includes(type)) {
+    throw new AiCoachValidationError("Loại phản hồi không hợp lệ");
+  }
+  return type;
+}
+
+function parseFeedbackReason(value: unknown): FeedbackReasonKey {
+  const reason = String(value || "").trim() as FeedbackReasonKey;
+  if (!FEEDBACK_REASON_KEYS.includes(reason)) {
+    throw new AiCoachValidationError("Lý do phản hồi không hợp lệ");
+  }
+  return reason;
+}
+
+function parseOptionalCount(value: unknown) {
+  if (value === null || value === undefined || value === "") return null;
+  const n = Number(value);
+  if (!Number.isInteger(n) || n < 0) {
+    throw new AiCoachValidationError("Kết quả thực tế phải là số nguyên không âm");
+  }
+  return n;
 }
 
 function parseIntNonNegative(value: unknown, fieldName: string) {
@@ -91,25 +115,302 @@ function parseChannel(value: unknown): OutboundChannel {
 }
 
 async function resolveSingleBranch(auth: AuthPayload, requested?: string | null) {
+  const allowed = await getAllowedBranchIds(auth);
   if (requested) {
-    const scoped = await enforceBranchScope(requested, auth);
+    const scoped = await enforceBranchScope(requested, auth, allowed);
     if (!scoped) throw new AiCoachForbiddenError(API_ERROR_VI.forbidden);
     return scoped;
   }
-  const allowed = await getAllowedBranchIds(auth);
   if (allowed.length === 0) throw new AiCoachForbiddenError(API_ERROR_VI.forbidden);
   return allowed[0];
 }
 
 async function resolveBranchList(auth: AuthPayload, requested?: string | null) {
+  const allowed = await getAllowedBranchIds(auth);
   if (requested) {
-    const scoped = await enforceBranchScope(requested, auth);
+    const scoped = await enforceBranchScope(requested, auth, allowed);
     if (!scoped) throw new AiCoachForbiddenError(API_ERROR_VI.forbidden);
     return [scoped];
   }
-  const allowed = await getAllowedBranchIds(auth);
   if (allowed.length === 0) throw new AiCoachForbiddenError(API_ERROR_VI.forbidden);
   return allowed;
+}
+
+function monthRangeInHoChiMinh(dateKey: string) {
+  const monthKey = dateKey.slice(0, 7);
+  const { start, end } = monthRangeHcm(monthKey);
+  return { monthKey, start, end };
+}
+
+function readN8nNotes(metricsJson: Prisma.JsonValue | null): string {
+  if (!metricsJson || typeof metricsJson !== "object" || Array.isArray(metricsJson)) return "";
+  const notes = (metricsJson as Record<string, unknown>).n8nNotes;
+  return typeof notes === "string" ? notes : "";
+}
+
+async function ensureSkeletonSuggestions(input: {
+  auth: AuthPayload;
+  dateKey: string;
+  allowedBranchIds: string[];
+  scope: { mode: "SYSTEM" | "BRANCH" | "OWNER"; branchId?: string; ownerId?: string };
+  requestedBranchId?: string;
+}) {
+  const { start: dayStart, end: dayEnd } = dayRangeInHoChiMinh(input.dateKey);
+  const { start: monthStart, end: monthEnd } = monthRangeInHoChiMinh(input.dateKey);
+  const weekAhead = addDays(dayStart, 7);
+  const twoWeeksAhead = addDays(dayStart, 14);
+
+  const scopedBranchIds = input.requestedBranchId ? [input.requestedBranchId] : input.allowedBranchIds;
+  if (scopedBranchIds.length === 0) return;
+
+  const ownerId = input.scope.mode === "OWNER" ? input.scope.ownerId || null : null;
+  const branchFilter = { branchId: { in: scopedBranchIds } };
+  const leadScope: Prisma.LeadWhereInput = ownerId ? { ...branchFilter, ownerId } : branchFilter;
+  const studentScope: Prisma.StudentWhereInput = ownerId
+    ? { ...branchFilter, lead: { ownerId } }
+    : branchFilter;
+
+  const [hasPhoneNoHen, henNoDen, denNoKy, noRecentReceipt, expenseToday, expenseMonth, scheduleRisk] = await Promise.all([
+    prisma.lead.count({
+      where: {
+        ...leadScope,
+        status: "HAS_PHONE",
+        updatedAt: { lte: dayEnd },
+      },
+    }),
+    prisma.lead.count({
+      where: {
+        ...leadScope,
+        status: "APPOINTED",
+        updatedAt: { lte: dayEnd },
+      },
+    }),
+    prisma.lead.count({
+      where: {
+        ...leadScope,
+        status: "ARRIVED",
+        updatedAt: { lte: dayEnd },
+      },
+    }),
+    prisma.student.count({
+      where: {
+        ...studentScope,
+        studyStatus: "studying",
+        receipts: {
+          none: {
+            receivedAt: { gte: addDays(dayStart, -14), lte: dayEnd },
+          },
+        },
+      },
+    }),
+    prisma.branchExpenseDaily.aggregate({
+      where: {
+        branchId: { in: scopedBranchIds },
+        date: { gte: dayStart, lte: dayEnd },
+      },
+      _sum: { amountVnd: true },
+    }),
+    prisma.branchExpenseDaily.aggregate({
+      where: {
+        branchId: { in: scopedBranchIds },
+        date: { gte: monthStart, lte: monthEnd },
+      },
+      _sum: { amountVnd: true },
+    }),
+    prisma.student.count({
+      where: {
+        ...studentScope,
+        examDate: { gte: dayStart, lte: twoWeeksAhead },
+        OR: [
+          { courseId: null },
+          {
+            course: {
+              scheduleItems: {
+                none: {
+                  isActive: true,
+                  startAt: { gte: dayStart, lte: weekAhead },
+                },
+              },
+            },
+          },
+        ],
+      },
+    }),
+  ]);
+
+  const candidates: Array<{
+    role: Role;
+    title: string;
+    content: string;
+    scoreColor: AiScoreColor;
+    actionsJson: Prisma.InputJsonValue;
+    metricsJson: Prisma.InputJsonValue;
+  }> = [];
+
+  if (hasPhoneNoHen > 0) {
+    candidates.push({
+      role: "telesales",
+      title: `Cần xử lý ${hasPhoneNoHen} khách có số chưa có lịch hẹn`,
+      content: "Ưu tiên gọi nhắc nhóm khách đã có số nhưng chưa chốt lịch hẹn trong ngày.",
+      scoreColor: hasPhoneNoHen >= 10 ? "RED" : "YELLOW",
+      actionsJson: [
+        {
+          type: "CREATE_OUTBOUND_JOB",
+          channel: "CALL_NOTE",
+          label: "Tạo danh sách gọi nhắc khách có số",
+          description: "Gọi trong khung giờ 9h-11h và 14h-17h để tăng tỉ lệ hẹn",
+        },
+        {
+          type: "UPDATE_LEAD_STATUS",
+          label: "Rà trạng thái khách chưa hẹn",
+          description: "Sau khi gọi, cập nhật lại trạng thái khách cho đúng thực tế",
+        },
+      ] as Prisma.InputJsonValue,
+      metricsJson: {
+        sourceModule: "leads",
+        hasPhoneNoHen,
+        n8nNotes:
+          "n8n đọc /api/leads?status=HAS_PHONE, lọc khách chưa hẹn, gom danh sách gọi nhắc rồi đẩy /api/outbound/jobs.",
+      } as Prisma.InputJsonValue,
+    });
+  }
+
+  if (henNoDen > 0 || denNoKy > 0) {
+    candidates.push({
+      role: "telesales",
+      title: `Nhóm khách cần bám sát: ${henNoDen} chưa đến, ${denNoKy} chưa ký`,
+      content: "Cần gọi nhắc khách đã hẹn nhưng chưa đến và nhóm đã đến nhưng chưa ký.",
+      scoreColor: henNoDen + denNoKy >= 10 ? "RED" : "YELLOW",
+      actionsJson: [
+        {
+          type: "CREATE_OUTBOUND_JOB",
+          channel: "CALL_NOTE",
+          label: "Tạo danh sách gọi nhắc theo phễu",
+          description: "Ưu tiên nhóm đã hẹn nhưng chưa đến trước",
+        },
+      ] as Prisma.InputJsonValue,
+      metricsJson: {
+        sourceModule: "kpi",
+        henNoDen,
+        denNoKy,
+        n8nNotes:
+          "n8n lấy phễu KPI ngày từ /api/kpi/daily, xác định điểm nghẽn Hẹn/Đến/Ký và tạo job gọi nhắc phù hợp.",
+      } as Prisma.InputJsonValue,
+    });
+  }
+
+  if (noRecentReceipt > 0) {
+    candidates.push({
+      role: "manager",
+      title: `Có ${noRecentReceipt} học viên cần nhắc thu tiền`,
+      content: "Nhóm học viên chưa có phiếu thu gần đây cần được nhắc để tránh dồn công nợ cuối tháng.",
+      scoreColor: noRecentReceipt >= 8 ? "RED" : "YELLOW",
+      actionsJson: [
+        {
+          type: "CREATE_TASK",
+          label: "Tạo việc nhắc thu tiền",
+          description: "Chia danh sách theo nhân sự phụ trách để xử lý trong ngày",
+        },
+        {
+          type: "CREATE_OUTBOUND_JOB",
+          channel: "SMS",
+          label: "Tạo danh sách nhắn nhắc học phí",
+          description: "Gửi tin nhắn nhắc nợ nhẹ nhàng cho học viên đến hạn",
+        },
+      ] as Prisma.InputJsonValue,
+      metricsJson: {
+        sourceModule: "receipts",
+        noRecentReceipt,
+        n8nNotes:
+          "n8n đọc /api/receipts/summary + /api/students, lọc học viên đến hạn chưa thu rồi tạo việc và danh sách nhắn nhắc.",
+      } as Prisma.InputJsonValue,
+    });
+  }
+
+  const expenseTodayVnd = expenseToday._sum.amountVnd ?? 0;
+  const expenseMonthVnd = expenseMonth._sum.amountVnd ?? 0;
+  if (expenseTodayVnd >= 8_000_000 || expenseMonthVnd >= 120_000_000) {
+    candidates.push({
+      role: "manager",
+      title: "Chi phí đang vượt ngưỡng theo dõi",
+      content: `Chi phí hôm nay khoảng ${expenseTodayVnd.toLocaleString("vi-VN")}đ, tháng này khoảng ${expenseMonthVnd.toLocaleString("vi-VN")}đ.`,
+      scoreColor: expenseTodayVnd >= 12_000_000 || expenseMonthVnd >= 160_000_000 ? "RED" : "YELLOW",
+      actionsJson: [
+        {
+          type: "CREATE_TASK",
+          label: "Rà soát chi phí vượt ngưỡng",
+          description: "Kiểm tra khoản phát sinh lớn và xác nhận tính hợp lệ",
+        },
+      ] as Prisma.InputJsonValue,
+      metricsJson: {
+        sourceModule: "expenses",
+        expenseTodayVnd,
+        expenseMonthVnd,
+        n8nNotes:
+          "n8n đọc /api/expenses/summary theo tháng, so với ngưỡng từng chi nhánh rồi sinh cảnh báo vượt ngưỡng.",
+      } as Prisma.InputJsonValue,
+    });
+  }
+
+  if (scheduleRisk > 0) {
+    candidates.push({
+      role: "manager",
+      title: `Lịch học có rủi ro cho ${scheduleRisk} học viên gần ngày thi`,
+      content: "Một số học viên gần ngày thi nhưng lịch học sắp tới đang thiếu hoặc chưa đủ buổi.",
+      scoreColor: scheduleRisk >= 6 ? "RED" : "YELLOW",
+      actionsJson: [
+        {
+          type: "CREATE_REMINDER",
+          label: "Tạo việc bổ sung lịch học",
+          description: "Bổ sung buổi học còn thiếu cho học viên gần ngày thi",
+        },
+      ] as Prisma.InputJsonValue,
+      metricsJson: {
+        sourceModule: "schedule",
+        scheduleRisk,
+        n8nNotes:
+          "n8n đọc /api/schedule + /api/students (gần ngày thi), đánh dấu học viên thiếu lịch và gửi nhắc xử lý.",
+      } as Prisma.InputJsonValue,
+    });
+  }
+
+  const branchIdForCreate = scopedBranchIds[0] ?? null;
+  const runId = `rule-skeleton-${input.dateKey}`;
+
+  for (const candidate of candidates) {
+    const payloadHash = hashPayload({
+      dateKey: input.dateKey,
+      role: candidate.role,
+      branchId: branchIdForCreate,
+      ownerId,
+      title: candidate.title,
+      source: "rule_skeleton_v2",
+    });
+
+    const existing = await prisma.aiSuggestion.findFirst({
+      where: { dateKey: input.dateKey, payloadHash, source: "rule_skeleton_v2" },
+      select: { id: true },
+    });
+    if (existing) continue;
+
+    await prisma.aiSuggestion.create({
+      data: {
+        dateKey: input.dateKey,
+        role: candidate.role,
+        branchId: branchIdForCreate,
+        ownerId,
+        status: "ACTIVE",
+        title: candidate.title,
+        content: candidate.content,
+        scoreColor: candidate.scoreColor,
+        actionsJson: candidate.actionsJson,
+        metricsJson: candidate.metricsJson,
+        source: "rule_skeleton_v2",
+        runId,
+        payloadHash,
+      },
+    });
+  }
 }
 
 export async function getKpiTargets(input: {
@@ -211,23 +512,23 @@ export async function upsertKpiTargets(input: {
 
       const item = existing
         ? await tx.kpiTarget.update({
-            where: { id: existing.id },
-            data: {
-              targetValue,
-              isActive: row.isActive ?? true,
-            },
-          })
+          where: { id: existing.id },
+          data: {
+            targetValue,
+            isActive: row.isActive ?? true,
+          },
+        })
         : await tx.kpiTarget.create({
-            data: {
-              branchId,
-              role,
-              ownerId,
-              metricKey,
-              targetValue,
-              dayOfWeek,
-              isActive: row.isActive ?? true,
-            },
-          });
+          data: {
+            branchId,
+            role,
+            ownerId,
+            metricKey,
+            targetValue,
+            dayOfWeek,
+            isActive: row.isActive ?? true,
+          },
+        });
       created.push(item);
     }
     return created;
@@ -356,15 +657,25 @@ export async function listAiSuggestions(input: {
   ensureYmd(dateKey);
   const scope = await resolveScope(input.auth);
   const allowedBranchIds = await getAllowedBranchIds(input.auth);
+  const requestedBranchId = input.branchId ? await enforceBranchScope(input.branchId, input.auth, allowedBranchIds) : null;
+  if (input.branchId && !requestedBranchId) {
+    throw new AiCoachForbiddenError(API_ERROR_VI.forbidden);
+  }
+
+  await ensureSkeletonSuggestions({
+    auth: input.auth,
+    dateKey,
+    allowedBranchIds,
+    scope,
+    requestedBranchId: requestedBranchId || undefined,
+  });
 
   const andClauses: Prisma.AiSuggestionWhereInput[] = [{ dateKey }, { status: "ACTIVE" }];
   if (input.role) andClauses.push({ role: parseRole(input.role, true) });
 
   if (scope.mode === "SYSTEM") {
-    if (input.branchId) {
-      const scoped = await enforceBranchScope(input.branchId, input.auth);
-      if (!scoped) throw new AiCoachForbiddenError(API_ERROR_VI.forbidden);
-      andClauses.push({ branchId: scoped });
+    if (requestedBranchId) {
+      andClauses.push({ branchId: requestedBranchId });
     } else if (allowedBranchIds.length > 0) {
       andClauses.push({ OR: [{ branchId: { in: allowedBranchIds } }, { branchId: null }] });
     }
@@ -389,14 +700,44 @@ export async function listAiSuggestions(input: {
       feedbacks: {
         orderBy: { createdAt: "desc" },
         take: 5,
-        select: { id: true, userId: true, rating: true, applied: true, note: true, createdAt: true },
+        select: {
+          id: true,
+          userId: true,
+          feedbackType: true,
+          reason: true,
+          reasonDetail: true,
+          actualResult: true,
+          rating: true,
+          applied: true,
+          note: true,
+          createdAt: true,
+        },
       },
       _count: { select: { feedbacks: true } },
     },
     orderBy: [{ scoreColor: "asc" }, { createdAt: "desc" }],
   });
 
-  return { items };
+  return {
+    items: items.map((item) => {
+      const feedbackStats = item.feedbacks.reduce(
+        (acc, row) => {
+          if (row.feedbackType === "HELPFUL") acc.helpful += 1;
+          if (row.feedbackType === "NOT_HELPFUL") acc.notHelpful += 1;
+          if (row.feedbackType === "DONE") acc.done += 1;
+          return acc;
+        },
+        { total: item._count.feedbacks, helpful: 0, notHelpful: 0, done: 0 }
+      );
+      const myFeedback = item.feedbacks.find((row) => row.userId === input.auth.sub) || null;
+      return {
+        ...item,
+        feedbackStats,
+        myFeedback,
+        n8nNotes: readN8nNotes(item.metricsJson),
+      };
+    }),
+  };
 }
 
 export async function createAiSuggestionManual(input: {
@@ -535,13 +876,32 @@ export async function ingestAiSuggestions(payload: {
 export async function addAiSuggestionFeedback(input: {
   auth: AuthPayload;
   suggestionId: string;
-  rating: number;
-  applied?: boolean;
+  feedbackType: string;
+  reason: string;
+  reasonDetail?: string;
+  actualResult?: {
+    data?: number | null;
+    hen?: number | null;
+    den?: number | null;
+    ky?: number | null;
+  };
   note?: string;
 }) {
-  if (!Number.isInteger(input.rating) || input.rating < 1 || input.rating > 5) {
-    throw new AiCoachValidationError("rating phải trong khoảng 1-5");
+  const feedbackType = parseFeedbackType(input.feedbackType);
+  const reason = parseFeedbackReason(input.reason);
+  const reasonDetail = String(input.reasonDetail || "").trim();
+  if (reason === "khac" && !reasonDetail) {
+    throw new AiCoachValidationError("Khi chọn lý do khác, cần nhập lý do cụ thể");
   }
+
+  const actualResult = input.actualResult
+    ? ({
+      data: parseOptionalCount(input.actualResult.data),
+      hen: parseOptionalCount(input.actualResult.hen),
+      den: parseOptionalCount(input.actualResult.den),
+      ky: parseOptionalCount(input.actualResult.ky),
+    } satisfies Record<string, number | null>)
+    : null;
 
   const scope = await resolveScope(input.auth);
   const allowedBranches = await getAllowedBranchIds(input.auth);
@@ -563,15 +923,38 @@ export async function addAiSuggestionFeedback(input: {
     }
   }
 
-  const feedback = await prisma.aiSuggestionFeedback.create({
-    data: {
-      suggestionId: input.suggestionId,
-      userId: input.auth.sub,
-      rating: input.rating,
-      applied: input.applied ?? false,
-      note: input.note?.trim() || null,
-    },
+  const existing = await prisma.aiSuggestionFeedback.findFirst({
+    where: { suggestionId: input.suggestionId, userId: input.auth.sub },
+    select: { id: true },
   });
+  if (existing) {
+    throw new AiCoachValidationError("Bạn đã phản hồi gợi ý này");
+  }
+
+  const rating = feedbackType === "HELPFUL" ? 5 : feedbackType === "NOT_HELPFUL" ? 1 : 4;
+  const applied = feedbackType !== "NOT_HELPFUL";
+
+  let feedback;
+  try {
+    feedback = await prisma.aiSuggestionFeedback.create({
+      data: {
+        suggestionId: input.suggestionId,
+        userId: input.auth.sub,
+        feedbackType,
+        reason,
+        reasonDetail: reasonDetail || null,
+        actualResult: (actualResult as Prisma.InputJsonValue) ?? null,
+        rating,
+        applied,
+        note: input.note?.trim() || null,
+      },
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      throw new AiCoachValidationError("Bạn đã phản hồi gợi ý này");
+    }
+    throw error;
+  }
   return { feedback };
 }
 

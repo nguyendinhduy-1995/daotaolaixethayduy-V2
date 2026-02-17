@@ -27,6 +27,8 @@ export const SECRET_AUTH_ROUTES: Array<{ method?: string; pattern: RegExp }> = [
   { method: "POST", pattern: /^\/api\/worker\/outbound$/ },
   { method: "POST", pattern: /^\/api\/insights\/expenses\/ingest$/ },
   { method: "POST", pattern: /^\/api\/ai\/suggestions\/ingest$/ },
+  { method: "PATCH", pattern: /^\/api\/outbound\/jobs\/[^/]+$/ },
+  { method: "POST", pattern: /^\/api\/automation\/logs\/ingest$/ },
 ];
 
 export const ROUTE_PERMISSION_RULES: RoutePermissionRule[] = [
@@ -38,6 +40,9 @@ export const ROUTE_PERMISSION_RULES: RoutePermissionRule[] = [
   { method: "GET", pattern: /^\/api\/ai\/suggestions$/, module: "ai_suggestions", action: "VIEW" },
   { method: "POST", pattern: /^\/api\/ai\/suggestions$/, module: "ai_suggestions", action: "CREATE" },
   { method: "POST", pattern: /^\/api\/ai\/suggestions\/[^/]+\/feedback$/, module: "ai_suggestions", action: "FEEDBACK" },
+  { method: "GET", pattern: /^\/api\/ai\/suggestions\/analytics$/, module: "ai_suggestions", action: "VIEW" },
+  { method: "GET", pattern: /^\/api\/ai\/suggestions\/summary$/, module: "ai_suggestions", action: "VIEW" },
+  { method: "GET", pattern: /^\/api\/ai\/suggestions\/trend$/, module: "ai_suggestions", action: "VIEW" },
   { method: "GET", pattern: /^\/api\/tasks$/, module: "notifications", action: "VIEW" },
   { method: "POST", pattern: /^\/api\/tasks$/, module: "notifications", action: "CREATE" },
   { method: "PATCH", pattern: /^\/api\/tasks\/[^/]+$/, module: "notifications", action: "UPDATE" },
@@ -52,6 +57,7 @@ export const ROUTE_PERMISSION_RULES: RoutePermissionRule[] = [
   { method: "POST", pattern: /^\/api\/admin\/users$/, module: "admin_users", action: "CREATE" },
   { method: "GET", pattern: /^\/api\/admin\/users\/[^/]+$/, module: "admin_users", action: "VIEW" },
   { method: "PATCH", pattern: /^\/api\/admin\/users\/[^/]+$/, module: "admin_users", action: "UPDATE" },
+  { method: "POST", pattern: /^\/api\/admin\/users\/bulk-toggle$/, module: "admin_users", action: "UPDATE" },
 
   { method: "GET", pattern: /^\/api\/admin\/branches$/, module: "admin_branches", action: "VIEW" },
   { method: "POST", pattern: /^\/api\/admin\/branches$/, module: "admin_branches", action: "CREATE" },
@@ -62,6 +68,7 @@ export const ROUTE_PERMISSION_RULES: RoutePermissionRule[] = [
   { method: "POST", pattern: /^\/api\/students$/, module: "students", action: "CREATE" },
   { method: "GET", pattern: /^\/api\/students\/[^/]+$/, module: "students", action: "VIEW" },
   { method: "PATCH", pattern: /^\/api\/students\/[^/]+$/, module: "students", action: "UPDATE" },
+  { method: "POST", pattern: /^\/api\/students\/bulk-status$/, module: "students", action: "UPDATE" },
   { method: "GET", pattern: /^\/api\/students\/[^/]+\/finance$/, module: "students", action: "VIEW" },
 
   { method: "GET", pattern: /^\/api\/courses$/, module: "courses", action: "VIEW" },
@@ -77,7 +84,8 @@ export const ROUTE_PERMISSION_RULES: RoutePermissionRule[] = [
 
   { method: "GET", pattern: /^\/api\/outbound\/messages$/, module: "messaging", action: "VIEW" },
   { method: "POST", pattern: /^\/api\/outbound\/messages$/, module: "messaging", action: "CREATE" },
-  { method: "POST", pattern: /^\/api\/outbound\/jobs$/, module: "messaging", action: "CREATE" },
+  { method: "GET", pattern: /^\/api\/outbound\/jobs$/, module: "outbound_jobs", action: "VIEW" },
+  { method: "POST", pattern: /^\/api\/outbound\/jobs$/, module: "outbound_jobs", action: "CREATE" },
   { method: "POST", pattern: /^\/api\/outbound\/dispatch$/, module: "messaging", action: "RUN" },
 
   { method: "GET", pattern: /^\/api\/leads$/, module: "leads", action: "VIEW" },
@@ -88,6 +96,10 @@ export const ROUTE_PERMISSION_RULES: RoutePermissionRule[] = [
   { method: "POST", pattern: /^\/api\/leads\/[^/]+\/events$/, module: "leads", action: "UPDATE" },
   { method: "POST", pattern: /^\/api\/leads\/assign$/, module: "leads", action: "ASSIGN" },
   { method: "POST", pattern: /^\/api\/leads\/auto-assign$/, module: "leads", action: "ASSIGN" },
+  { method: "GET", pattern: /^\/api\/leads\/unassigned-count$/, module: "leads", action: "VIEW" },
+  { method: "GET", pattern: /^\/api\/leads\/stale$/, module: "leads", action: "VIEW" },
+  { method: "GET", pattern: /^\/api\/leads\/export$/, module: "leads", action: "VIEW" },
+  { method: "POST", pattern: /^\/api\/leads\/bulk-assign$/, module: "leads", action: "ASSIGN" },
 
   { method: "GET", pattern: /^\/api\/receipts$/, module: "receipts", action: "VIEW" },
   { method: "POST", pattern: /^\/api\/receipts$/, module: "receipts", action: "CREATE" },
@@ -130,6 +142,10 @@ export const ROUTE_PERMISSION_RULES: RoutePermissionRule[] = [
   { method: "GET", pattern: /^\/api\/admin\/ops\/pulse$/, module: "ops_ai_hr", action: "VIEW" },
   { method: "POST", pattern: /^\/api\/admin\/ops\/pulse$/, module: "ops_ai_hr", action: "RUN" },
   { method: "GET", pattern: /^\/api\/admin\/n8n\/workflows$/, module: "ops_n8n", action: "VIEW" },
+  { method: "GET", pattern: /^\/api\/admin\/automation\/overview$/, module: "ops_n8n", action: "VIEW" },
+  { method: "GET", pattern: /^\/api\/admin\/automation\/jobs$/, module: "ops_n8n", action: "VIEW" },
+  { method: "GET", pattern: /^\/api\/admin\/automation\/logs$/, module: "ops_n8n", action: "VIEW" },
+  { method: "GET", pattern: /^\/api\/admin\/automation\/errors$/, module: "ops_n8n", action: "VIEW" },
 
   { method: "GET", pattern: /^\/api\/admin\/permission-groups$/, module: "admin_users", action: "VIEW" },
   { method: "POST", pattern: /^\/api\/admin\/permission-groups$/, module: "admin_users", action: "CREATE" },

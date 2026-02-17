@@ -13,9 +13,10 @@ const COOKIE_SESSION_TOKEN = "__cookie_session__";
 export async function fetchJson<T>(
   path: string,
   options?: {
-    method?: "GET" | "POST" | "PATCH" | "DELETE";
+    method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
     body?: unknown;
     token?: string | null;
+    headers?: Record<string, string>;
   }
 ): Promise<T> {
   const shouldAttachBearer =
@@ -29,6 +30,7 @@ export async function fetchJson<T>(
     headers: {
       "Content-Type": "application/json",
       ...(shouldAttachBearer ? { Authorization: `Bearer ${options?.token}` } : {}),
+      ...(options?.headers ?? {}),
     },
     ...(options?.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
   });

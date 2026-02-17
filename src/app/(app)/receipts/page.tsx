@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchJson, type ApiClientError } from "@/lib/api-client";
-import { clearToken, getToken } from "@/lib/auth-client";
+import { clearToken, fetchMe, getToken } from "@/lib/auth-client";
 import { firstDayOfMonthYmd, shiftDateYmd, todayInHoChiMinh } from "@/lib/date-utils";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Table } from "@/components/ui/table";
 import { formatCurrencyVnd, formatDateTimeVi } from "@/lib/date-utils";
+import { hasUiPermission } from "@/lib/ui-permissions";
 
 type ReceiptMethodFilter = "" | "cash" | "bank" | "momo" | "other";
 type ReceiptMethodInput = "cash" | "bank" | "momo" | "other";
@@ -116,6 +117,7 @@ export default function ReceiptsPage() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createSaving, setCreateSaving] = useState(false);
+  const [canCreateReceipt, setCanCreateReceipt] = useState(false);
   const [createForm, setCreateForm] = useState<FormState>(EMPTY_FORM);
 
   const [editOpen, setEditOpen] = useState(false);
@@ -198,6 +200,12 @@ export default function ReceiptsPage() {
   useEffect(() => {
     loadReceipts();
   }, [loadReceipts]);
+
+  useEffect(() => {
+    fetchMe()
+      .then((data) => setCanCreateReceipt(hasUiPermission(data.user.permissions, "receipts", "CREATE")))
+      .catch(() => setCanCreateReceipt(false));
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -334,14 +342,16 @@ export default function ReceiptsPage() {
               "Làm mới"
             )}
           </Button>
-          <Button
-            onClick={() => {
-              setCreateForm({ ...EMPTY_FORM, receivedAt: mode === "day" ? date : todayInHoChiMinh(), studentId });
-              setCreateOpen(true);
-            }}
-          >
-            Tạo phiếu thu
-          </Button>
+          {canCreateReceipt ? (
+            <Button
+              onClick={() => {
+                setCreateForm({ ...EMPTY_FORM, receivedAt: mode === "day" ? date : todayInHoChiMinh(), studentId });
+                setCreateOpen(true);
+              }}
+            >
+              Tạo phiếu thu
+            </Button>
+          ) : null}
         </div>
       </div>
 

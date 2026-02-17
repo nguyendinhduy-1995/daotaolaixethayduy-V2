@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import type { ExamResult, Prisma, StudyStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-response";
-import { requireRouteAuth } from "@/lib/route-auth";
-import { isAdminRole } from "@/lib/admin-auth";
+import { requireMappedRoutePermissionAuth } from "@/lib/route-auth";
+import { API_ERROR_VI } from "@/lib/api-error-vi";
+import { applyScopeToWhere, resolveScope, resolveWriteBranchId } from "@/lib/scope";
 
 const STUDY_STATUSES: StudyStatus[] = ["studying", "paused", "done"];
 const EXAM_RESULTS: ExamResult[] = ["pass", "fail"];
@@ -33,7 +34,7 @@ function isExamResult(value: unknown): value is ExamResult {
 }
 
 export async function GET(req: Request) {
-  const authResult = requireRouteAuth(req);
+  const authResult = await requireMappedRoutePermissionAuth(req);
   if (authResult.error) return authResult.error;
 
   try {
@@ -46,11 +47,11 @@ export async function GET(req: Request) {
     const q = searchParams.get("q");
 
     if (studyStatus !== null && !isStudyStatus(studyStatus)) {
-      return jsonError(400, "VALIDATION_ERROR", "Invalid studyStatus");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
 
+    const scope = await resolveScope(authResult.auth);
     const leadFilter: Prisma.LeadWhereInput = {
-      ...(!isAdminRole(authResult.auth.role) ? { ownerId: authResult.auth.sub } : {}),
       ...(q
         ? {
             OR: [{ fullName: { contains: q, mode: "insensitive" } }, { phone: { contains: q, mode: "insensitive" } }],
@@ -58,12 +59,13 @@ export async function GET(req: Request) {
         : {}),
     };
 
-    const where: Prisma.StudentWhereInput = {
+    const whereBase: Prisma.StudentWhereInput = {
       ...(courseId ? { courseId } : {}),
       ...(leadId ? { leadId } : {}),
       ...(studyStatus ? { studyStatus } : {}),
       ...(Object.keys(leadFilter).length > 0 ? { lead: leadFilter } : {}),
     };
+    const where = applyScopeToWhere(whereBase, scope, "student");
 
     const [items, total] = await Promise.all([
       prisma.student.findMany({
@@ -83,55 +85,62 @@ export async function GET(req: Request) {
     return NextResponse.json({ items, page, pageSize, total });
   } catch (error) {
     if (error instanceof Error && error.message === "INVALID_PAGINATION") {
-      return jsonError(400, "VALIDATION_ERROR", "Invalid pagination");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
-    return jsonError(500, "INTERNAL_ERROR", "Internal server error");
+    return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }
 
 export async function POST(req: Request) {
-  const authResult = requireRouteAuth(req);
+  const authResult = await requireMappedRoutePermissionAuth(req);
   if (authResult.error) return authResult.error;
 
   try {
     const body = await req.json().catch(() => null);
     if (!body || typeof body !== "object") {
-      return jsonError(400, "VALIDATION_ERROR", "Invalid JSON body");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
     if (!body.leadId || typeof body.leadId !== "string") {
-      return jsonError(400, "VALIDATION_ERROR", "leadId is required");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
     if (body.studyStatus !== undefined && !isStudyStatus(body.studyStatus)) {
-      return jsonError(400, "VALIDATION_ERROR", "Invalid studyStatus");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
     if (body.examResult !== undefined && body.examResult !== null && !isExamResult(body.examResult)) {
-      return jsonError(400, "VALIDATION_ERROR", "Invalid examResult");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
 
+    const scope = await resolveScope(authResult.auth);
     const lead = await prisma.lead.findUnique({
       where: { id: body.leadId },
-      select: { id: true, ownerId: true },
+      select: { id: true, ownerId: true, branchId: true, owner: { select: { branchId: true } } },
     });
-    if (!lead) return jsonError(404, "NOT_FOUND", "Lead not found");
-    if (!isAdminRole(authResult.auth.role) && lead.ownerId !== authResult.auth.sub) {
-      return jsonError(403, "AUTH_FORBIDDEN", "Forbidden");
+    if (!lead) return jsonError(404, "NOT_FOUND", API_ERROR_VI.notFoundLead);
+    const scopedLead = await prisma.lead.findFirst({
+      where: applyScopeToWhere({ id: body.leadId }, scope, "lead"),
+      select: { id: true },
+    });
+    if (!scopedLead) {
+      return jsonError(403, "AUTH_FORBIDDEN", API_ERROR_VI.forbidden);
     }
 
     if (body.courseId) {
       const course = await prisma.course.findUnique({ where: { id: body.courseId }, select: { id: true } });
-      if (!course) return jsonError(404, "NOT_FOUND", "Course not found");
+      if (!course) return jsonError(404, "NOT_FOUND", API_ERROR_VI.required);
     }
     if (body.tuitionPlanId) {
       const plan = await prisma.tuitionPlan.findUnique({
         where: { id: body.tuitionPlanId },
         select: { id: true },
       });
-      if (!plan) return jsonError(404, "NOT_FOUND", "Tuition plan not found");
+      if (!plan) return jsonError(404, "NOT_FOUND", API_ERROR_VI.required);
     }
 
+    const branchId = await resolveWriteBranchId(authResult.auth, [lead.branchId, lead.owner?.branchId ?? null]);
     const student = await prisma.student.create({
       data: {
         leadId: body.leadId,
+        branchId,
         courseId: typeof body.courseId === "string" ? body.courseId : null,
         tuitionPlanId: typeof body.tuitionPlanId === "string" ? body.tuitionPlanId : null,
         tuitionSnapshot: typeof body.tuitionSnapshot === "number" ? body.tuitionSnapshot : null,
@@ -147,8 +156,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ student });
   } catch (error) {
     if (error instanceof Error && error.message === "INVALID_DATE") {
-      return jsonError(400, "VALIDATION_ERROR", "Invalid date");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
-    return jsonError(500, "INTERNAL_ERROR", "Internal server error");
+    return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

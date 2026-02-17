@@ -1,0 +1,124 @@
+# REPO_MAP
+
+## Thư mục chính (2-3 tầng)
+- `src/`
+  - `src/app/`
+    - `src/app/(app)/` (UI pages chính: admin, dashboard, leads, marketing, hr, ...)
+    - `src/app/api/` (Next.js App Router API routes)
+    - `src/app/student/` (student portal pages)
+  - `src/components/`
+    - `src/components/ui/`
+    - `src/components/admin/`
+    - `src/components/mobile/`
+  - `src/lib/`
+    - `src/lib/services/` (business services: kpi, ops pulse, marketing, payroll, worker, ...)
+- `prisma/`
+  - `prisma/schema.prisma`
+  - `prisma/migrations/` (SQL migrations)
+- `scripts/`
+  - `scripts/verify.sh`
+  - `scripts/seed-admin.ts`
+  - `scripts/seed-templates.ts`
+  - `scripts/worker-outbound.sh`
+- `public/`
+  - `public/*.svg`
+- `docs/`
+  - `docs/n8n/`
+  - `docs/N8N_WORKFLOWS.md`
+  - `docs/CODEX_AUDIT.md`
+
+## Core files
+- `package.json`: scripts và dependencies chính của dự án Next.js + Prisma.
+- `next.config.ts`: cấu hình Next.js.
+- `tsconfig.json`: cấu hình TypeScript cho toàn repo.
+- `tailwind.config.*`: **không thấy file** (đang dùng Tailwind v4 qua CSS/plugin).
+- `postcss.config.mjs`: cấu hình PostCSS.
+- `prisma/schema.prisma`: schema database (models/enums/relations).
+- `prisma.config.ts`: cấu hình Prisma runtime (schema, migrations, datasource).
+- `docker-compose.yml`: services local (Postgres, Redis).
+- `.env.example`: mẫu biến môi trường (**không chứa secrets thật**).
+
+## API routes (Next.js App Router)
+- Router style: `src/app/api/**/route.ts` (App Router).
+- `src/pages/api/**`: **không có** (không dùng Pages Router API).
+
+- `/api/admin/attendance/:id` -> `src/app/api/admin/attendance/[id]/route.ts`
+- `/api/admin/attendance` -> `src/app/api/admin/attendance/route.ts`
+- `/api/admin/branches/:id` -> `src/app/api/admin/branches/[id]/route.ts`
+- `/api/admin/branches` -> `src/app/api/admin/branches/route.ts`
+- `/api/admin/commissions/paid50/rebuild` -> `src/app/api/admin/commissions/paid50/rebuild/route.ts`
+- `/api/admin/commissions/rebuild` -> `src/app/api/admin/commissions/rebuild/route.ts`
+- `/api/admin/commissions` -> `src/app/api/admin/commissions/route.ts`
+- `/api/admin/cron/daily` -> `src/app/api/admin/cron/daily/route.ts`
+- `/api/admin/employee-kpi/:id` -> `src/app/api/admin/employee-kpi/[id]/route.ts`
+- `/api/admin/employee-kpi` -> `src/app/api/admin/employee-kpi/route.ts`
+- `/api/admin/marketing/ingest` -> `src/app/api/admin/marketing/ingest/route.ts`
+- `/api/admin/marketing/report` -> `src/app/api/admin/marketing/report/route.ts`
+- `/api/admin/marketing/reports` -> `src/app/api/admin/marketing/reports/route.ts`
+- `/api/admin/n8n/workflows` -> `src/app/api/admin/n8n/workflows/route.ts`
+- `/api/admin/ops/pulse` -> `src/app/api/admin/ops/pulse/route.ts`
+- `/api/admin/payroll/finalize` -> `src/app/api/admin/payroll/finalize/route.ts`
+- `/api/admin/payroll/generate` -> `src/app/api/admin/payroll/generate/route.ts`
+- `/api/admin/payroll` -> `src/app/api/admin/payroll/route.ts`
+- `/api/admin/salary-profiles/:id` -> `src/app/api/admin/salary-profiles/[id]/route.ts`
+- `/api/admin/salary-profiles` -> `src/app/api/admin/salary-profiles/route.ts`
+- `/api/admin/scheduler/health` -> `src/app/api/admin/scheduler/health/route.ts`
+- `/api/admin/student-content/:id` -> `src/app/api/admin/student-content/[id]/route.ts`
+- `/api/admin/student-content` -> `src/app/api/admin/student-content/route.ts`
+- `/api/admin/users/:id` -> `src/app/api/admin/users/[id]/route.ts`
+- `/api/admin/users` -> `src/app/api/admin/users/route.ts`
+- `/api/admin/worker/outbound` -> `src/app/api/admin/worker/outbound/route.ts`
+- `/api/auth/login` -> `src/app/api/auth/login/route.ts`
+- `/api/auth/logout` -> `src/app/api/auth/logout/route.ts`
+- `/api/auth/me` -> `src/app/api/auth/me/route.ts`
+- `/api/auth/refresh` -> `src/app/api/auth/refresh/route.ts`
+- `/api/automation/logs` -> `src/app/api/automation/logs/route.ts`
+- `/api/automation/run` -> `src/app/api/automation/run/route.ts`
+- `/api/courses/:id` -> `src/app/api/courses/[id]/route.ts`
+- `/api/courses/:id/schedule` -> `src/app/api/courses/[id]/schedule/route.ts`
+- `/api/courses` -> `src/app/api/courses/route.ts`
+- `/api/cron/daily` -> `src/app/api/cron/daily/route.ts`
+- `/api/health/db` -> `src/app/api/health/db/route.ts`
+- `/api/kpi/daily` -> `src/app/api/kpi/daily/route.ts`
+- `/api/leads/:id/events` -> `src/app/api/leads/[id]/events/route.ts`
+- `/api/leads/:id` -> `src/app/api/leads/[id]/route.ts`
+- `/api/leads/assign` -> `src/app/api/leads/assign/route.ts`
+- `/api/leads/auto-assign` -> `src/app/api/leads/auto-assign/route.ts`
+- `/api/leads` -> `src/app/api/leads/route.ts`
+- `/api/marketing/ingest` -> `src/app/api/marketing/ingest/route.ts`
+- `/api/marketing/metrics` -> `src/app/api/marketing/metrics/route.ts`
+- `/api/marketing/report` -> `src/app/api/marketing/report/route.ts`
+- `/api/me/payroll` -> `src/app/api/me/payroll/route.ts`
+- `/api/notifications/:id` -> `src/app/api/notifications/[id]/route.ts`
+- `/api/notifications/generate` -> `src/app/api/notifications/generate/route.ts`
+- `/api/notifications` -> `src/app/api/notifications/route.ts`
+- `/api/ops/pulse` -> `src/app/api/ops/pulse/route.ts`
+- `/api/outbound/callback` -> `src/app/api/outbound/callback/route.ts`
+- `/api/outbound/dispatch` -> `src/app/api/outbound/dispatch/route.ts`
+- `/api/outbound/messages` -> `src/app/api/outbound/messages/route.ts`
+- `/api/receipts/:id` -> `src/app/api/receipts/[id]/route.ts`
+- `/api/receipts` -> `src/app/api/receipts/route.ts`
+- `/api/receipts/summary` -> `src/app/api/receipts/summary/route.ts`
+- `/api/schedule/:id/attendance` -> `src/app/api/schedule/[id]/attendance/route.ts`
+- `/api/schedule/:id` -> `src/app/api/schedule/[id]/route.ts`
+- `/api/schedule` -> `src/app/api/schedule/route.ts`
+- `/api/scheduler/health` -> `src/app/api/scheduler/health/route.ts`
+- `/api/student/auth/login` -> `src/app/api/student/auth/login/route.ts`
+- `/api/student/auth/logout` -> `src/app/api/student/auth/logout/route.ts`
+- `/api/student/auth/register` -> `src/app/api/student/auth/register/route.ts`
+- `/api/student/content` -> `src/app/api/student/content/route.ts`
+- `/api/student/me` -> `src/app/api/student/me/route.ts`
+- `/api/students/:id/finance` -> `src/app/api/students/[id]/finance/route.ts`
+- `/api/students/:id` -> `src/app/api/students/[id]/route.ts`
+- `/api/students` -> `src/app/api/students/route.ts`
+- `/api/templates` -> `src/app/api/templates/route.ts`
+- `/api/templates/seed` -> `src/app/api/templates/seed/route.ts`
+- `/api/tuition-plans/:id` -> `src/app/api/tuition-plans/[id]/route.ts`
+- `/api/tuition-plans` -> `src/app/api/tuition-plans/route.ts`
+- `/api/users/:id` -> `src/app/api/users/[id]/route.ts`
+- `/api/users` -> `src/app/api/users/route.ts`
+- `/api/worker/outbound` -> `src/app/api/worker/outbound/route.ts`
+
+## Bảo mật
+- Không in secrets/tokens trong file này.
+- Nếu có giá trị nhạy cảm trong tương lai: ghi `REDACTED`.

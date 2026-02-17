@@ -11,6 +11,12 @@
 - Retry theo backoff tăng dần, tối đa 3 lần.
 - Lưu phản hồi người dùng để hệ thống học dần qua `AiLearningHistory`.
 
+## Vòng phản hồi bắt buộc
+- Mỗi gợi ý ở trang Trợ lý công việc phải được người dùng phản hồi theo 1 trong 3 trạng thái: `Hữu ích`, `Không hữu ích`, `Đã làm xong`.
+- CRM ghi nhận phản hồi qua `POST /api/ai/suggestions/{id}/feedback` với ràng buộc `mỗi user chỉ phản hồi 1 lần / gợi ý`.
+- n8n đọc dữ liệu phản hồi + kết quả thực tế (data/hẹn/đến/ký) để tối ưu prompt và luật ưu tiên cho lần chạy tiếp theo.
+- Dashboard/luồng vận hành ưu tiên dùng các gợi ý có tỷ lệ phản hồi hữu ích cao và loại bớt các mẫu bị đánh giá không phù hợp.
+
 ## Cơ hội AI theo module
 ### Leads
 - Quick win: chấm điểm nóng/lạnh và gợi ý gọi lại.

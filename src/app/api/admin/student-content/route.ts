@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { Prisma, StudentContentCategory } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-response";
-import { requireRouteAuth } from "@/lib/route-auth";
+import { requireMappedRoutePermissionAuth } from "@/lib/route-auth";
 import { requireAdminRole } from "@/lib/admin-auth";
 import { ensureStudentPortalSchema } from "@/lib/student-portal-db";
 
@@ -20,7 +20,7 @@ function parsePositiveInt(value: string | null, fallback: number, max = 100) {
 }
 
 export async function GET(req: Request) {
-  const authResult = requireRouteAuth(req);
+  const authResult = await requireMappedRoutePermissionAuth(req);
   if (authResult.error) return authResult.error;
   const adminError = requireAdminRole(authResult.auth.role);
   if (adminError) return adminError;
@@ -71,7 +71,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const authResult = requireRouteAuth(req);
+  const authResult = await requireMappedRoutePermissionAuth(req);
   if (authResult.error) return authResult.error;
   const adminError = requireAdminRole(authResult.auth.role);
   if (adminError) return adminError;

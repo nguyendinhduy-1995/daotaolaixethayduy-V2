@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import type { LeadStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-response";
-import { requireRouteAuth } from "@/lib/route-auth";
-import { requireAdminRole } from "@/lib/admin-auth";
+import { API_ERROR_VI } from "@/lib/api-error-vi";
+import { requirePermissionRouteAuth } from "@/lib/route-auth";
 import { isLeadStatusType, logLeadEvent } from "@/lib/lead-events";
 
 function parseDateYmd(value: string, endOfDay = false) {
@@ -51,24 +51,22 @@ function buildLeadWhere(filters: Record<string, unknown>) {
 }
 
 export async function POST(req: Request) {
-  const authResult = requireRouteAuth(req);
+  const authResult = await requirePermissionRouteAuth(req, { module: "leads", action: "ASSIGN" });
   if (authResult.error) return authResult.error;
-  const adminError = requireAdminRole(authResult.auth.role);
-  if (adminError) return adminError;
 
   try {
     const body = await req.json().catch(() => null);
     if (!body || typeof body !== "object") {
-      return jsonError(400, "VALIDATION_ERROR", "Invalid JSON body");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
     if (body.strategy !== "round_robin") {
-      return jsonError(400, "VALIDATION_ERROR", "Only round_robin strategy is supported");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
     if (body.leadIds !== undefined && (!Array.isArray(body.leadIds) || !body.leadIds.every((id: unknown) => typeof id === "string"))) {
-      return jsonError(400, "VALIDATION_ERROR", "leadIds must be an array of strings");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
     if (body.filters !== undefined && (body.filters === null || typeof body.filters !== "object")) {
-      return jsonError(400, "VALIDATION_ERROR", "filters must be an object");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
 
     const telesales = await prisma.user.findMany({
@@ -77,7 +75,7 @@ export async function POST(req: Request) {
       orderBy: { createdAt: "asc" },
     });
     if (telesales.length === 0) {
-      return jsonError(404, "NOT_FOUND", "No active telesales users found");
+      return jsonError(404, "NOT_FOUND", API_ERROR_VI.required);
     }
 
     let leads: Array<{ id: string; ownerId: string | null }> = [];
@@ -148,8 +146,8 @@ export async function POST(req: Request) {
       error instanceof Error &&
       (error.message === "INVALID_DATE" || error.message === "INVALID_STATUS")
     ) {
-      return jsonError(400, "VALIDATION_ERROR", "Invalid filters");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
-    return jsonError(500, "INTERNAL_ERROR", "Internal server error");
+    return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

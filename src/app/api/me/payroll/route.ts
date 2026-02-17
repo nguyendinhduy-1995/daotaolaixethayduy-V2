@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-response";
-import { requireRouteAuth } from "@/lib/route-auth";
+import { requireMappedRoutePermissionAuth } from "@/lib/route-auth";
 
 export async function GET(req: Request) {
-  const auth = requireRouteAuth(req);
+  const auth = await requireMappedRoutePermissionAuth(req);
   if (auth.error) return auth.error;
 
   try {

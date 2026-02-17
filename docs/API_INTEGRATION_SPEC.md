@@ -224,7 +224,7 @@ curl -sS 'http://localhost:3000/api/leads?page=1&pageSize=20' \
 ### 7.5 Insights ingest (service-token)
 - `POST /api/insights/expenses/ingest`
 - Header bắt buộc:
-  - `x-service-token: <SERVICE_TOKEN_ACTIVE | SERVICE_TOKEN_NEXT>`
+  - `x-service-token: <SERVICE_TOKEN>`
   - `Idempotency-Key: <uuid-v4>`
 - Payload mẫu:
 ```json
@@ -301,7 +301,7 @@ curl -sS 'http://localhost:3000/api/leads?page=1&pageSize=20' \
 ### 8.4 AI Suggestions ingest (service-token)
 - `POST /api/ai/suggestions/ingest`
 - Header bắt buộc:
-  - `x-service-token: <SERVICE_TOKEN_ACTIVE | SERVICE_TOKEN_NEXT>`
+  - `x-service-token: <SERVICE_TOKEN>`
   - `Idempotency-Key: <uuid-v4>`
 - Payload mẫu:
 ```json

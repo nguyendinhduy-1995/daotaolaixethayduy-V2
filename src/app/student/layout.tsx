@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ReactNode, useMemo } from "react";
+import { ReactNode, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
+import { APP_SHORT } from "@/lib/app-meta";
 
 const NAV = [
   { href: "/student", label: "Tổng quan" },
@@ -16,6 +17,10 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const isAuthPage = useMemo(() => pathname === "/student/login" || pathname === "/student/register", [pathname]);
+
+  useEffect(() => {
+    document.title = isAuthPage ? `${APP_SHORT} | Đăng nhập học viên` : `${APP_SHORT} | Cổng học viên`;
+  }, [isAuthPage]);
 
   async function logout() {
     await fetch("/api/student/auth/logout", { method: "POST", credentials: "include" }).catch(() => undefined);

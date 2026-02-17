@@ -5,12 +5,12 @@ import {
   EmployeeKpiValidationError,
   updateSetting,
 } from "@/lib/services/employee-kpi";
-import { requireRouteAuth } from "@/lib/route-auth";
+import { requireMappedRoutePermissionAuth } from "@/lib/route-auth";
 
 type RouteContext = { params: Promise<{ id: string }> | { id: string } };
 
 export async function PATCH(req: Request, context: RouteContext) {
-  const authResult = requireRouteAuth(req);
+  const authResult = await requireMappedRoutePermissionAuth(req);
   if (authResult.error) return authResult.error;
   const adminError = requireAdminRole(authResult.auth.role);
   if (adminError) return adminError;

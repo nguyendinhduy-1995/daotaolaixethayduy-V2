@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NotificationScope, NotificationStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-response";
-import { requireRouteAuth } from "@/lib/route-auth";
+import { requireMappedRoutePermissionAuth } from "@/lib/route-auth";
 import { isAdminRole } from "@/lib/admin-auth";
 import { ensureNotificationSchema } from "@/lib/notifications-db";
 import { KpiDateError, resolveKpiDateParam } from "@/lib/services/kpi-daily";
@@ -32,7 +32,7 @@ function dayRangeInHoChiMinh(dateStr: string) {
 }
 
 export async function GET(req: Request) {
-  const authResult = requireRouteAuth(req);
+  const authResult = await requireMappedRoutePermissionAuth(req);
   if (authResult.error) return authResult.error;
 
   try {

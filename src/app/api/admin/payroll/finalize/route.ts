@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-response";
-import { requireAdminRole } from "@/lib/admin-auth";
-import { requireRouteAuth } from "@/lib/route-auth";
+import { requirePermissionRouteAuth } from "@/lib/route-auth";
 import { finalizePayrollRun } from "@/lib/services/payroll";
+import { API_ERROR_VI } from "@/lib/api-error-vi";
 
 export async function POST(req: Request) {
-  const auth = requireRouteAuth(req);
+  const auth = await requirePermissionRouteAuth(req, { module: "hr_total_payroll", action: "RUN" });
   if (auth.error) return auth.error;
-  const adminError = requireAdminRole(auth.auth.role);
-  if (adminError) return adminError;
 
   try {
     const body = await req.json().catch(() => null);
@@ -30,6 +28,6 @@ export async function POST(req: Request) {
         return jsonError(404, "NOT_FOUND", "Chưa có bảng lương để chốt");
       }
     }
-    return jsonError(500, "INTERNAL_ERROR", "Internal server error");
+    return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

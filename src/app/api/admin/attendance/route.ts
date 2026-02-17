@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-response";
-import { requireRouteAuth } from "@/lib/route-auth";
+import { requireMappedRoutePermissionAuth } from "@/lib/route-auth";
 import { requireAdminRole } from "@/lib/admin-auth";
 
 const ALLOWED_STATUS = new Set(["PRESENT", "HALF", "OFF", "LEAVE_PAID", "LEAVE_UNPAID", "LATE", "ABSENT"]);
@@ -22,7 +22,7 @@ function monthRange(month: string) {
 }
 
 export async function GET(req: Request) {
-  const auth = requireRouteAuth(req);
+  const auth = await requireMappedRoutePermissionAuth(req);
   if (auth.error) return auth.error;
   const adminError = requireAdminRole(auth.auth.role);
   if (adminError) return adminError;
@@ -66,7 +66,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const auth = requireRouteAuth(req);
+  const auth = await requireMappedRoutePermissionAuth(req);
   if (auth.error) return auth.error;
   const adminError = requireAdminRole(auth.auth.role);
   if (adminError) return adminError;

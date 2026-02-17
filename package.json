@@ -5,20 +5,29 @@
   "scripts": {
     "seed:admin": "ts-node --transpile-only scripts/seed-admin.ts",
     "seed:templates": "ts-node --transpile-only scripts/seed-templates.ts",
-    "dev": "next dev",
+    "dev": "node scripts/dev.mjs",
+    "dev:stable": "node scripts/dev-stable.mjs",
     "build": "next build",
-    "start": "next start",
+    "start": "node scripts/start.mjs",
     "lint": "eslint",
     "db:up": "docker compose up -d postgres redis",
     "db:down": "docker compose down",
+    "db:reset": "prisma migrate reset --force",
     "db:migrate": "prisma migrate deploy",
-    "db:seed": "npm run seed:admin && npm run seed:templates",
+    "check:schema": "node scripts/check-schema.mjs",
+    "db:seed": "prisma db seed",
+    "audit:permissions": "ts-node --transpile-only scripts/audit-route-permissions.ts",
     "prisma:generate": "prisma generate",
     "prisma:validate": "prisma validate",
-    "verify": "bash scripts/verify.sh",
+    "verify": "node scripts/verify-gate.mjs",
     "worker:outbound:dry": "bash scripts/worker-outbound.sh dry",
     "worker:outbound": "bash scripts/worker-outbound.sh run",
-    "log:session": "node scripts/log-session.mjs"
+    "log:session": "node scripts/log-session.mjs",
+    "test:e2e": "node scripts/run-e2e.mjs",
+    "test:e2e:local": "node scripts/run-e2e.mjs tests/hardening-v2.spec.ts"
+  },
+  "prisma": {
+    "seed": "ts-node --transpile-only prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.4.0",
@@ -32,6 +41,7 @@
     "react-dom": "19.2.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4",
     "@types/bcrypt": "^6.0.0",
     "@types/jsonwebtoken": "^9.0.10",

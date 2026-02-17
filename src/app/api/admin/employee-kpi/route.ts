@@ -7,7 +7,7 @@ import {
   EmployeeKpiValidationError,
   listSettings,
 } from "@/lib/services/employee-kpi";
-import { requireRouteAuth } from "@/lib/route-auth";
+import { requireMappedRoutePermissionAuth } from "@/lib/route-auth";
 
 function parseBooleanFilter(value: string | null) {
   if (value === null) return undefined;
@@ -30,7 +30,7 @@ function parseRole(role: string | null) {
 }
 
 export async function GET(req: Request) {
-  const authResult = requireRouteAuth(req);
+  const authResult = await requireMappedRoutePermissionAuth(req);
   if (authResult.error) return authResult.error;
   const adminError = requireAdminRole(authResult.auth.role);
   if (adminError) return adminError;
@@ -56,7 +56,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const authResult = requireRouteAuth(req);
+  const authResult = await requireMappedRoutePermissionAuth(req);
   if (authResult.error) return authResult.error;
   const adminError = requireAdminRole(authResult.auth.role);
   if (adminError) return adminError;

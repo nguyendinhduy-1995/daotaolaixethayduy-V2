@@ -17,6 +17,10 @@ const ERROR_MESSAGES_VI: Record<string, ErrorMessageVi> = {
     title: "Phiên đăng nhập hết hạn",
     message: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
   },
+  AUTH_UNAUTHENTICATED: {
+    title: "Chưa đăng nhập",
+    message: "Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.",
+  },
   AUTH_UNAUTHORIZED: {
     title: "Không thể xác thực",
     message: "Thông tin đăng nhập không chính xác.",
@@ -47,4 +51,3 @@ export function getErrorMessageVi(code?: string): ErrorMessageVi {
   if (!code) return DEFAULT_ERROR_MESSAGE;
   return ERROR_MESSAGES_VI[code] ?? DEFAULT_ERROR_MESSAGE;
 }
-

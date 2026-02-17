@@ -3,8 +3,8 @@ import bcrypt from "bcrypt";
 import type { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-response";
-import { requireRouteAuth } from "@/lib/route-auth";
-import { requireAdminRole } from "@/lib/admin-auth";
+import { API_ERROR_VI } from "@/lib/api-error-vi";
+import { requirePermissionRouteAuth } from "@/lib/route-auth";
 
 type RouteContext = { params: Promise<{ id: string }> | { id: string } };
 
@@ -15,10 +15,8 @@ function isRole(value: unknown): value is Role {
 }
 
 export async function GET(req: Request, context: RouteContext) {
-  const authResult = requireRouteAuth(req);
+  const authResult = await requirePermissionRouteAuth(req, { module: "admin_users", action: "VIEW" });
   if (authResult.error) return authResult.error;
-  const adminError = requireAdminRole(authResult.auth.role);
-  if (adminError) return adminError;
 
   try {
     const { id } = await Promise.resolve(context.params);
@@ -28,6 +26,7 @@ export async function GET(req: Request, context: RouteContext) {
         id: true,
         name: true,
         email: true,
+        username: true,
         role: true,
         isActive: true,
         branchId: true,
@@ -42,45 +41,43 @@ export async function GET(req: Request, context: RouteContext) {
         updatedAt: true,
       },
     });
-    if (!user) return jsonError(404, "NOT_FOUND", "User not found");
+    if (!user) return jsonError(404, "NOT_FOUND", "Không tìm thấy người dùng");
     return NextResponse.json({ user });
   } catch {
-    return jsonError(500, "INTERNAL_ERROR", "Internal server error");
+    return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }
 
 export async function PATCH(req: Request, context: RouteContext) {
-  const authResult = requireRouteAuth(req);
+  const authResult = await requirePermissionRouteAuth(req, { module: "admin_users", action: "UPDATE" });
   if (authResult.error) return authResult.error;
-  const adminError = requireAdminRole(authResult.auth.role);
-  if (adminError) return adminError;
 
   try {
     const { id } = await Promise.resolve(context.params);
     const body = await req.json().catch(() => null);
     if (!body || typeof body !== "object") {
-      return jsonError(400, "VALIDATION_ERROR", "Invalid JSON body");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
 
     if (body.role !== undefined && !isRole(body.role)) {
-      return jsonError(400, "VALIDATION_ERROR", "Invalid role");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
     if (body.branchId !== undefined && body.branchId !== null && typeof body.branchId !== "string") {
-      return jsonError(400, "VALIDATION_ERROR", "branchId must be a string");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
     if (body.password !== undefined && (typeof body.password !== "string" || body.password.length < 8)) {
-      return jsonError(400, "VALIDATION_ERROR", "password must be at least 8 characters");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
 
     const branchId =
       typeof body.branchId === "string" && body.branchId.trim().length > 0 ? body.branchId.trim() : null;
     if (body.branchId !== undefined && branchId) {
       const branch = await prisma.branch.findUnique({ where: { id: branchId }, select: { id: true } });
-      if (!branch) return jsonError(400, "VALIDATION_ERROR", "Branch not found");
+      if (!branch) return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
 
     const exists = await prisma.user.findUnique({ where: { id }, select: { id: true } });
-    if (!exists) return jsonError(404, "NOT_FOUND", "User not found");
+    if (!exists) return jsonError(404, "NOT_FOUND", "Không tìm thấy người dùng");
 
     const passwordHash =
       typeof body.password === "string" && body.password.length >= 8
@@ -102,6 +99,7 @@ export async function PATCH(req: Request, context: RouteContext) {
         id: true,
         name: true,
         email: true,
+        username: true,
         role: true,
         isActive: true,
         branchId: true,
@@ -119,6 +117,6 @@ export async function PATCH(req: Request, context: RouteContext) {
 
     return NextResponse.json({ user });
   } catch {
-    return jsonError(500, "INTERNAL_ERROR", "Internal server error");
+    return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

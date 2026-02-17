@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import type { ReceiptMethod } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-response";
-import { requireRouteAuth } from "@/lib/route-auth";
-import { isAdminRole } from "@/lib/admin-auth";
+import { API_ERROR_VI } from "@/lib/api-error-vi";
+import { requirePermissionRouteAuth } from "@/lib/route-auth";
+import { applyScopeToWhere, resolveScope } from "@/lib/scope";
 import { KpiDateError, resolveKpiDateParam } from "@/lib/services/kpi-daily";
 
 type ReceiptInputMethod = "cash" | "bank" | "momo" | "other" | "bank_transfer" | "card";
@@ -41,44 +42,40 @@ function parseReceivedAt(value: unknown) {
 }
 
 export async function GET(req: Request, context: RouteContext) {
-  const authResult = requireRouteAuth(req);
+  const authResult = await requirePermissionRouteAuth(req, { module: "receipts", action: "VIEW" });
   if (authResult.error) return authResult.error;
 
   try {
+    const scope = await resolveScope(authResult.auth);
     const { id } = await Promise.resolve(context.params);
-    const receipt = await prisma.receipt.findUnique({
-      where: { id },
+    const receipt = await prisma.receipt.findFirst({
+      where: applyScopeToWhere({ id }, scope, "receipt"),
       include: { student: { include: { lead: { select: { ownerId: true } } } } },
     });
-    if (!receipt) return jsonError(404, "NOT_FOUND", "Receipt not found");
-    if (!isAdminRole(authResult.auth.role) && receipt.student.lead.ownerId !== authResult.auth.sub) {
-      return jsonError(403, "AUTH_FORBIDDEN", "Forbidden");
-    }
+    if (!receipt) return jsonError(404, "NOT_FOUND", API_ERROR_VI.required);
     return NextResponse.json({ receipt });
   } catch {
-    return jsonError(500, "INTERNAL_ERROR", "Internal server error");
+    return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }
 
 export async function PATCH(req: Request, context: RouteContext) {
-  const authResult = requireRouteAuth(req);
+  const authResult = await requirePermissionRouteAuth(req, { module: "receipts", action: "UPDATE" });
   if (authResult.error) return authResult.error;
 
   try {
+    const scope = await resolveScope(authResult.auth);
     const { id } = await Promise.resolve(context.params);
     const body = await req.json().catch(() => null);
     if (!body || typeof body !== "object") {
-      return jsonError(400, "VALIDATION_ERROR", "Invalid JSON body");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
 
-    const exists = await prisma.receipt.findUnique({
-      where: { id },
+    const exists = await prisma.receipt.findFirst({
+      where: applyScopeToWhere({ id }, scope, "receipt"),
       select: { id: true, student: { select: { lead: { select: { ownerId: true } } } } },
     });
-    if (!exists) return jsonError(404, "NOT_FOUND", "Receipt not found");
-    if (!isAdminRole(authResult.auth.role) && exists.student.lead.ownerId !== authResult.auth.sub) {
-      return jsonError(403, "AUTH_FORBIDDEN", "Forbidden");
-    }
+    if (!exists) return jsonError(404, "NOT_FOUND", API_ERROR_VI.required);
 
     const data: {
       amount?: number;
@@ -106,8 +103,8 @@ export async function PATCH(req: Request, context: RouteContext) {
       error instanceof Error &&
       (error.message === "INVALID_AMOUNT" || error.message === "INVALID_METHOD" || error.message === "INVALID_DATE")
     ) {
-      return jsonError(400, "VALIDATION_ERROR", "Invalid receipt input");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
-    return jsonError(500, "INTERNAL_ERROR", "Internal server error");
+    return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

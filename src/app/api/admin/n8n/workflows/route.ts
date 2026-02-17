@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireRouteAuth } from "@/lib/route-auth";
+import { requireMappedRoutePermissionAuth } from "@/lib/route-auth";
 import { requireAdminRole } from "@/lib/admin-auth";
 import {
   N8N_DEFINITIONS,
@@ -10,7 +10,7 @@ import {
 import { jsonError } from "@/lib/api-response";
 
 export async function GET(req: Request) {
-  const authResult = requireRouteAuth(req);
+  const authResult = await requireMappedRoutePermissionAuth(req);
   if (authResult.error) return authResult.error;
   const adminError = requireAdminRole(authResult.auth.role);
   if (adminError) return adminError;

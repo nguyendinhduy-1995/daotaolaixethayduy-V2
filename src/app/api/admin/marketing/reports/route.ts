@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-response";
 import { requireAdminRole } from "@/lib/admin-auth";
-import { requireRouteAuth } from "@/lib/route-auth";
+import { requireMappedRoutePermissionAuth } from "@/lib/route-auth";
 import { listReports } from "@/lib/services/marketing";
 
 function isDateYmd(value: string | null) {
@@ -10,7 +10,7 @@ function isDateYmd(value: string | null) {
 }
 
 export async function GET(req: Request) {
-  const auth = requireRouteAuth(req);
+  const auth = await requireMappedRoutePermissionAuth(req);
   if (auth.error) return auth.error;
   const adminError = requireAdminRole(auth.auth.role);
   if (adminError) return adminError;

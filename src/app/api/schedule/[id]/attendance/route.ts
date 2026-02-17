@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import type { AttendanceStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-response";
-import { requireRouteAuth } from "@/lib/route-auth";
+import { API_ERROR_VI } from "@/lib/api-error-vi";
+import { requirePermissionRouteAuth } from "@/lib/route-auth";
 import { ensureAttendanceSchema } from "@/lib/attendance-db";
 import { buildScheduleScopeWhere, requireScheduleRole } from "@/lib/services/schedule";
 
@@ -16,7 +17,7 @@ function isAttendanceStatus(value: unknown): value is AttendanceStatus {
 }
 
 export async function POST(req: Request, context: RouteContext) {
-  const authResult = requireRouteAuth(req);
+  const authResult = await requirePermissionRouteAuth(req, { module: "schedule", action: "UPDATE" });
   if (authResult.error) return authResult.error;
   const roleError = requireScheduleRole(authResult.auth.role);
   if (roleError) return roleError;
@@ -26,25 +27,26 @@ export async function POST(req: Request, context: RouteContext) {
     const { id } = await Promise.resolve(context.params);
     const body = await req.json().catch(() => null);
     if (!body || typeof body !== "object" || !Array.isArray(body.records)) {
-      return jsonError(400, "VALIDATION_ERROR", "records is required");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
 
+    const scopeWhere = await buildScheduleScopeWhere(authResult.auth);
     const item = await prisma.courseScheduleItem.findFirst({
-      where: { id, ...buildScheduleScopeWhere(authResult.auth) },
+      where: { id, ...scopeWhere },
       select: { id: true, courseId: true },
     });
-    if (!item) return jsonError(404, "NOT_FOUND", "Schedule not found");
+    if (!item) return jsonError(404, "NOT_FOUND", API_ERROR_VI.required);
 
     const recordsInput: RowInput[] = [];
     for (const row of body.records) {
       if (!row || typeof row !== "object") {
-        return jsonError(400, "VALIDATION_ERROR", "Invalid record row");
+        return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
       }
       if (typeof row.studentId !== "string" || !row.studentId) {
-        return jsonError(400, "VALIDATION_ERROR", "studentId is required");
+        return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
       }
       if (!isAttendanceStatus(row.status)) {
-        return jsonError(400, "VALIDATION_ERROR", "Invalid attendance status");
+        return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
       }
       recordsInput.push({
         studentId: row.studentId,
@@ -64,7 +66,7 @@ export async function POST(req: Request, context: RouteContext) {
     });
     const validSet = new Set(validStudents.map((s) => s.id));
     if (validSet.size !== studentIds.length) {
-      return jsonError(400, "VALIDATION_ERROR", "Some students are not in this schedule scope");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
 
     const previous = await prisma.attendanceRecord.findMany({
@@ -148,6 +150,6 @@ export async function POST(req: Request, context: RouteContext) {
       changed: result.changedCount,
     });
   } catch {
-    return jsonError(500, "INTERNAL_ERROR", "Internal server error");
+    return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

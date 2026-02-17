@@ -1,4 +1,6 @@
+import type { AuthPayload } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { applyScopeToWhere, resolveScope } from "@/lib/scope";
 
 export const KPI_TIME_ZONE = "Asia/Ho_Chi_Minh";
 
@@ -8,25 +10,43 @@ export class KpiDateError extends Error {
   }
 }
 
+type RatioValue = {
+  numerator: number;
+  denominator: number;
+  valuePct: number;
+};
+
 type KpiDailyResult = {
   date: string;
-  leads: { new: number; hasPhone: number };
-  telesale: {
-    called: number;
-    appointed: number;
-    arrived: number;
-    signed: number;
-    studying: number;
-    examined: number;
-    result: number;
-    lost: number;
+  monthKey: string;
+  timezone: string;
+  monthlyClosed: boolean;
+  directPage: {
+    hasPhoneRate: {
+      daily: RatioValue;
+      monthly: RatioValue;
+    };
   };
-  finance: {
-    totalThu: number;
-    totalPhieuThu: number;
-    totalRemaining: number;
-    countPaid50: number;
+  tuVan: {
+    appointedRate: {
+      daily: RatioValue;
+      monthly: RatioValue;
+    };
+    arrivedRate: {
+      daily: RatioValue;
+      monthly: RatioValue;
+    };
+    signedRate: {
+      daily: RatioValue;
+      monthly: RatioValue;
+    };
   };
+};
+
+type ScopedLead = {
+  id: string;
+  ownerId: string | null;
+  createdAt: Date;
 };
 
 function getCurrentDateInTimeZone() {
@@ -42,7 +62,7 @@ function getCurrentDateInTimeZone() {
   const day = parts.find((p) => p.type === "day")?.value;
 
   if (!year || !month || !day) {
-    throw new KpiDateError("Unable to resolve current date");
+    throw new KpiDateError("Không thể xác định ngày hiện tại");
   }
 
   return `${year}-${month}-${day}`;
@@ -50,92 +70,261 @@ function getCurrentDateInTimeZone() {
 
 function isValidDateString(dateStr: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return false;
-
   const [year, month, day] = dateStr.split("-").map(Number);
   const utc = new Date(Date.UTC(year, month - 1, day));
-
-  return (
-    utc.getUTCFullYear() === year &&
-    utc.getUTCMonth() === month - 1 &&
-    utc.getUTCDate() === day
-  );
+  return utc.getUTCFullYear() === year && utc.getUTCMonth() === month - 1 && utc.getUTCDate() === day;
 }
 
 export function resolveKpiDateParam(dateParam: string | null) {
   if (!dateParam) return getCurrentDateInTimeZone();
   if (!isValidDateString(dateParam)) {
-    throw new KpiDateError("Invalid date format, expected YYYY-MM-DD");
+    throw new KpiDateError("Ngày không hợp lệ, cần định dạng YYYY-MM-DD");
   }
   return dateParam;
 }
 
 function dayRangeInHoChiMinh(dateStr: string) {
-  // Vietnam has no DST; +07:00 matches Asia/Ho_Chi_Minh boundaries.
   const start = new Date(`${dateStr}T00:00:00.000+07:00`);
   const end = new Date(`${dateStr}T23:59:59.999+07:00`);
   return { start, end };
 }
 
-export async function getKpiDaily(date: string): Promise<KpiDailyResult> {
-  const { start, end } = dayRangeInHoChiMinh(date);
+function monthRangeInHoChiMinh(dateStr: string) {
+  const [year, month] = dateStr.split("-").map(Number);
+  const monthStr = String(month).padStart(2, "0");
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const start = new Date(`${year}-${monthStr}-01T00:00:00.000+07:00`);
+  const end = new Date(`${year}-${monthStr}-${String(lastDay).padStart(2, "0")}T23:59:59.999+07:00`);
+  return { start, end, lastDay, monthKey: `${year}-${monthStr}` };
+}
 
-  const leadsNew = await prisma.lead.count({
-    where: { createdAt: { gte: start, lte: end } },
+function toPercent(numerator: number, denominator: number): RatioValue {
+  if (denominator <= 0) return { numerator, denominator, valuePct: 0 };
+  return {
+    numerator,
+    denominator,
+    valuePct: Number(((numerator / denominator) * 100).toFixed(2)),
+  };
+}
+
+function toRecord(value: unknown) {
+  if (!value || typeof value !== "object") return {};
+  return value as Record<string, unknown>;
+}
+
+function extractToOwnerId(payload: unknown) {
+  const root = toRecord(payload);
+  const meta = toRecord(root.meta);
+  const direct = typeof root.toOwnerId === "string" ? root.toOwnerId : "";
+  const nested = typeof meta.toOwnerId === "string" ? meta.toOwnerId : "";
+  return direct || nested || null;
+}
+
+async function getScopedLeads(auth: AuthPayload) {
+  const scope = await resolveScope(auth);
+  const where = applyScopeToWhere({}, scope, "lead");
+  const leads = await prisma.lead.findMany({
+    where,
+    select: { id: true, ownerId: true, createdAt: true },
   });
+  return { scope, leads };
+}
 
-  const leadsHasPhone = await prisma.lead.count({
+async function countDistinctEventByLead(
+  leadIds: string[],
+  type: "HAS_PHONE" | "APPOINTED" | "ARRIVED" | "SIGNED",
+  start: Date,
+  end: Date
+) {
+  if (leadIds.length === 0) return 0;
+  const rows = await prisma.leadEvent.groupBy({
+    by: ["leadId"],
     where: {
+      leadId: { in: leadIds },
+      type,
       createdAt: { gte: start, lte: end },
-      status: { in: ["HAS_PHONE", "APPOINTED", "ARRIVED", "SIGNED", "STUDYING", "EXAMED", "RESULT"] },
     },
   });
+  return rows.length;
+}
 
-  const [called, appointed, arrived, signed, studied, examined, result, lost] = await Promise.all([
-    prisma.leadEvent.count({ where: { type: "CALLED", createdAt: { gte: start, lte: end } } }),
-    prisma.leadEvent.count({ where: { type: "APPOINTED", createdAt: { gte: start, lte: end } } }),
-    prisma.leadEvent.count({ where: { type: "ARRIVED", createdAt: { gte: start, lte: end } } }),
-    prisma.leadEvent.count({ where: { type: "SIGNED", createdAt: { gte: start, lte: end } } }),
-    prisma.leadEvent.count({ where: { type: "STUDYING", createdAt: { gte: start, lte: end } } }),
-    prisma.leadEvent.count({ where: { type: "EXAMED", createdAt: { gte: start, lte: end } } }),
-    prisma.leadEvent.count({ where: { type: "RESULT", createdAt: { gte: start, lte: end } } }),
-    prisma.leadEvent.count({ where: { type: "LOST", createdAt: { gte: start, lte: end } } }),
+async function buildAssignedAtMap(scopeOwnerId: string | undefined, leads: ScopedLead[]) {
+  const assignedAtByLead = new Map<string, Date>();
+  const consideredLeadIds: string[] = [];
+
+  if (!scopeOwnerId) {
+    for (const lead of leads) {
+      assignedAtByLead.set(lead.id, lead.createdAt);
+      consideredLeadIds.push(lead.id);
+    }
+    return { assignedAtByLead, consideredLeadIds };
+  }
+
+  const leadIds = leads.map((lead) => lead.id);
+  const ownerChanged = await prisma.leadEvent.findMany({
+    where: { leadId: { in: leadIds }, type: "OWNER_CHANGED" },
+    select: { leadId: true, createdAt: true, payload: true },
+    orderBy: [{ leadId: "asc" }, { createdAt: "asc" }],
+  });
+
+  for (const event of ownerChanged) {
+    const toOwnerId = extractToOwnerId(event.payload);
+    if (toOwnerId !== scopeOwnerId) continue;
+    if (!assignedAtByLead.has(event.leadId)) {
+      assignedAtByLead.set(event.leadId, event.createdAt);
+    }
+  }
+
+  for (const lead of leads) {
+    if (assignedAtByLead.has(lead.id)) {
+      consideredLeadIds.push(lead.id);
+      continue;
+    }
+    // Assumption for legacy data: nếu chưa có OWNER_CHANGED nhưng lead đang thuộc owner hiện tại,
+    // dùng createdAt của lead làm mốc "nhận lead" để tính denominator.
+    if (lead.ownerId === scopeOwnerId) {
+      assignedAtByLead.set(lead.id, lead.createdAt);
+      consideredLeadIds.push(lead.id);
+    }
+  }
+
+  return { assignedAtByLead, consideredLeadIds };
+}
+
+async function buildFirstHasPhoneMap(leadIds: string[]) {
+  const firstHasPhoneMap = new Map<string, Date>();
+  if (leadIds.length === 0) return firstHasPhoneMap;
+  const rows = await prisma.leadEvent.groupBy({
+    by: ["leadId"],
+    where: {
+      leadId: { in: leadIds },
+      type: "HAS_PHONE",
+    },
+    _min: { createdAt: true },
+  });
+  for (const row of rows) {
+    if (row._min.createdAt) firstHasPhoneMap.set(row.leadId, row._min.createdAt);
+  }
+  return firstHasPhoneMap;
+}
+
+async function countUnphonedMessagesToEnd(
+  leadIds: string[],
+  assignedAtByLead: Map<string, Date>,
+  firstHasPhoneMap: Map<string, Date>,
+  end: Date
+) {
+  if (leadIds.length === 0) return 0;
+  let minAssignedAt: Date | null = null;
+  for (const leadId of leadIds) {
+    const assignedAt = assignedAtByLead.get(leadId);
+    if (!assignedAt) continue;
+    if (!minAssignedAt || assignedAt < minAssignedAt) minAssignedAt = assignedAt;
+  }
+  if (!minAssignedAt) return 0;
+
+  const messages = await prisma.leadMessage.findMany({
+    where: {
+      leadId: { in: leadIds },
+      direction: "inbound",
+      createdAt: { gte: minAssignedAt, lte: end },
+    },
+    select: { leadId: true, createdAt: true },
+  });
+
+  let count = 0;
+  for (const msg of messages) {
+    const assignedAt = assignedAtByLead.get(msg.leadId);
+    if (!assignedAt || msg.createdAt < assignedAt) continue;
+    const firstHasPhoneAt = firstHasPhoneMap.get(msg.leadId);
+    if (firstHasPhoneAt && msg.createdAt >= firstHasPhoneAt) continue;
+    count += 1;
+  }
+  return count;
+}
+
+async function countHasPhoneConversions(
+  leadIds: string[],
+  assignedAtByLead: Map<string, Date>,
+  start: Date,
+  end: Date
+) {
+  if (leadIds.length === 0) return 0;
+  const rows = await prisma.leadEvent.findMany({
+    where: {
+      leadId: { in: leadIds },
+      type: "HAS_PHONE",
+      createdAt: { gte: start, lte: end },
+    },
+    select: { leadId: true, createdAt: true },
+    orderBy: [{ leadId: "asc" }, { createdAt: "asc" }],
+  });
+
+  const picked = new Set<string>();
+  for (const row of rows) {
+    const assignedAt = assignedAtByLead.get(row.leadId);
+    if (assignedAt && row.createdAt < assignedAt) continue;
+    picked.add(row.leadId);
+  }
+  return picked.size;
+}
+
+export async function getKpiDaily(date: string, auth: AuthPayload): Promise<KpiDailyResult> {
+  const { start: dayStart, end: dayEnd } = dayRangeInHoChiMinh(date);
+  const { start: monthStart, end: monthEnd, lastDay, monthKey } = monthRangeInHoChiMinh(date);
+  const day = Number(date.split("-")[2]);
+  const monthlyClosed = day === lastDay;
+  const monthEndApplied = day < lastDay ? dayEnd : monthEnd;
+
+  const { scope, leads } = await getScopedLeads(auth);
+  const allLeadIds = leads.map((lead) => lead.id);
+
+  const { assignedAtByLead, consideredLeadIds } = await buildAssignedAtMap(scope.ownerId, leads);
+  const firstHasPhoneMap = await buildFirstHasPhoneMap(consideredLeadIds);
+
+  const [directDenominatorDaily, directDenominatorMonthly, directNumeratorDaily, directNumeratorMonthly] = await Promise.all([
+    countUnphonedMessagesToEnd(consideredLeadIds, assignedAtByLead, firstHasPhoneMap, dayEnd),
+    countUnphonedMessagesToEnd(consideredLeadIds, assignedAtByLead, firstHasPhoneMap, monthEndApplied),
+    countHasPhoneConversions(consideredLeadIds, assignedAtByLead, dayStart, dayEnd),
+    countHasPhoneConversions(consideredLeadIds, assignedAtByLead, monthStart, monthEndApplied),
   ]);
 
-  const receiptAgg = await prisma.receipt.aggregate({
-    where: { receivedAt: { gte: start, lte: end } },
-    _sum: { amount: true },
-    _count: { id: true },
-  });
-
-  const totalThu = receiptAgg._sum.amount ?? 0;
-  const totalPhieuThu = receiptAgg._count.id ?? 0;
-
-  const paidByStudent = await prisma.receipt.groupBy({
-    by: ["studentId"],
-    _sum: { amount: true },
-  });
-
-  const students = await prisma.student.findMany({
-    select: { id: true, tuitionSnapshot: true },
-  });
-
-  const paidMap = new Map<string, number>();
-  for (const row of paidByStudent) paidMap.set(row.studentId, row._sum.amount ?? 0);
-
-  let totalRemaining = 0;
-  let countPaid50 = 0;
-
-  for (const s of students) {
-    const tuition = s.tuitionSnapshot ?? 0;
-    const paid = paidMap.get(s.id) ?? 0;
-    totalRemaining += Math.max(0, tuition - paid);
-    if (tuition > 0 && paid >= tuition * 0.5) countPaid50 += 1;
-  }
+  const [hasPhoneDaily, appointedDaily, arrivedDaily, signedDaily, hasPhoneMonthly, appointedMonthly, arrivedMonthly, signedMonthly] =
+    await Promise.all([
+      countDistinctEventByLead(allLeadIds, "HAS_PHONE", dayStart, dayEnd),
+      countDistinctEventByLead(allLeadIds, "APPOINTED", dayStart, dayEnd),
+      countDistinctEventByLead(allLeadIds, "ARRIVED", dayStart, dayEnd),
+      countDistinctEventByLead(allLeadIds, "SIGNED", dayStart, dayEnd),
+      countDistinctEventByLead(allLeadIds, "HAS_PHONE", monthStart, monthEndApplied),
+      countDistinctEventByLead(allLeadIds, "APPOINTED", monthStart, monthEndApplied),
+      countDistinctEventByLead(allLeadIds, "ARRIVED", monthStart, monthEndApplied),
+      countDistinctEventByLead(allLeadIds, "SIGNED", monthStart, monthEndApplied),
+    ]);
 
   return {
     date,
-    leads: { new: leadsNew, hasPhone: leadsHasPhone },
-    telesale: { called, appointed, arrived, signed, studying: studied, examined, result, lost },
-    finance: { totalThu, totalPhieuThu, totalRemaining, countPaid50 },
+    monthKey,
+    timezone: KPI_TIME_ZONE,
+    monthlyClosed,
+    directPage: {
+      hasPhoneRate: {
+        daily: toPercent(directNumeratorDaily, directDenominatorDaily),
+        monthly: toPercent(directNumeratorMonthly, directDenominatorMonthly),
+      },
+    },
+    tuVan: {
+      appointedRate: {
+        daily: toPercent(appointedDaily, hasPhoneDaily),
+        monthly: toPercent(appointedMonthly, hasPhoneMonthly),
+      },
+      arrivedRate: {
+        daily: toPercent(arrivedDaily, appointedDaily),
+        monthly: toPercent(arrivedMonthly, appointedMonthly),
+      },
+      signedRate: {
+        daily: toPercent(signedDaily, arrivedDaily),
+        monthly: toPercent(signedMonthly, arrivedMonthly),
+      },
+    },
   };
 }

@@ -201,6 +201,14 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     icon: "dot",
   },
   {
+    key: "admin-automation-monitor",
+    label: "Giám sát luồng tự động",
+    href: "/admin/automation-monitor",
+    group: "Tự động hoá",
+    keywords: ["giam sat", "luong tu dong", "monitor", "run", "job", "log"],
+    icon: "dot",
+  },
+  {
     key: "admin-ops",
     label: "Báo cáo",
     href: "/admin/ops",

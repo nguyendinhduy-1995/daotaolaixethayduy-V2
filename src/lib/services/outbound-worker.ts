@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import type { OutboundPriority, OutboundStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ensureOutboundSchema } from "@/lib/outbound-db";
+import { envInt } from "@/lib/utils/env";
 
 type OwnerInfo = { ownerId: string | null; ownerName: string };
 
@@ -42,21 +43,25 @@ type LeasedOutboundItem = {
   leadId: string | null;
   studentId: string | null;
   notificationId: string | null;
+  branchId: string;
   retryCount: number;
   createdAt: Date;
   lead: { id: string; ownerId: string | null; fullName: string | null } | null;
   student: { lead: { id: string; ownerId: string | null; fullName: string | null } } | null;
 };
 
-const PRIORITY_RANK: Record<OutboundPriority, number> = { HIGH: 3, MEDIUM: 2, LOW: 1 };
-
-function envInt(name: string, fallback: number) {
-  const raw = process.env[name];
-  if (!raw) return fallback;
-  const v = Number(raw);
-  if (!Number.isInteger(v) || v <= 0) return fallback;
-  return v;
+async function resolveSystemBranchId() {
+  const byCode = await prisma.branch.findFirst({ where: { code: "DEFAULT" }, select: { id: true } });
+  if (byCode?.id) return byCode.id;
+  const first = await prisma.branch.findFirst({ where: { isActive: true }, select: { id: true }, orderBy: { createdAt: "asc" } });
+  if (first?.id) return first.id;
+  const created = await prisma.branch.create({
+    data: { id: "__DEFAULT_BRANCH__", code: "DEFAULT", name: "Chi nhánh mặc định", isActive: true },
+    select: { id: true },
+  });
+  return created.id;
 }
+
 
 function nextBackoffWithJitter(retryCount: number) {
   const minute = 60 * 1000;
@@ -119,21 +124,12 @@ export async function selectEligible(input: WorkerInput) {
       lead: { select: { id: true, ownerId: true, fullName: true } },
       student: { include: { lead: { select: { id: true, ownerId: true, fullName: true } } } },
     },
-    orderBy: [{ createdAt: "asc" }],
-    take: batchSize * 3,
+    // Sort by priority at DB level (enum order: HIGH=0, MEDIUM=1, LOW=2 → asc = highest first)
+    orderBy: [{ priority: "asc" }, { nextAttemptAt: "asc" }, { createdAt: "asc" }],
+    take: batchSize,
   });
 
-  const sorted = fetched.sort((a, b) => {
-    const pa = PRIORITY_RANK[a.priority as OutboundPriority] ?? 1;
-    const pb = PRIORITY_RANK[b.priority as OutboundPriority] ?? 1;
-    if (pa !== pb) return pb - pa;
-    const na = a.nextAttemptAt?.getTime() ?? 0;
-    const nb = b.nextAttemptAt?.getTime() ?? 0;
-    if (na !== nb) return na - nb;
-    return a.createdAt.getTime() - b.createdAt.getTime();
-  });
-
-  return sorted.slice(0, batchSize);
+  return fetched;
 }
 
 export async function leaseBatch(ids: string[], leaseSeconds: number) {
@@ -330,8 +326,10 @@ export async function runWorkerOnce(input: WorkerInput): Promise<WorkerResult> {
       ...(warnings.length ? { warnings } : {}),
     };
     if (input.logRun !== false) {
+      const logBranchId = await resolveSystemBranchId();
       await prisma.automationLog.create({
         data: {
+          branchId: logBranchId,
           channel: "system",
           templateKey: "worker.outbound",
           milestone: "outbound-worker",
@@ -410,8 +408,10 @@ export async function runWorkerOnce(input: WorkerInput): Promise<WorkerResult> {
   });
 
   if (input.logRun !== false) {
+    const logBranchId = execItems[0]?.branchId ?? (await resolveSystemBranchId());
     await prisma.automationLog.create({
       data: {
+        branchId: logBranchId,
         channel: "system",
         templateKey: "worker.outbound",
         milestone: "outbound-worker",

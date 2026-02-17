@@ -210,11 +210,13 @@ enum PermissionModule {
   kpi_targets
   goals
   ai_kpi_coach
+  ai_suggestions
   students
   courses
   schedule
   receipts
   notifications
+  outbound_jobs
   messaging
   my_payroll
   ops_ai_hr
@@ -245,6 +247,7 @@ enum PermissionAction {
   VIEW
   CREATE
   UPDATE
+  FEEDBACK
   EDIT
   DELETE
   EXPORT
@@ -258,6 +261,13 @@ enum GoalPeriodType {
   MONTHLY
 }
 
+enum OutboundJobStatus {
+  NEW
+  DISPATCHED
+  DONE
+  FAILED
+}
+
 enum AiSuggestionStatus {
   ACTIVE
   ARCHIVED
@@ -267,6 +277,12 @@ enum AiScoreColor {
   RED
   YELLOW
   GREEN
+}
+
+enum AiSuggestionFeedbackType {
+  HELPFUL
+  NOT_HELPFUL
+  DONE
 }
 
 model User {
@@ -306,6 +322,8 @@ model User {
   aiSuggestionFeedbacks AiSuggestionFeedback[]
   aiLearningHistories AiLearningHistory[]
   kpiTargetsOwned KpiTarget[]
+  outboundJobsOwned OutboundJob[] @relation("OutboundJobOwner")
+  outboundJobsCreated OutboundJob[] @relation("OutboundJobCreatedBy")
 
   @@index([branchId])
   @@index([groupId])
@@ -624,6 +642,7 @@ model AutomationLog {
   @@index([leadId, sentAt])
   @@index([studentId, sentAt])
   @@index([branchId, sentAt])
+  @@index([branchId, milestone, sentAt])
 }
 
 model Notification {
@@ -647,6 +666,7 @@ model Notification {
   course    Course?              @relation(fields: [courseId], references: [id], onDelete: SetNull)
   owner     User?                @relation("OwnerNotifications", fields: [ownerId], references: [id], onDelete: SetNull)
   outboundMessages OutboundMessage[]
+  outboundJobs OutboundJob[]
 
   @@index([scope, status, dueAt])
   @@index([ownerId, createdAt])
@@ -702,10 +722,44 @@ model OutboundMessage {
   branch         Branch          @relation(fields: [branchId], references: [id], onDelete: Restrict)
 
   @@index([status, nextAttemptAt])
+  @@index([status, createdAt])
   @@index([leaseExpiresAt])
   @@index([studentId, createdAt])
   @@index([leadId, createdAt])
   @@index([branchId, createdAt])
+}
+
+model OutboundJob {
+  id             String            @id @default(cuid())
+  title          String
+  status         OutboundJobStatus @default(NEW)
+  runId          String?
+  lastError      String?
+  idempotencyKey String?
+  dispatchedAt   DateTime?
+  doneAt         DateTime?
+  metaJson       Json?
+  payloadJson    Json?
+  suggestionId   String?
+  taskId         String?
+  branchId       String
+  ownerId        String?
+  createdById    String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @default(now()) @updatedAt
+
+  suggestion     AiSuggestion?     @relation(fields: [suggestionId], references: [id], onDelete: SetNull)
+  task           Notification?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  branch         Branch            @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  owner          User?             @relation("OutboundJobOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  createdBy      User?             @relation("OutboundJobCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([branchId, status, createdAt])
+  @@index([ownerId, status, createdAt])
+  @@index([suggestionId, createdAt])
+  @@index([taskId, createdAt])
+  @@index([runId])
+  @@unique([idempotencyKey])
 }
 
 model Branch {
@@ -737,6 +791,7 @@ model Branch {
   kpiTargets KpiTarget[]
   goalSettings GoalSetting[]
   aiSuggestions AiSuggestion[]
+  outboundJobs OutboundJob[]
 }
 
 model KpiTarget {
@@ -803,6 +858,7 @@ model AiSuggestion {
   branch       Branch?           @relation(fields: [branchId], references: [id], onDelete: SetNull)
   owner        User?             @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   feedbacks    AiSuggestionFeedback[]
+  outboundJobs OutboundJob[]
 
   @@index([dateKey, role, branchId, ownerId])
   @@index([runId])
@@ -812,6 +868,10 @@ model AiSuggestionFeedback {
   id           String       @id @default(cuid())
   suggestionId String
   userId       String
+  feedbackType AiSuggestionFeedbackType @default(HELPFUL)
+  reason       String       @default("")
+  reasonDetail String?
+  actualResult Json?
   rating       Int
   applied      Boolean      @default(false)
   note         String?
@@ -820,7 +880,8 @@ model AiSuggestionFeedback {
   suggestion   AiSuggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([suggestionId, createdAt])
+  @@unique([suggestionId, userId])
+  @@index([suggestionId, feedbackType, createdAt])
   @@index([userId, createdAt])
 }
 

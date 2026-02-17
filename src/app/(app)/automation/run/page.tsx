@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchJson, type ApiClientError } from "@/lib/api-client";
 import { clearToken, fetchMe, getToken } from "@/lib/auth-client";
-import { isAdminRole } from "@/lib/admin-auth";
+import { hasUiPermission } from "@/lib/ui-permissions";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,9 +48,9 @@ export default function AutomationRunPage() {
   useEffect(() => {
     fetchMe()
       .then((data) => {
-        const admin = isAdminRole(data.user.role);
-        setCanRun(admin);
-        if (!admin) {
+        const hasRun = hasUiPermission(data.user.permissions, "automation_run", "RUN");
+        setCanRun(hasRun);
+        if (!hasRun) {
           router.replace("/leads?err=forbidden");
         }
       })
@@ -159,13 +159,13 @@ export default function AutomationRunPage() {
         <div>
           <label className="mb-1 block text-sm text-zinc-600">Phạm vi</label>
           <Select value={scope} onChange={(e) => setScope(e.target.value as "daily" | "manual")}>
-            <option value="manual">Manual</option>
-            <option value="daily">Daily</option>
+            <option value="manual">Thủ công</option>
+            <option value="daily">Hằng ngày</option>
           </Select>
         </div>
 
         <div>
-          <label className="mb-1 block text-sm text-zinc-600">Tìm khách hàng (Lead)</label>
+          <label className="mb-1 block text-sm text-zinc-600">Tìm khách hàng</label>
           <Input value={leadQuery} onChange={(e) => setLeadQuery(e.target.value)} placeholder="Nhập tên hoặc SĐT" />
           {loadingLead ? <p className="mt-1 text-xs text-zinc-500">Đang tìm khách hàng...</p> : null}
           <Select value={leadId} onChange={(e) => setLeadId(e.target.value)} className="mt-2">
@@ -200,7 +200,7 @@ export default function AutomationRunPage() {
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={() => router.push("/automation/logs")}>Xem nhật ký</Button>
           <Button onClick={submitRun} disabled={saving}>
-            {saving ? "Đang chạy..." : "Chạy automation"}
+            {saving ? "Đang chạy..." : "Chạy tự động hóa"}
           </Button>
         </div>
       </div>

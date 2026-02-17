@@ -1,19 +1,21 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-response";
-import { requireRouteAuth } from "@/lib/route-auth";
-import { isAdminRole } from "@/lib/admin-auth";
+import { requireMappedRoutePermissionAuth } from "@/lib/route-auth";
+import { API_ERROR_VI } from "@/lib/api-error-vi";
+import { applyScopeToWhere, resolveScope } from "@/lib/scope";
 
 type RouteContext = { params: Promise<{ id: string }> | { id: string } };
 
 export async function GET(req: Request, context: RouteContext) {
-  const authResult = requireRouteAuth(req);
+  const authResult = await requireMappedRoutePermissionAuth(req);
   if (authResult.error) return authResult.error;
 
   try {
+    const scope = await resolveScope(authResult.auth);
     const { id } = await Promise.resolve(context.params);
-    const student = await prisma.student.findUnique({
-      where: { id },
+    const student = await prisma.student.findFirst({
+      where: applyScopeToWhere({ id }, scope, "student"),
       select: {
         id: true,
         tuitionSnapshot: true,
@@ -21,10 +23,7 @@ export async function GET(req: Request, context: RouteContext) {
         tuitionPlan: { select: { tuition: true } },
       },
     });
-    if (!student) return jsonError(404, "NOT_FOUND", "Student not found");
-    if (!isAdminRole(authResult.auth.role) && student.lead.ownerId !== authResult.auth.sub) {
-      return jsonError(403, "AUTH_FORBIDDEN", "Forbidden");
-    }
+    if (!student) return jsonError(404, "NOT_FOUND", API_ERROR_VI.notFoundStudent);
 
     const agg = await prisma.receipt.aggregate({
       where: { studentId: id },
@@ -46,6 +45,6 @@ export async function GET(req: Request, context: RouteContext) {
       paid50,
     });
   } catch {
-    return jsonError(500, "INTERNAL_ERROR", "Internal server error");
+    return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

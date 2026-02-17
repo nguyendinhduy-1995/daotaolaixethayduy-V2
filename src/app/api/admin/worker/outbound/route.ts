@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-response";
-import { requireRouteAuth } from "@/lib/route-auth";
-import { requireAdminRole } from "@/lib/admin-auth";
+import { requirePermissionRouteAuth } from "@/lib/route-auth";
 import { runWorkerOnce } from "@/lib/services/outbound-worker";
+import { API_ERROR_VI } from "@/lib/api-error-vi";
 
 export async function POST(req: Request) {
-  const authResult = requireRouteAuth(req);
+  const authResult = await requirePermissionRouteAuth(req, { module: "admin_send_progress", action: "RUN" });
   if (authResult.error) return authResult.error;
-  const roleError = requireAdminRole(authResult.auth.role);
-  if (roleError) return roleError;
 
   try {
     const body = await req.json().catch(() => ({}));
@@ -26,6 +24,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json(result);
   } catch {
-    return jsonError(500, "INTERNAL_ERROR", "Internal server error");
+    return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

@@ -70,8 +70,13 @@ export default function ApiHubPage() {
     trigger: string;
     schedule: string;
     apiCalls: Array<{ method: string; endpoint: string; headers: string[] }>;
+    samplePayload: string;
     retryBackoff: string;
     idempotency: string;
+    definitionOfDone?: string[];
+    failConditions?: string[];
+    retryPolicy?: string[];
+    n8nNotes?: string[];
   }>>([]);
 
   const loadPermission = useCallback(async () => {
@@ -156,8 +161,13 @@ export default function ApiHubPage() {
           trigger: string;
           schedule: string;
           apiCalls: Array<{ method: string; endpoint: string; headers: string[] }>;
+          samplePayload: string;
           retryBackoff: string;
           idempotency: string;
+          definitionOfDone?: string[];
+          failConditions?: string[];
+          retryPolicy?: string[];
+          n8nNotes?: string[];
         }>;
       }>("/api/admin/n8n/workflows");
       setWorkflows(Array.isArray(data.workflows) ? data.workflows : []);
@@ -223,7 +233,7 @@ export default function ApiHubPage() {
           </p>
           <p>
             <span className="font-medium text-zinc-900">Idempotency:</span> gửi `Idempotency-Key` cho các API tạo mới như phiếu
-            thu, outbound jobs, dispatch outbound, lịch học, ingest AI.
+            thu, danh sách gọi nhắc, gửi đi hàng đợi gọi nhắc, lịch học, nạp dữ liệu AI.
           </p>
           <p>
             <span className="font-medium text-zinc-900">Webhook:</span> callback outbound tại `POST /api/outbound/callback`,
@@ -234,6 +244,9 @@ export default function ApiHubPage() {
           <p className="font-semibold uppercase tracking-wide text-zinc-500">Tài liệu repo</p>
           <p className="mt-1 font-mono">PERMISSION_MATRIX.md</p>
           <p className="font-mono">API_INTEGRATION_SPEC.md</p>
+          <p className="mt-2 text-[11px] text-zinc-500">
+            Luồng mới: tạo việc từ đề xuất, tạo danh sách gọi từ đề xuất, nhắc đánh giá khi việc hoàn thành.
+          </p>
         </div>
       </section>
 
@@ -336,6 +349,7 @@ export default function ApiHubPage() {
               <li>Gửi header <code>x-service-token: REDACTED</code> và <code>Idempotency-Key: REDACTED-UUID</code>.</li>
               <li>Bật retry 3 lần với giãn cách tăng dần để tránh mất dữ liệu.</li>
               <li>Không dán token thật vào màn hình hoặc tài liệu chia sẻ.</li>
+              <li>n8n có thể đọc phản hồi người dùng để chấm lại độ phù hợp của từng gợi ý.</li>
             </ul>
           </section>
 
@@ -355,14 +369,68 @@ export default function ApiHubPage() {
                 </div>
                 <div className="mt-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Điểm vào/ra API</p>
-                  <ul className="mt-1 space-y-1 text-sm text-zinc-700">
+                  <div className="mt-1 space-y-2 text-sm text-zinc-700">
                     {wf.apiCalls.map((call, idx) => (
-                      <li key={`${wf.id}-${idx}`}>
-                        <code>{call.method} {call.endpoint}</code> - Header: {call.headers.join(", ")}
-                      </li>
+                      <div key={`${wf.id}-${idx}`} className="rounded-xl border border-zinc-200 bg-zinc-50 p-2">
+                        <p><code>{call.method} {call.endpoint}</code></p>
+                        <p className="text-xs text-zinc-600">Headers mẫu: {call.headers.join(", ")}</p>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
+                <div className="mt-3">
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Payload mẫu</p>
+                    <Button
+                      variant="secondary"
+                      className="h-8 px-2 text-xs"
+                      onClick={() => copyText(`${wf.id}-sample`, wf.samplePayload)}
+                    >
+                      {copiedId === `${wf.id}-sample` ? "Đã sao chép" : "Sao chép"}
+                    </Button>
+                  </div>
+                  <pre className="overflow-auto rounded-xl bg-zinc-50 p-2 text-xs text-zinc-700">{wf.samplePayload}</pre>
+                </div>
+                {Array.isArray(wf.n8nNotes) && wf.n8nNotes.length > 0 ? (
+                  <details className="mt-3 rounded-xl border border-sky-200 bg-sky-50/70 p-3">
+                    <summary className="cursor-pointer text-sm font-medium text-sky-800">Ghi chú n8n</summary>
+                    <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-sky-900">
+                      {wf.n8nNotes.map((note, idx) => (
+                        <li key={`${wf.id}-note-${idx}`}>{note}</li>
+                      ))}
+                    </ol>
+                  </details>
+                ) : null}
+                {Array.isArray(wf.definitionOfDone) && wf.definitionOfDone.length > 0 ? (
+                  <details className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3">
+                    <summary className="cursor-pointer text-sm font-medium text-emerald-800">Điều kiện hoàn tất</summary>
+                    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-emerald-900">
+                      {wf.definitionOfDone.map((item, idx) => (
+                        <li key={`${wf.id}-dod-${idx}`}>{item}</li>
+                      ))}
+                    </ul>
+                  </details>
+                ) : null}
+                {Array.isArray(wf.failConditions) && wf.failConditions.length > 0 ? (
+                  <details className="mt-3 rounded-xl border border-rose-200 bg-rose-50/70 p-3">
+                    <summary className="cursor-pointer text-sm font-medium text-rose-800">Điều kiện lỗi</summary>
+                    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-rose-900">
+                      {wf.failConditions.map((item, idx) => (
+                        <li key={`${wf.id}-fail-${idx}`}>{item}</li>
+                      ))}
+                    </ul>
+                  </details>
+                ) : null}
+                {Array.isArray(wf.retryPolicy) && wf.retryPolicy.length > 0 ? (
+                  <details className="mt-3 rounded-xl border border-amber-200 bg-amber-50/70 p-3">
+                    <summary className="cursor-pointer text-sm font-medium text-amber-800">Chính sách thử lại</summary>
+                    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-amber-900">
+                      {wf.retryPolicy.map((item, idx) => (
+                        <li key={`${wf.id}-retry-${idx}`}>{item}</li>
+                      ))}
+                    </ul>
+                  </details>
+                ) : null}
               </article>
             ))
           )}

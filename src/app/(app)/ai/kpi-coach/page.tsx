@@ -34,6 +34,7 @@ type Suggestion = {
   owner?: { id: string; name: string | null; email: string } | null;
   _count?: { feedbacks: number };
   feedbackStats?: { total: number; helpful: number; notHelpful: number; done: number };
+  n8nNotes?: string;
   myFeedback?: {
     id: string;
     feedbackType: FeedbackType;
@@ -228,18 +229,13 @@ export default function AiKpiCoachPage() {
   );
 
   const createCallList = useCallback(
-    async (suggestion: Suggestion, action: Record<string, unknown>) => {
+    async (suggestion: Suggestion, action: Record<string, unknown>, actionKey: string) => {
       const token = getToken();
       if (!token) return;
-      const res = await fetch("/api/outbound/jobs", {
+      await fetchJson("/api/outbound/jobs", {
         method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          "Idempotency-Key": crypto.randomUUID(),
-        },
-        body: JSON.stringify({
+        token,
+        body: {
           channel: action.channel || "CALL_NOTE",
           templateKey: action.templateKey || "remind_schedule",
           leadId: action.leadId,
@@ -247,13 +243,14 @@ export default function AiKpiCoachPage() {
           to: action.to,
           variables: action.variables,
           note: `Tạo từ gợi ý ${suggestion.id}`,
-        }),
+          suggestionId: suggestion.id,
+          actionKey,
+        },
+        headers: {
+          "Idempotency-Key": crypto.randomUUID(),
+        },
       });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { error?: { code?: string } } | null;
-        throw new Error(body?.error?.code || "OUTBOUND_CREATE_FAILED");
-      }
-      await logApplyAction({ suggestion, actionKey: "CREATE_CALL_LIST", action });
+      await logApplyAction({ suggestion, actionKey, action });
     },
     [logApplyAction]
   );
@@ -313,8 +310,13 @@ export default function AiKpiCoachPage() {
             continue;
           }
 
-          if (actionType === "CREATE_CALL_LIST") {
-            await createCallList(item, action);
+          if (actionType === "CREATE_CALL_LIST" || actionType === "CREATE_OUTBOUND_JOB") {
+            await createCallList(item, action, actionType);
+            continue;
+          }
+
+          if (actionType === "UPDATE_LEAD_STATUS") {
+            setError("Hành động cập nhật trạng thái đang ở chế độ gợi ý, chưa tự chạy.");
             continue;
           }
 
@@ -523,6 +525,15 @@ export default function AiKpiCoachPage() {
                           );
                         })}
                       </div>
+                    ) : null}
+
+                    {item.n8nNotes ? (
+                      <details className="mt-3 rounded-xl border border-sky-100 bg-sky-50/60 p-3">
+                        <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-sky-700">
+                          Ghi chú n8n
+                        </summary>
+                        <p className="mt-2 whitespace-pre-wrap text-xs text-sky-800">{item.n8nNotes}</p>
+                      </details>
                     ) : null}
 
                     <div className="mt-3 flex flex-wrap items-center gap-2">

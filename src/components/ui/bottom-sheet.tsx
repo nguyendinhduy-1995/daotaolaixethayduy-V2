@@ -47,7 +47,7 @@ export function BottomSheet({ open, onOpenChange, title, children, footer }: Bot
       <div
         ref={panelRef}
         tabIndex={-1}
-        className="absolute bottom-0 left-0 right-0 rounded-t-[20px] border border-zinc-200 bg-white p-4 shadow-2xl outline-none animate-[sheet-up_220ms_ease-out]"
+        className="ios-glass absolute bottom-0 left-0 right-0 rounded-t-[24px] border border-zinc-200 bg-white/85 p-4 pb-[max(env(safe-area-inset-bottom),16px)] shadow-2xl outline-none animate-[sheet-up_220ms_ease-out]"
       >
         <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-zinc-300" />
         <div className="mb-3 flex items-center justify-between gap-2">

@@ -191,8 +191,16 @@ export async function runDailyCron(options: { dryRun: boolean; force?: boolean; 
 
     const quietBlocked = !force && quietRange ? isInQuietRange(nowInTz(tz), quietRange) : false;
 
+    const defaultBranch =
+      (await prisma.branch.findFirst({ where: { code: "DEFAULT" }, select: { id: true } })) ??
+      (await prisma.branch.findFirst({ where: { isActive: true }, select: { id: true }, orderBy: { createdAt: "asc" } }));
+    if (!defaultBranch?.id) {
+      throw new Error("Không tìm thấy chi nhánh mặc định");
+    }
+
     const log = await prisma.automationLog.create({
       data: {
+        branchId: defaultBranch.id,
         channel: "system",
         templateKey: "cron.daily",
         milestone: "daily",
@@ -240,8 +248,8 @@ export async function runDailyCron(options: { dryRun: boolean; force?: boolean; 
       const notifications = await prisma.notification.findMany({
         where: { scope: "FINANCE", status: { in: ["NEW", "DOING"] } },
         include: {
-          student: { include: { lead: { select: { id: true, fullName: true, phone: true, ownerId: true } } } },
-          lead: { select: { id: true, fullName: true, phone: true, ownerId: true } },
+          student: { include: { lead: { select: { id: true, fullName: true, phone: true, ownerId: true, branchId: true } } } },
+          lead: { select: { id: true, fullName: true, phone: true, ownerId: true, branchId: true } },
         },
         orderBy: { createdAt: "desc" },
         take: Math.max(maxPerRun * 2, 200),
@@ -400,6 +408,7 @@ export async function runDailyCron(options: { dryRun: boolean; force?: boolean; 
               renderedText,
               status: "QUEUED",
               priority: row.priority,
+              branchId: row.lead?.branchId ?? defaultBranch.id,
               leadId: row.lead?.id ?? row.item.leadId,
               studentId: row.item.studentId,
               notificationId: row.item.id,

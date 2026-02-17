@@ -7,8 +7,8 @@ import { fetchJson, type ApiClientError } from "@/lib/api-client";
 import { clearToken, fetchMe, getToken } from "@/lib/auth-client";
 import { isAdminRole, isTelesalesRole } from "@/lib/admin-auth";
 import { Alert } from "@/components/ui/alert";
-import { MobileHeader } from "@/components/app/mobile-header";
 import { MobileToolbar } from "@/components/app/mobile-toolbar";
+import { MobileShell } from "@/components/mobile/MobileShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FilterCard } from "@/components/ui/filter-card";
@@ -332,11 +332,14 @@ export default function LeadsBoardPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <MobileHeader title="Bảng Kanban khách hàng" subtitle="Theo dõi pipeline theo trạng thái" />
+    <MobileShell
+      title="Bảng trạng thái khách hàng"
+      subtitle="Pipeline theo trạng thái"
+    >
+    <div className="space-y-4 pb-24 md:pb-0">
       <div className="hidden md:block">
         <PageHeader
-          title="Bảng Kanban khách hàng"
+          title="Bảng trạng thái khách hàng"
           subtitle="Theo dõi pipeline theo trạng thái"
           actions={
             <>
@@ -440,7 +443,7 @@ export default function LeadsBoardPage() {
       {loading ? (
         <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center gap-2 text-sm text-zinc-600">
-            <Spinner /> Đang tải bảng Kanban...
+            <Spinner /> Đang tải bảng trạng thái...
           </div>
           <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
             <Skeleton className="h-24" />
@@ -583,7 +586,7 @@ export default function LeadsBoardPage() {
       <MobileFiltersSheet
         open={filterOpen}
         onOpenChange={setFilterOpen}
-        title="Bộ lọc Kanban"
+        title="Bộ lọc bảng trạng thái"
         onApply={() => applyFiltersToUrl(filters)}
         onReset={() => {
           setFilters(EMPTY_FILTERS);
@@ -736,5 +739,6 @@ export default function LeadsBoardPage() {
         </div>
       </Modal>
     </div>
+    </MobileShell>
   );
 }

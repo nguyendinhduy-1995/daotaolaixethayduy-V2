@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import type { OutboundChannel, OutboundStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-response";
-import { requireRouteAuth } from "@/lib/route-auth";
+import { requireMappedRoutePermissionAuth } from "@/lib/route-auth";
 import { isAdminRole } from "@/lib/admin-auth";
 import { ensureOutboundSchema, renderTemplate } from "@/lib/outbound-db";
 import { KpiDateError, resolveKpiDateParam } from "@/lib/services/kpi-daily";
+import { resolveScope, resolveWriteBranchId } from "@/lib/scope";
 
 const CHANNELS: OutboundChannel[] = ["ZALO", "FB", "SMS", "CALL_NOTE"];
 const STATUSES: OutboundStatus[] = ["QUEUED", "SENT", "FAILED", "SKIPPED"];
@@ -57,10 +58,11 @@ function toVariables(input: unknown) {
 }
 
 export async function GET(req: Request) {
-  const authResult = requireRouteAuth(req);
+  const authResult = await requireMappedRoutePermissionAuth(req);
   if (authResult.error) return authResult.error;
 
   try {
+    const scope = await resolveScope(authResult.auth);
     await ensureOutboundSchema();
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
@@ -94,13 +96,12 @@ export async function GET(req: Request) {
         ],
       });
     }
-    if (!isAdminRole(authResult.auth.role)) {
-      andClauses.push({
-        OR: [
-          { lead: { ownerId: authResult.auth.sub } },
-          { student: { lead: { ownerId: authResult.auth.sub } } },
-        ],
-      });
+    if (scope.mode === "OWNER" && scope.ownerId) {
+      andClauses.push({ OR: [{ lead: { ownerId: scope.ownerId } }, { student: { lead: { ownerId: scope.ownerId } } }] });
+      if (scope.branchId) andClauses.push({ branchId: scope.branchId });
+    }
+    if (scope.mode === "BRANCH" && scope.branchId) {
+      andClauses.push({ branchId: scope.branchId });
     }
 
     const where: Prisma.OutboundMessageWhereInput = {
@@ -140,10 +141,11 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const authResult = requireRouteAuth(req);
+  const authResult = await requireMappedRoutePermissionAuth(req);
   if (authResult.error) return authResult.error;
 
   try {
+    const scope = await resolveScope(authResult.auth);
     await ensureOutboundSchema();
     const body = await req.json().catch(() => null);
     if (!body || typeof body !== "object") {
@@ -163,19 +165,35 @@ export async function POST(req: Request) {
       return jsonError(404, "NOT_FOUND", "Template not found");
     }
 
-    let lead: { id: string; fullName: string | null; phone: string | null; ownerId: string | null } | null = null;
+    let lead:
+      | {
+          id: string;
+          fullName: string | null;
+          phone: string | null;
+          branchId: string;
+          ownerId: string | null;
+          owner?: { branchId: string | null } | null;
+        }
+      | null = null;
     let student:
       | {
           id: string;
           leadId: string;
-          lead: { id: string; fullName: string | null; phone: string | null; ownerId: string | null };
+          lead: {
+            id: string;
+            fullName: string | null;
+            phone: string | null;
+            branchId: string;
+            ownerId: string | null;
+            owner?: { branchId: string | null } | null;
+          };
         }
       | null = null;
 
     if (typeof body.leadId === "string") {
       lead = await prisma.lead.findUnique({
         where: { id: body.leadId },
-        select: { id: true, fullName: true, phone: true, ownerId: true },
+        select: { id: true, fullName: true, phone: true, branchId: true, ownerId: true, owner: { select: { branchId: true } } },
       });
       if (!lead) return jsonError(404, "NOT_FOUND", "Lead not found");
     }
@@ -183,7 +201,9 @@ export async function POST(req: Request) {
     if (typeof body.studentId === "string") {
       student = await prisma.student.findUnique({
         where: { id: body.studentId },
-        include: { lead: { select: { id: true, fullName: true, phone: true, ownerId: true } } },
+        include: {
+          lead: { select: { id: true, fullName: true, phone: true, branchId: true, ownerId: true, owner: { select: { branchId: true } } } },
+        },
       });
       if (!student) return jsonError(404, "NOT_FOUND", "Student not found");
       if (!lead) lead = student.lead;
@@ -195,41 +215,62 @@ export async function POST(req: Request) {
           leadId: string | null;
           studentId: string | null;
           ownerId: string | null;
-          lead: { ownerId: string | null } | null;
-          student: { lead: { ownerId: string | null } } | null;
+          lead: { branchId: string; ownerId: string | null; owner?: { branchId: string | null } | null } | null;
+          student: {
+            branchId: string;
+            lead: { branchId: string; ownerId: string | null; owner?: { branchId: string | null } | null };
+          } | null;
         }
       | null = null;
     if (typeof body.notificationId === "string") {
       notification = await prisma.notification.findUnique({
         where: { id: body.notificationId },
         include: {
-          lead: { select: { ownerId: true } },
-          student: { include: { lead: { select: { ownerId: true } } } },
+          lead: { select: { branchId: true, ownerId: true, owner: { select: { branchId: true } } } },
+          student: {
+            include: { lead: { select: { branchId: true, ownerId: true, owner: { select: { branchId: true } } } } },
+          },
         },
       });
       if (!notification) return jsonError(404, "NOT_FOUND", "Notification not found");
       if (!lead && notification.leadId) {
         lead = await prisma.lead.findUnique({
           where: { id: notification.leadId },
-          select: { id: true, fullName: true, phone: true, ownerId: true },
+          select: { id: true, fullName: true, phone: true, branchId: true, ownerId: true, owner: { select: { branchId: true } } },
         });
       }
       if (!student && notification.studentId) {
         student = await prisma.student.findUnique({
           where: { id: notification.studentId },
-          include: { lead: { select: { id: true, fullName: true, phone: true, ownerId: true } } },
+          include: {
+            lead: { select: { id: true, fullName: true, phone: true, branchId: true, ownerId: true, owner: { select: { branchId: true } } } },
+          },
         });
         if (!lead && student) lead = student.lead;
       }
     }
 
     if (!isAdminRole(authResult.auth.role)) {
-      const inScope =
-        lead?.ownerId === authResult.auth.sub ||
-        student?.lead.ownerId === authResult.auth.sub ||
-        notification?.ownerId === authResult.auth.sub ||
-        notification?.lead?.ownerId === authResult.auth.sub ||
-        notification?.student?.lead.ownerId === authResult.auth.sub;
+      const inOwnerScope =
+        scope.mode === "OWNER" &&
+        scope.ownerId &&
+        (lead?.ownerId === scope.ownerId ||
+          student?.lead.ownerId === scope.ownerId ||
+          notification?.ownerId === scope.ownerId ||
+          notification?.lead?.ownerId === scope.ownerId ||
+          notification?.student?.lead.ownerId === scope.ownerId);
+      const candidateBranchId =
+        lead?.branchId ??
+        student?.lead.branchId ??
+        notification?.student?.lead.branchId ??
+        notification?.lead?.owner?.branchId ??
+        notification?.student?.lead.owner?.branchId ??
+        null;
+      const inBranchScope = scope.branchId ? candidateBranchId === scope.branchId : true;
+      const inScope = Boolean(
+        (scope.mode === "OWNER" ? inOwnerScope && inBranchScope : true) &&
+          (scope.mode === "BRANCH" ? inBranchScope : true)
+      );
       if (!inScope) return jsonError(403, "AUTH_FORBIDDEN", "Forbidden");
     }
 
@@ -254,6 +295,14 @@ export async function POST(req: Request) {
 
     const renderedText = renderTemplate(template.body, variables);
 
+    const resolvedBranchId = await resolveWriteBranchId(authResult.auth, [
+      lead?.branchId,
+      student?.lead.branchId,
+      notification?.student?.lead.branchId,
+      notification?.lead?.owner?.branchId,
+      notification?.student?.lead.owner?.branchId,
+    ]);
+
     const dedupeRange = todayRangeInHoChiMinh();
     if (student?.id) {
       const existing = await prisma.outboundMessage.findFirst({
@@ -275,6 +324,7 @@ export async function POST(req: Request) {
             status: "SKIPPED",
             priority: "MEDIUM",
             error: "Bỏ qua do trùng template trong ngày",
+            branchId: resolvedBranchId,
             leadId: lead?.id ?? null,
             studentId: student.id,
             notificationId: typeof body.notificationId === "string" ? body.notificationId : null,
@@ -293,6 +343,7 @@ export async function POST(req: Request) {
         renderedText,
         status: "QUEUED",
         priority: "MEDIUM",
+        branchId: resolvedBranchId,
         leadId: lead?.id ?? null,
         studentId: student?.id ?? null,
         notificationId: typeof body.notificationId === "string" ? body.notificationId : null,

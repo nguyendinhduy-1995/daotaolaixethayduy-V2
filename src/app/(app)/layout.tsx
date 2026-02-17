@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { logoutSession, type MeResponse } from "@/lib/auth-client";
 import { isAdminRole } from "@/lib/admin-auth";
 import { guardByAuthMe, type AuthGuardResult } from "@/lib/ui-auth-guard";
+import { ErrorBoundary } from "@/components/app/ErrorBoundary";
 import { MobileTopbar } from "@/components/mobile/MobileTopbar";
 import { MobileAdminMenu } from "@/components/mobile/MobileAdminMenu";
 import { DesktopSidebarMenu } from "@/components/admin/DesktopSidebarMenu";
@@ -38,6 +39,7 @@ function guessPageTitle(pathname: string) {
     { test: (p) => p.startsWith("/notifications"), title: "Thông báo", subtitle: "Danh sách việc cần xử lý" },
     { test: (p) => p.startsWith("/outbound"), title: "Gọi nhắc", subtitle: "Hàng đợi và lịch sử nhắc học viên" },
     { test: (p) => p.startsWith("/admin/n8n"), title: "Luồng n8n", subtitle: "Tài liệu luồng tự động và runbook tích hợp" },
+    { test: (p) => p.startsWith("/admin/automation-monitor"), title: "Giám sát luồng tự động", subtitle: "Theo dõi job, lỗi và nhật ký chạy trong ngày" },
     { test: (p) => p.startsWith("/api-hub"), title: "API Hub", subtitle: "Tra cứu API và cách đấu nối nhanh" },
     { test: (p) => p.startsWith("/admin"), title: "Quản trị", subtitle: "Thiết lập và vận hành hệ thống" },
   ];
@@ -183,7 +185,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           </header>
 
           <main className={`mx-auto w-full max-w-[1280px] px-3 py-3 ${usePageMobileShell ? "pb-6" : "pb-24"} md:p-5 md:pb-8`}>
-            {children}
+            <ErrorBoundary>{children}</ErrorBoundary>
           </main>
         </div>
       </div>

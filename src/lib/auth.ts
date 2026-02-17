@@ -36,12 +36,12 @@ function getTokenFromRequest(req: Request) {
 export function requireAuth(req: Request): AuthPayload {
   const token = getTokenFromRequest(req);
   if (!token) {
-    throw new AuthError("AUTH_MISSING_BEARER", "Missing or invalid Authorization Bearer token");
+    throw new AuthError("AUTH_MISSING_BEARER", "Thiếu hoặc sai token xác thực");
   }
 
   try {
     return verifyAccessToken(token);
   } catch {
-    throw new AuthError("AUTH_INVALID_TOKEN", "Invalid or expired token");
+    throw new AuthError("AUTH_INVALID_TOKEN", "Token không hợp lệ hoặc đã hết hạn");
   }
 }

@@ -1,0 +1,5 @@
+-- Phase 1 (manual): chạy script backfill trước khi enforce NOT NULL.
+-- Lệnh:
+--   node scripts/backfill-branch-id.mjs
+-- Báo cáo orphan:
+--   artifacts/ORPHAN_RECORDS.md

@@ -1,38 +1,36 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-response";
-import { requireRouteAuth } from "@/lib/route-auth";
-import { requireAdminRole } from "@/lib/admin-auth";
+import { API_ERROR_VI } from "@/lib/api-error-vi";
+import { requirePermissionRouteAuth } from "@/lib/route-auth";
 import { logLeadEvent } from "@/lib/lead-events";
 
 export async function POST(req: Request) {
-  const authResult = requireRouteAuth(req);
+  const authResult = await requirePermissionRouteAuth(req, { module: "leads", action: "ASSIGN" });
   if (authResult.error) return authResult.error;
-  const adminError = requireAdminRole(authResult.auth.role);
-  if (adminError) return adminError;
 
   try {
     const body = await req.json().catch(() => null);
     if (!body || typeof body !== "object") {
-      return jsonError(400, "VALIDATION_ERROR", "Invalid JSON body");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
     if (
       !Array.isArray(body.leadIds) ||
       body.leadIds.length === 0 ||
       !body.leadIds.every((id: unknown) => typeof id === "string")
     ) {
-      return jsonError(400, "VALIDATION_ERROR", "leadIds must be a non-empty array of strings");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
     if (!body.ownerId || typeof body.ownerId !== "string") {
-      return jsonError(400, "VALIDATION_ERROR", "ownerId is required");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
 
     const owner = await prisma.user.findUnique({
       where: { id: body.ownerId },
       select: { id: true, isActive: true },
     });
-    if (!owner) return jsonError(404, "NOT_FOUND", "Owner not found");
-    if (!owner.isActive) return jsonError(400, "VALIDATION_ERROR", "Owner is inactive");
+    if (!owner) return jsonError(404, "NOT_FOUND", API_ERROR_VI.required);
+    if (!owner.isActive) return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
 
     const leadIds = body.leadIds as string[];
     const uniqueLeadIds = Array.from(new Set(leadIds));
@@ -72,6 +70,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json(result);
   } catch {
-    return jsonError(500, "INTERNAL_ERROR", "Internal server error");
+    return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

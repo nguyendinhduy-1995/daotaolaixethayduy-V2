@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import type { Prisma, ReceiptMethod } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-response";
-import { requireRouteAuth } from "@/lib/route-auth";
-import { isAdminRole } from "@/lib/admin-auth";
+import { API_ERROR_VI } from "@/lib/api-error-vi";
+import { requirePermissionRouteAuth } from "@/lib/route-auth";
+import { applyScopeToWhere, resolveScope, resolveWriteBranchId } from "@/lib/scope";
 import { KpiDateError, resolveKpiDateParam } from "@/lib/services/kpi-daily";
+import { requireIdempotencyKey, withIdempotency } from "@/lib/idempotency";
 
 type ReceiptInputMethod = "cash" | "bank" | "momo" | "other" | "bank_transfer" | "card";
 
@@ -49,43 +51,71 @@ function parseReceivedAt(value: unknown) {
 }
 
 export async function POST(req: Request) {
-  const authResult = requireRouteAuth(req);
+  const authResult = await requirePermissionRouteAuth(req, { module: "receipts", action: "CREATE" });
   if (authResult.error) return authResult.error;
 
   try {
+    const scope = await resolveScope(authResult.auth);
+    const idempotency = requireIdempotencyKey(req);
+    if (idempotency.error) return idempotency.error;
     const body = await req.json().catch(() => null);
     if (!body || typeof body !== "object") {
-      return jsonError(400, "VALIDATION_ERROR", "Invalid JSON body");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
     if (!body.studentId || typeof body.studentId !== "string") {
-      return jsonError(400, "VALIDATION_ERROR", "studentId is required");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
 
     const student = await prisma.student.findUnique({
       where: { id: body.studentId },
-      select: { id: true, lead: { select: { ownerId: true } } },
+      select: {
+        id: true,
+        branchId: true,
+        lead: { select: { ownerId: true, branchId: true, owner: { select: { branchId: true } } } },
+      },
     });
-    if (!student) return jsonError(404, "NOT_FOUND", "Student not found");
-    if (!isAdminRole(authResult.auth.role) && student.lead.ownerId !== authResult.auth.sub) {
-      return jsonError(403, "AUTH_FORBIDDEN", "Forbidden");
+    if (!student) return jsonError(404, "NOT_FOUND", API_ERROR_VI.notFoundStudent);
+    const scopedStudent = await prisma.student.findFirst({
+      where: applyScopeToWhere({ id: body.studentId }, scope, "student"),
+      select: { id: true },
+    });
+    if (!scopedStudent) {
+      return jsonError(403, "AUTH_FORBIDDEN", API_ERROR_VI.forbidden);
     }
 
     const amount = parseAmount(body.amount);
     const method = parseReceiptMethod(body.method) ?? "cash";
     const receivedAt = parseReceivedAt(body.receivedAt);
 
-    const receipt = await prisma.receipt.create({
-      data: {
-        studentId: body.studentId,
-        amount,
-        method,
-        note: typeof body.note === "string" ? body.note : null,
-        ...(receivedAt ? { receivedAt } : {}),
-        createdById: authResult.auth.sub,
-      },
-    });
-
-    return NextResponse.json({ receipt });
+    const resolvedBranchId = await resolveWriteBranchId(authResult.auth, [
+      student.branchId,
+      student.lead.branchId,
+      student.lead.owner?.branchId,
+    ]);
+    const route = new URL(req.url).pathname;
+    return (
+      await withIdempotency({
+        key: idempotency.key!,
+        route,
+        actorType: "user",
+        actorId: authResult.auth.sub,
+        requestBody: body,
+        execute: async () => {
+          const receipt = await prisma.receipt.create({
+            data: {
+              studentId: body.studentId,
+              branchId: resolvedBranchId,
+              amount,
+              method,
+              note: typeof body.note === "string" ? body.note : null,
+              ...(receivedAt ? { receivedAt } : {}),
+              createdById: authResult.auth.sub,
+            },
+          });
+          return { statusCode: 200, responseJson: { receipt } };
+        },
+      })
+    ).response;
   } catch (error) {
     if (error instanceof KpiDateError) {
       return jsonError(400, "VALIDATION_ERROR", error.message);
@@ -94,17 +124,18 @@ export async function POST(req: Request) {
       error instanceof Error &&
       (error.message === "INVALID_AMOUNT" || error.message === "INVALID_METHOD" || error.message === "INVALID_DATE")
     ) {
-      return jsonError(400, "VALIDATION_ERROR", "Invalid receipt input");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
-    return jsonError(500, "INTERNAL_ERROR", "Internal server error");
+    return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }
 
 export async function GET(req: Request) {
-  const authResult = requireRouteAuth(req);
+  const authResult = await requirePermissionRouteAuth(req, { module: "receipts", action: "VIEW" });
   if (authResult.error) return authResult.error;
 
   try {
+    const scope = await resolveScope(authResult.auth);
     const { searchParams } = new URL(req.url);
     const studentId = searchParams.get("studentId");
     const method = searchParams.get("method");
@@ -116,7 +147,7 @@ export async function GET(req: Request) {
     const pageSize = parsePositiveInt(searchParams.get("pageSize"), 20);
 
     if (date && (from || to)) {
-      return jsonError(400, "VALIDATION_ERROR", "Use either date or from/to");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
 
     let receivedAt: Prisma.DateTimeFilter | undefined;
@@ -136,30 +167,21 @@ export async function GET(req: Request) {
       }
     }
 
-    const where: Prisma.ReceiptWhereInput = {
+    const whereBase: Prisma.ReceiptWhereInput = {
       ...(studentId ? { studentId } : {}),
       ...(method ? { method: parseReceiptMethod(method) } : {}),
       ...(receivedAt ? { receivedAt } : {}),
-      ...(!isAdminRole(authResult.auth.role)
-        ? {
-            student: {
-              lead: {
-                ownerId: authResult.auth.sub,
-              },
-            },
-          }
-        : {}),
       ...(q
         ? {
             student: {
               lead: {
-                ...(isAdminRole(authResult.auth.role) ? {} : { ownerId: authResult.auth.sub }),
                 OR: [{ fullName: { contains: q, mode: "insensitive" } }, { phone: { contains: q, mode: "insensitive" } }],
               },
             },
           }
         : {}),
     };
+    const where = applyScopeToWhere(whereBase, scope, "receipt");
 
     const [items, total] = await Promise.all([
       prisma.receipt.findMany({
@@ -193,8 +215,8 @@ export async function GET(req: Request) {
       error instanceof Error &&
       (error.message === "INVALID_PAGINATION" || error.message === "INVALID_METHOD")
     ) {
-      return jsonError(400, "VALIDATION_ERROR", "Invalid receipt query");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
-    return jsonError(500, "INTERNAL_ERROR", "Internal server error");
+    return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

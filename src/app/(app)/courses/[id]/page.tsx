@@ -34,6 +34,8 @@ type ScheduleItem = {
   title: string;
   startAt: string;
   endAt: string | null;
+  location?: string | null;
+  note?: string | null;
   rule: unknown;
   isActive: boolean;
 };
@@ -56,12 +58,14 @@ function scheduleTypeLabel(type: ScheduleItem["type"]) {
   return "Nhắc lịch";
 }
 
-function parseRule(rule: unknown) {
-  if (!rule || typeof rule !== "object") return { location: "", note: "" };
+function parseRule(rule: unknown, fallback?: { location?: string | null; note?: string | null }) {
+  if (!rule || typeof rule !== "object") {
+    return { location: fallback?.location || "", note: fallback?.note || "" };
+  }
   const obj = rule as Record<string, unknown>;
   return {
-    location: typeof obj.location === "string" ? obj.location : "",
-    note: typeof obj.note === "string" ? obj.note : "",
+    location: fallback?.location ?? (typeof obj.location === "string" ? obj.location : ""),
+    note: fallback?.note ?? (typeof obj.note === "string" ? obj.note : ""),
   };
 }
 
@@ -351,7 +355,7 @@ export default function CourseDetailPage() {
           ) : (
             <Table headers={["Ngày", "Khung giờ", "Loại", "Địa điểm", "Ghi chú", "Trạng thái"]}>
               {scheduleItems.map((item) => {
-                const meta = parseRule(item.rule);
+                const meta = parseRule(item.rule, { location: item.location, note: item.note });
                 const start = new Date(item.startAt);
                 const end = item.endAt ? new Date(item.endAt) : null;
                 return (

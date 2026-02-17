@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import type { AutomationLog } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-response";
-import { requireRouteAuth } from "@/lib/route-auth";
-import { requireAdminRole } from "@/lib/admin-auth";
+import { requirePermissionRouteAuth } from "@/lib/route-auth";
+import { API_ERROR_VI } from "@/lib/api-error-vi";
+import { resolveWriteBranchId } from "@/lib/scope";
 
 type RunScope = "daily" | "manual";
 
@@ -12,43 +13,55 @@ function isScope(value: unknown): value is RunScope {
 }
 
 export async function POST(req: Request) {
-  const authResult = requireRouteAuth(req);
+  const authResult = await requirePermissionRouteAuth(req, { module: "automation_run", action: "RUN" });
   if (authResult.error) return authResult.error;
-  const roleError = requireAdminRole(authResult.auth.role);
-  if (roleError) return roleError;
 
   let log: AutomationLog | null = null;
 
   try {
     const body = await req.json().catch(() => null);
     if (!body || typeof body !== "object" || !isScope(body.scope)) {
-      return jsonError(400, "VALIDATION_ERROR", "Invalid run input");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
     if (body.leadId !== undefined && typeof body.leadId !== "string") {
-      return jsonError(400, "VALIDATION_ERROR", "leadId must be string");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
     if (body.studentId !== undefined && typeof body.studentId !== "string") {
-      return jsonError(400, "VALIDATION_ERROR", "studentId must be string");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
     if (body.dryRun !== undefined && typeof body.dryRun !== "boolean") {
-      return jsonError(400, "VALIDATION_ERROR", "dryRun must be boolean");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
 
     if (body.scope === "manual" && !body.leadId && !body.studentId) {
-      return jsonError(400, "VALIDATION_ERROR", "manual scope requires leadId or studentId");
+      return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
 
+    let leadBranchId: string | null = null;
+    let studentBranchId: string | null = null;
+
     if (body.leadId) {
-      const lead = await prisma.lead.findUnique({ where: { id: body.leadId }, select: { id: true } });
-      if (!lead) return jsonError(404, "NOT_FOUND", "Lead not found");
+      const lead = await prisma.lead.findUnique({
+        where: { id: body.leadId },
+        select: { id: true, branchId: true },
+      });
+      if (!lead) return jsonError(404, "NOT_FOUND", API_ERROR_VI.notFoundLead);
+      leadBranchId = lead.branchId;
     }
     if (body.studentId) {
-      const student = await prisma.student.findUnique({ where: { id: body.studentId }, select: { id: true } });
-      if (!student) return jsonError(404, "NOT_FOUND", "Student not found");
+      const student = await prisma.student.findUnique({
+        where: { id: body.studentId },
+        select: { id: true, branchId: true },
+      });
+      if (!student) return jsonError(404, "NOT_FOUND", API_ERROR_VI.notFoundStudent);
+      studentBranchId = student.branchId;
     }
+
+    const branchId = await resolveWriteBranchId(authResult.auth, [leadBranchId, studentBranchId]);
 
     log = await prisma.automationLog.create({
       data: {
+        branchId,
         leadId: body.leadId ?? null,
         studentId: body.studentId ?? null,
         channel: "system",
@@ -83,7 +96,7 @@ export async function POST(req: Request) {
       scope: body.scope,
       leadId: body.leadId ?? null,
       studentId: body.studentId ?? null,
-      message: body.dryRun ? "Dry run completed" : "Automation run completed",
+      message: body.dryRun ? "Chạy thử thành công" : "Chạy tự động hóa thành công",
     };
 
     const final = await prisma.automationLog.update({
@@ -108,12 +121,12 @@ export async function POST(req: Request) {
           payload: {
             ...(log.payload && typeof log.payload === "object" ? log.payload : {}),
             runtimeStatus: "failed",
-            error: error instanceof Error ? error.message : "Unknown error",
+            error: error instanceof Error ? error.message : API_ERROR_VI.internal,
           },
         },
       });
     }
 
-    return jsonError(500, "INTERNAL_ERROR", "Internal server error");
+    return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

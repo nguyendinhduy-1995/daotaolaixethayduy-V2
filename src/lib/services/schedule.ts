@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { isAdminRole, isTelesalesRole } from "@/lib/admin-auth";
 import { jsonError } from "@/lib/api-response";
+import { applyScopeToWhere, resolveScope } from "@/lib/scope";
 
 export type ScheduleStatusFilter = "upcoming" | "ongoing" | "done" | "inactive";
 
@@ -37,15 +38,28 @@ export function resolveScheduleStatus(item: {
   return "ongoing";
 }
 
-export function extractScheduleMeta(rule: unknown) {
+type ScheduleMetaFallback = {
+  location?: string | null;
+  note?: string | null;
+  status?: string | null;
+  source?: string | null;
+};
+
+export function extractScheduleMeta(rule: unknown, fallback?: ScheduleMetaFallback) {
   if (!rule || typeof rule !== "object" || Array.isArray(rule)) {
-    return { location: "", note: "", status: "" };
+    return {
+      location: fallback?.location || "",
+      note: fallback?.note || "",
+      status: fallback?.status || "",
+      source: fallback?.source || "",
+    };
   }
   const obj = rule as Record<string, unknown>;
   return {
-    location: typeof obj.location === "string" ? obj.location : "",
-    note: typeof obj.note === "string" ? obj.note : "",
-    status: typeof obj.status === "string" ? obj.status : "",
+    location: fallback?.location ?? (typeof obj.location === "string" ? obj.location : ""),
+    note: fallback?.note ?? (typeof obj.note === "string" ? obj.note : ""),
+    status: fallback?.status ?? (typeof obj.status === "string" ? obj.status : ""),
+    source: fallback?.source ?? (typeof obj.source === "string" ? obj.source : ""),
   };
 }
 
@@ -54,17 +68,7 @@ export function requireScheduleRole(role: string) {
   return jsonError(403, "AUTH_FORBIDDEN", "Forbidden");
 }
 
-export function buildScheduleScopeWhere(auth: { sub: string; role: string }): Prisma.CourseScheduleItemWhereInput {
-  if (isAdminRole(auth.role)) return {};
-  return {
-    course: {
-      students: {
-        some: {
-          lead: {
-            ownerId: auth.sub,
-          },
-        },
-      },
-    },
-  };
+export async function buildScheduleScopeWhere(auth: { sub: string; role: string }): Promise<Prisma.CourseScheduleItemWhereInput> {
+  const scope = await resolveScope(auth);
+  return applyScopeToWhere({}, scope, "schedule");
 }
