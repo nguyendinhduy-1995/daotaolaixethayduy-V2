@@ -233,6 +233,7 @@ export default function ReceiptsPage() {
       await fetchJson<{ receipt: ReceiptItem }>("/api/receipts", {
         method: "POST",
         token,
+        headers: { "Idempotency-Key": crypto.randomUUID() },
         body: {
           studentId: createForm.studentId,
           amount: Math.round(amount),
@@ -267,6 +268,7 @@ export default function ReceiptsPage() {
       await fetchJson<{ receipt: ReceiptItem }>(`/api/receipts/${editingId}`, {
         method: "PATCH",
         token,
+        headers: { "Idempotency-Key": crypto.randomUUID() },
         body: {
           amount: Math.round(amount),
           method: editForm.method,

@@ -24,12 +24,16 @@ export async function fetchJson<T>(
     options.token.length > 0 &&
     options.token !== COOKIE_SESSION_TOKEN;
 
+  const method = options?.method ?? "GET";
+  const isMutating = method === "POST" || method === "PUT" || method === "PATCH";
+
   const res = await fetch(path, {
-    method: options?.method ?? "GET",
+    method,
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...(shouldAttachBearer ? { Authorization: `Bearer ${options?.token}` } : {}),
+      ...(isMutating ? { "Idempotency-Key": crypto.randomUUID() } : {}),
       ...(options?.headers ?? {}),
     },
     ...(options?.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
