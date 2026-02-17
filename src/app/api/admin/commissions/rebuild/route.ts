@@ -73,7 +73,8 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ ok: true, dryRun, rebuilt: rows.length });
-  } catch {
+  } catch (err) {
+    console.error("[admin.commissions.rebuild]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }

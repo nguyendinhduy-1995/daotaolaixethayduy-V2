@@ -60,7 +60,8 @@ export async function POST(req: Request) {
         });
 
         return NextResponse.json({ ok: true, message: "Đã ghi nhận thông tin. Chúng tôi sẽ liên hệ bạn sớm!" });
-    } catch {
+    } catch (err) {
+    console.error("[public.lead]", err);
         return jsonError(500, "INTERNAL_ERROR", "Lỗi hệ thống");
     }
 }

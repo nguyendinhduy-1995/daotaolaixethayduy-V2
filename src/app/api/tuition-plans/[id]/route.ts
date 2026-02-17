@@ -39,7 +39,8 @@ export async function GET(req: Request, context: RouteContext) {
         note: null,
       },
     });
-  } catch {
+  } catch (err) {
+    console.error("[tuition-plans.[id]]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }

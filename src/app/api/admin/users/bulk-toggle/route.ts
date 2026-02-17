@@ -39,7 +39,8 @@ export async function POST(req: Request) {
         });
 
         return NextResponse.json({ updated: result.count });
-    } catch {
+    } catch (err) {
+    console.error("[admin.users.bulk-toggle]", err);
         return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
     }
 }

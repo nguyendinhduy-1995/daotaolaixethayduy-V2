@@ -39,7 +39,8 @@ export async function GET(req: Request) {
     });
 
     return NextResponse.json({ items });
-  } catch {
+  } catch (err) {
+    console.error("[student.content]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }

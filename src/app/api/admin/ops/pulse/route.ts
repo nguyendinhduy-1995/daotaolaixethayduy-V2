@@ -25,7 +25,8 @@ export async function GET(req: Request) {
 
     const data = await listOpsPulse({ role, ownerId, dateKey, limit });
     return NextResponse.json(data);
-  } catch {
+  } catch (err) {
+    console.error("[admin.ops.pulse]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }

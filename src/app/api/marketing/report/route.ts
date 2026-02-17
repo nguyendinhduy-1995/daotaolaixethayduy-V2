@@ -20,7 +20,8 @@ export async function POST(req: Request) {
 
     const item = await upsertDailyReport(validated.data);
     return NextResponse.json({ ok: true, item });
-  } catch {
+  } catch (err) {
+    console.error("[marketing.report]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }

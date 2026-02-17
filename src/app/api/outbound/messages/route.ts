@@ -359,7 +359,8 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ outboundMessage, skipped: false });
-  } catch {
+  } catch (err) {
+    console.error("[outbound.messages]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }

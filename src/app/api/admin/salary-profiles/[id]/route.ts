@@ -24,7 +24,8 @@ export async function GET(req: Request, context: RouteContext) {
     });
     if (!profile) return jsonError(404, "NOT_FOUND", "Salary profile not found");
     return NextResponse.json({ profile });
-  } catch {
+  } catch (err) {
+    console.error("[admin.salary-profiles.[id]]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }
@@ -58,7 +59,8 @@ export async function PATCH(req: Request, context: RouteContext) {
     });
 
     return NextResponse.json({ profile });
-  } catch {
+  } catch (err) {
+    console.error("[admin.salary-profiles.[id]]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }

@@ -31,7 +31,8 @@ export async function GET(req: Request) {
       orderBy: { createdAt: "desc" },
     });
     return NextResponse.json({ items });
-  } catch {
+  } catch (err) {
+    console.error("[templates]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }

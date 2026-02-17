@@ -48,7 +48,8 @@ export async function GET(req: Request) {
     ]);
 
     return NextResponse.json({ items, page, pageSize, total });
-  } catch {
+  } catch (err) {
+    console.error("[admin.commissions]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }
@@ -97,7 +98,8 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ commission });
-  } catch {
+  } catch (err) {
+    console.error("[admin.commissions]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }

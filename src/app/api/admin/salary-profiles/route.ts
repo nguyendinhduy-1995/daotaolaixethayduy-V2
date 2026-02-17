@@ -52,7 +52,8 @@ export async function GET(req: Request) {
     ]);
 
     return NextResponse.json({ items, page, pageSize, total });
-  } catch {
+  } catch (err) {
+    console.error("[admin.salary-profiles]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }
@@ -94,7 +95,8 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ profile });
-  } catch {
+  } catch (err) {
+    console.error("[admin.salary-profiles]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }

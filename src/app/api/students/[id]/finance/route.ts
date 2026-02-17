@@ -44,7 +44,8 @@ export async function GET(req: Request, context: RouteContext) {
       paidRatio,
       paid50,
     });
-  } catch {
+  } catch (err) {
+    console.error("[students.[id].finance]", err);
     return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

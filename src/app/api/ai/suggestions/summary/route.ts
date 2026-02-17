@@ -76,7 +76,8 @@ export async function GET(req: Request) {
             },
             totalActive,
         });
-    } catch {
+    } catch (err) {
+    console.error("[ai.suggestions.summary]", err);
         return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
     }
 }

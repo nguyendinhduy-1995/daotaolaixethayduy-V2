@@ -170,7 +170,8 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ lead });
-  } catch {
+  } catch (err) {
+    console.error("[leads]", err);
     return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

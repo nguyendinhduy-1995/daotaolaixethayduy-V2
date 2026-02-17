@@ -39,7 +39,8 @@ export async function GET(req: Request) {
         permissions: serializePermissions(permissions),
       },
     });
-  } catch {
+  } catch (err) {
+    console.error("[auth.me]", err);
     return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

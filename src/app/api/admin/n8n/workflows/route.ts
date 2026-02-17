@@ -23,7 +23,8 @@ export async function GET(req: Request) {
       ingestEndpoints: N8N_INGEST_ENDPOINTS,
       workflows: N8N_WORKFLOWS,
     });
-  } catch {
+  } catch (err) {
+    console.error("[admin.n8n.workflows]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }

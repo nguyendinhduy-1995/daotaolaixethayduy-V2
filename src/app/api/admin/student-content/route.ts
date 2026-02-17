@@ -102,7 +102,8 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ item });
-  } catch {
+  } catch (err) {
+    console.error("[admin.student-content]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }

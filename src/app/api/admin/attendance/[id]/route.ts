@@ -36,7 +36,8 @@ export async function PATCH(req: Request, context: RouteContext) {
     });
 
     return NextResponse.json({ attendance });
-  } catch {
+  } catch (err) {
+    console.error("[admin.attendance.[id]]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }

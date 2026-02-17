@@ -54,7 +54,8 @@ export async function GET(req: Request, context: RouteContext) {
     });
     if (!receipt) return jsonError(404, "NOT_FOUND", API_ERROR_VI.required);
     return NextResponse.json({ receipt });
-  } catch {
+  } catch (err) {
+    console.error("[receipts.[id]]", err);
     return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

@@ -30,7 +30,8 @@ export async function GET(req: Request) {
 
         const count = await prisma.lead.count({ where });
         return NextResponse.json({ count });
-    } catch {
+    } catch (err) {
+    console.error("[leads.unassigned-count]", err);
         return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
     }
 }

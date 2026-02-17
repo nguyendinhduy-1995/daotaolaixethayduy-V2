@@ -32,7 +32,8 @@ export async function GET(req: Request, context: RouteContext) {
       },
       rules: group.rules,
     });
-  } catch {
+  } catch (err) {
+    console.error("[admin.permission-groups.[id].rules]", err);
     return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

@@ -5,12 +5,16 @@ import { jsonError } from "@/lib/api-response";
 import { setStudentAuthCookie } from "@/lib/student-auth-cookies";
 import { signStudentAccessToken } from "@/lib/jwt";
 import { ensureStudentPortalSchema } from "@/lib/student-portal-db";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 function normalizePhone(value: string) {
   return value.replace(/\s+/g, "").trim();
 }
 
 export async function POST(req: Request) {
+  const rateLimited = checkRateLimit(req, { name: "student-register", maxRequests: 5, windowSec: 60 });
+  if (rateLimited) return rateLimited;
+
   try {
     await ensureStudentPortalSchema();
     const body = await req.json().catch(() => null);
@@ -33,11 +37,11 @@ export async function POST(req: Request) {
     const student = studentId
       ? await prisma.student.findUnique({ where: { id: studentId }, include: { lead: true } })
       : await prisma.student.findFirst({
-          where: {
-            OR: [{ id: profileCode }, { leadId: profileCode }, { lead: { phone: profileCode } }],
-          },
-          include: { lead: true },
-        });
+        where: {
+          OR: [{ id: profileCode }, { leadId: profileCode }, { lead: { phone: profileCode } }],
+        },
+        include: { lead: true },
+      });
     if (!student) return jsonError(404, "NOT_FOUND", "Không tìm thấy học viên");
 
     const existed = await prisma.studentAccount.findFirst({
@@ -70,7 +74,8 @@ export async function POST(req: Request) {
     });
     setStudentAuthCookie(response, accessToken);
     return response;
-  } catch {
+  } catch (err) {
+    console.error("[student.auth.register]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }

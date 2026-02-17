@@ -64,7 +64,8 @@ export async function GET(req: Request) {
         });
 
         return NextResponse.json({ items: staleItems, page, pageSize, total });
-    } catch {
+    } catch (err) {
+    console.error("[leads.stale]", err);
         return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
     }
 }

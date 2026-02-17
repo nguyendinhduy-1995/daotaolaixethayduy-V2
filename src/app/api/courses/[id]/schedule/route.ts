@@ -58,7 +58,8 @@ export async function GET(req: Request, context: RouteContext) {
     });
 
     return NextResponse.json({ items });
-  } catch {
+  } catch (err) {
+    console.error("[courses.[id].schedule]", err);
     return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

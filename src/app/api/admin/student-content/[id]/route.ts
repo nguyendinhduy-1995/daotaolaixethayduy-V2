@@ -41,7 +41,8 @@ export async function PATCH(req: Request, context: RouteContext) {
       },
     });
     return NextResponse.json({ item });
-  } catch {
+  } catch (err) {
+    console.error("[admin.student-content.[id]]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }

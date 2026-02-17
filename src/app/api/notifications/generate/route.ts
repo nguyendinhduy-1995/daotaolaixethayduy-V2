@@ -21,7 +21,8 @@ export async function POST(req: Request) {
 
     const result = await runNotificationGenerate(body.scope, Boolean(body.dryRun));
     return NextResponse.json(result);
-  } catch {
+  } catch (err) {
+    console.error("[notifications.generate]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }

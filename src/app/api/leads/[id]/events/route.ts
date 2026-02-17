@@ -54,7 +54,8 @@ export async function POST(req: Request, context: RouteContext) {
 
     if (!result) return jsonError(404, "NOT_FOUND", API_ERROR_VI.notFoundLead);
     return NextResponse.json(result);
-  } catch {
+  } catch (err) {
+    console.error("[leads.[id].events]", err);
     return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }
@@ -100,7 +101,8 @@ export async function GET(req: Request, context: RouteContext) {
     ]);
 
     return NextResponse.json({ items, page, pageSize, total });
-  } catch {
+  } catch (err) {
+    console.error("[leads.[id].events]", err);
     return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

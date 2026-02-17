@@ -97,7 +97,8 @@ export async function GET(req: Request, context: RouteContext) {
       attendance: records,
       audits,
     });
-  } catch {
+  } catch (err) {
+    console.error("[schedule.[id]]", err);
     return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

@@ -26,7 +26,8 @@ export async function GET(req: Request, context: RouteContext) {
     });
     if (!course) return jsonError(404, "NOT_FOUND", "Course not found");
     return NextResponse.json({ course });
-  } catch {
+  } catch (err) {
+    console.error("[courses.[id]]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }

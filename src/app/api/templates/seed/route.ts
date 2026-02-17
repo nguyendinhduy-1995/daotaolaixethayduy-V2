@@ -13,7 +13,8 @@ export async function POST(req: Request) {
   try {
     await ensureDefaultMessageTemplates();
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (err) {
+    console.error("[templates.seed]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }

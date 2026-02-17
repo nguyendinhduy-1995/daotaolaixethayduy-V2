@@ -92,7 +92,8 @@ export async function POST(req: Request) {
       },
     });
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (err) {
+    console.error("[outbound.callback]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }

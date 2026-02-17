@@ -74,7 +74,8 @@ export async function GET(req: Request) {
         const csv = toCsv(items as LeadRow[], LEAD_CSV_COLUMNS);
         const dateStr = new Date().toISOString().slice(0, 10);
         return csvResponse(csv, `leads_${dateStr}.csv`);
-    } catch {
+    } catch (err) {
+    console.error("[leads.export]", err);
         return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
     }
 }

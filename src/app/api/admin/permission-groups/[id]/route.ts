@@ -22,7 +22,8 @@ export async function GET(req: Request, context: RouteContext) {
     });
     if (!group) return jsonError(404, "NOT_FOUND", "Không tìm thấy nhóm quyền");
     return NextResponse.json({ group });
-  } catch {
+  } catch (err) {
+    console.error("[admin.permission-groups.[id]]", err);
     return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }
@@ -82,7 +83,8 @@ export async function DELETE(req: Request, context: RouteContext) {
     ]);
 
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (err) {
+    console.error("[admin.permission-groups.[id]]", err);
     return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

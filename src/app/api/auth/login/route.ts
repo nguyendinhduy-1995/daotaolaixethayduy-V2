@@ -4,8 +4,12 @@ import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-response";
 import { setAuthCookies } from "@/lib/auth-cookies";
 import { signAccessToken, signRefreshToken } from "@/lib/jwt";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
+  const rateLimited = checkRateLimit(req, { name: "admin-login", maxRequests: 10, windowSec: 60 });
+  if (rateLimited) return rateLimited;
+
   try {
     const body = await req.json().catch(() => null);
     const account = String(body?.account ?? body?.email ?? "").trim();
@@ -38,7 +42,8 @@ export async function POST(req: Request) {
     });
     setAuthCookies(response, accessToken, refreshToken);
     return response;
-  } catch {
+  } catch (err) {
+    console.error("[auth.login]", err);
     return jsonError(500, "INTERNAL_ERROR", "Lỗi hệ thống");
   }
 }

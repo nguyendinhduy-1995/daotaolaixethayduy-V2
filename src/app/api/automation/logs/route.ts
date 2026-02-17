@@ -193,7 +193,8 @@ export async function POST(req: Request) {
       },
     });
     return NextResponse.json({ log: created });
-  } catch {
+  } catch (err) {
+    console.error("[automation.logs]", err);
     return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

@@ -53,7 +53,8 @@ export async function POST(req: Request) {
       },
       warning: "Endpoint deprecated. Use POST /api/marketing/report",
     });
-  } catch {
+  } catch (err) {
+    console.error("[marketing.ingest]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }

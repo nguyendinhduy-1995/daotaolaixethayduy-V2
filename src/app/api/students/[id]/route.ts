@@ -48,7 +48,8 @@ export async function GET(req: Request, context: RouteContext) {
 
     if (!student) return jsonError(404, "NOT_FOUND", API_ERROR_VI.notFoundStudent);
     return NextResponse.json({ student });
-  } catch {
+  } catch (err) {
+    console.error("[students.[id]]", err);
     return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

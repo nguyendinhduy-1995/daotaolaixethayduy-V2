@@ -10,7 +10,8 @@ export async function GET(req: Request) {
   try {
     const payload = await getSchedulerHealth(authResult.auth);
     return NextResponse.json(payload);
-  } catch {
+  } catch (err) {
+    console.error("[scheduler.health]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }

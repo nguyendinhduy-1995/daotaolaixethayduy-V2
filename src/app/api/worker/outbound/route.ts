@@ -41,7 +41,8 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json(result);
-  } catch {
+  } catch (err) {
+    console.error("[worker.outbound]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }

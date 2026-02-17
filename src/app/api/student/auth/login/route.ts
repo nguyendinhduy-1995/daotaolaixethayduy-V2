@@ -5,12 +5,16 @@ import { jsonError } from "@/lib/api-response";
 import { setStudentAuthCookie } from "@/lib/student-auth-cookies";
 import { signStudentAccessToken } from "@/lib/jwt";
 import { ensureStudentPortalSchema } from "@/lib/student-portal-db";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 function normalizePhone(value: string) {
   return value.replace(/\s+/g, "").trim();
 }
 
 export async function POST(req: Request) {
+  const rateLimited = checkRateLimit(req, { name: "student-login", maxRequests: 10, windowSec: 60 });
+  if (rateLimited) return rateLimited;
+
   try {
     await ensureStudentPortalSchema();
     const body = await req.json().catch(() => null);
@@ -71,7 +75,8 @@ export async function POST(req: Request) {
     });
     setStudentAuthCookie(response, accessToken);
     return response;
-  } catch {
+  } catch (err) {
+    console.error("[student.auth.login]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }

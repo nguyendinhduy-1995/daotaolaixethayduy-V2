@@ -23,7 +23,8 @@ export async function POST(req: Request) {
 
     const result = await runDailyCron({ dryRun, force, requestedBy: "cron" });
     return NextResponse.json(result);
-  } catch {
+  } catch (err) {
+    console.error("[cron.daily]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }

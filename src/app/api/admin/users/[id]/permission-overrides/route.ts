@@ -45,7 +45,8 @@ export async function GET(req: Request, context: RouteContext) {
       overrides: user.permissionOverrides,
       effectivePermissions: serializePermissions(effectivePermissions),
     });
-  } catch {
+  } catch (err) {
+    console.error("[admin.users.[id].permission-overrides]", err);
     return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

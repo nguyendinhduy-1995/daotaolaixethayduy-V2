@@ -142,7 +142,8 @@ export async function GET(req: Request) {
                 count: row._count,
             })),
         });
-    } catch {
+    } catch (err) {
+    console.error("[ai.suggestions.analytics]", err);
         return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
     }
 }

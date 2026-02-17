@@ -46,7 +46,8 @@ export async function GET(req: Request) {
       totals: payload.totals,
       warning: "Endpoint deprecated. Use GET /api/admin/marketing/reports",
     });
-  } catch {
+  } catch (err) {
+    console.error("[marketing.metrics]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }

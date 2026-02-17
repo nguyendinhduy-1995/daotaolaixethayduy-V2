@@ -40,7 +40,8 @@ export async function GET(req: Request) {
       .sort((a, b) => b.month.localeCompare(a.month));
 
     return NextResponse.json({ items });
-  } catch {
+  } catch (err) {
+    console.error("[me.payroll]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }

@@ -43,7 +43,8 @@ export async function GET(req: Request, context: RouteContext) {
     });
     if (!user) return jsonError(404, "NOT_FOUND", "Không tìm thấy người dùng");
     return NextResponse.json({ user });
-  } catch {
+  } catch (err) {
+    console.error("[users.[id]]", err);
     return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }
@@ -116,7 +117,8 @@ export async function PATCH(req: Request, context: RouteContext) {
     });
 
     return NextResponse.json({ user });
-  } catch {
+  } catch (err) {
+    console.error("[users.[id]]", err);
     return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

@@ -69,7 +69,8 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json(result);
-  } catch {
+  } catch (err) {
+    console.error("[leads.assign]", err);
     return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

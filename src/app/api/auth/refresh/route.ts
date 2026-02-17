@@ -41,7 +41,8 @@ export async function POST(req: Request) {
   try {
     payload = verifyRefreshToken(refreshToken);
     if (payload.type !== "refresh") throw new Error("invalid");
-  } catch {
+  } catch (err) {
+    console.error("[auth.refresh]", err);
     return jsonError(401, "AUTH_INVALID_TOKEN", "Invalid or expired token");
   }
 
@@ -67,7 +68,8 @@ export async function POST(req: Request) {
     });
     setAuthCookies(response, accessToken, nextRefreshToken);
     return response;
-  } catch {
+  } catch (err) {
+    console.error("[auth.refresh]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }

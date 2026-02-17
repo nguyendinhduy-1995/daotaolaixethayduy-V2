@@ -110,7 +110,8 @@ export async function GET(req: Request) {
         : null,
       contentHighlights,
     });
-  } catch {
+  } catch (err) {
+    console.error("[student.me]", err);
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }

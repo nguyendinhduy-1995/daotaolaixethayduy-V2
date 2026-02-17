@@ -149,7 +149,8 @@ export async function POST(req: Request, context: RouteContext) {
       updated: recordsInput.length,
       changed: result.changedCount,
     });
-  } catch {
+  } catch (err) {
+    console.error("[schedule.[id].attendance]", err);
     return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

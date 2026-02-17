@@ -33,7 +33,8 @@ export async function GET(req: Request, context: RouteContext) {
     });
     if (!lead) return jsonError(404, "NOT_FOUND", API_ERROR_VI.notFoundLead);
     return NextResponse.json({ lead });
-  } catch {
+  } catch (err) {
+    console.error("[leads.[id]]", err);
     return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }

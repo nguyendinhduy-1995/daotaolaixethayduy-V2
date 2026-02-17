@@ -119,7 +119,8 @@ export async function GET(req: Request) {
                 GREEN: colorDist.GREEN ?? 0,
             },
         });
-    } catch {
+    } catch (err) {
+    console.error("[ai.suggestions.trend]", err);
         return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
     }
 }

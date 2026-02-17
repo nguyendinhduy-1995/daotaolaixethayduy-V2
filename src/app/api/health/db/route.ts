@@ -8,7 +8,8 @@ export async function GET() {
     await prisma.user.findFirst();
 
     return NextResponse.json({ ok: true, db: "connected" });
-  } catch {
+  } catch (err) {
+    console.error("[health.db]", err);
     return jsonError(500, "DB_UNAVAILABLE", "Database unavailable");
   }
 }
