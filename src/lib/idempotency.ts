@@ -14,10 +14,8 @@ export function hashRequestBody(body: unknown): string {
 export function requireIdempotencyKey(req: Request) {
   const key = req.headers.get("Idempotency-Key")?.trim();
   if (!key) {
-    return {
-      key: null,
-      error: jsonError(400, "VALIDATION_ERROR", "Thiếu Idempotency-Key"),
-    };
+    // Auto-generate key when client doesn't provide one
+    return { key: crypto.randomUUID(), error: null };
   }
   return { key, error: null };
 }

@@ -173,12 +173,12 @@ export async function GET(req: Request) {
       ...(receivedAt ? { receivedAt } : {}),
       ...(q
         ? {
-            student: {
-              lead: {
-                OR: [{ fullName: { contains: q, mode: "insensitive" } }, { phone: { contains: q, mode: "insensitive" } }],
-              },
+          student: {
+            lead: {
+              OR: [{ fullName: { contains: q, mode: "insensitive" } }, { phone: { contains: q, mode: "insensitive" } }],
             },
-          }
+          },
+        }
         : {}),
     };
     const where = applyScopeToWhere(whereBase, scope, "receipt");

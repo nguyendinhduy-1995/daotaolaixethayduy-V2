@@ -100,7 +100,7 @@ export async function buildFinanceCandidates() {
       scope: "FINANCE",
       priority,
       title: "Nhắc thu học phí",
-      message: `${student.lead.fullName || "Học viên"} còn ${remaining.toLocaleString("vi-VN")} đ cần thu.`,
+      message: `${student.lead.fullName || "Học viên"} còn ${remaining.toLocaleString("vi-VN")}đ cần thu.`,
       ownerId: student.lead.ownerId,
       leadId: student.leadId,
       studentId: student.id,

@@ -89,5 +89,5 @@ export function formatDateVi(value: string | Date) {
 }
 
 export function formatCurrencyVnd(value: number) {
-  return `${new Intl.NumberFormat("vi-VN").format(value)} đ`;
+  return `${new Intl.NumberFormat("vi-VN").format(value)}đ`;
 }
