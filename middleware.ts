@@ -24,7 +24,8 @@ function isProtectedPath(pathname: string) {
 }
 
 function isStudentProtectedPath(pathname: string) {
-  if (!pathname.startsWith("/student")) return false;
+  // Match /student exactly or /student/* but NOT /students (CRM admin route)
+  if (pathname !== "/student" && !pathname.startsWith("/student/")) return false;
   if (pathname === "/student/login" || pathname === "/student/register") return false;
   return true;
 }
