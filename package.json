@@ -7,6 +7,7 @@
     "seed:admin": "ts-node --transpile-only scripts/seed-admin.ts",
     "seed:templates": "ts-node --transpile-only scripts/seed-templates.ts",
     "seed:tuition": "ts-node --transpile-only scripts/seed-tuition-plans.ts",
+    "seed:demo": "npx tsx prisma/seed-demo.ts",
     "dev": "node scripts/dev.mjs",
     "dev:stable": "node scripts/dev-stable.mjs",
     "build": "next build",

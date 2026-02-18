@@ -1,0 +1,18 @@
+{
+    "source": "n8n",
+    "runId": "demo-run-001",
+    "suggestions": [
+        {
+            "role": "telesales",
+            "ownerId": "<USER_ID>",
+            "branchId": "<BRANCH_ID>",
+            "color": "GREEN",
+            "title": "KPI đạt 95% - Tuyệt vời!",
+            "body": "Tỷ lệ chuyển đổi lead rất tốt. Tiếp tục phát huy!",
+            "kpiContext": {
+                "period": "2026-02-18",
+                "score": 95
+            }
+        }
+    ]
+}

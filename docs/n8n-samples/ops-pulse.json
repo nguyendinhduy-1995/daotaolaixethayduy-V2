@@ -1,0 +1,13 @@
+{
+    "role": "PAGE",
+    "branchId": "<BRANCH_ID>",
+    "ownerId": "<USER_ID>",
+    "dateKey": "2026-02-18",
+    "metrics": {
+        "totalLeads": 45,
+        "newLeads": 12,
+        "calledLeads": 30,
+        "appointedLeads": 8,
+        "cancelledLeads": 2
+    }
+}
