@@ -112,6 +112,11 @@ body {
   animation: shimmer 1.5s linear infinite;
 }
 
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
 .ios-glass {
   background: color-mix(in srgb, #ffffff 70%, transparent);
   backdrop-filter: blur(16px) saturate(140%);
