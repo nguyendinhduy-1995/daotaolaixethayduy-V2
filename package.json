@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "postinstall": "prisma generate",
     "seed:admin": "ts-node --transpile-only scripts/seed-admin.ts",
     "seed:templates": "ts-node --transpile-only scripts/seed-templates.ts",
     "seed:tuition": "ts-node --transpile-only scripts/seed-tuition-plans.ts",
