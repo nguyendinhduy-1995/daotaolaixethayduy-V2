@@ -211,74 +211,53 @@ export default function ApiHubPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-zinc-900">API Hub</h1>
-          <p className="text-sm text-zinc-500">Tra cứu nhanh API để tích hợp hệ thống bên ngoài.</p>
+      {/* ── Premium Header ── */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600 p-4 text-white shadow-lg shadow-sky-200 animate-fadeInUp">
+        <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+        <div className="absolute -bottom-4 -left-4 h-20 w-20 rounded-full bg-white/10 blur-xl" />
+        <div className="relative flex flex-wrap items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 text-2xl backdrop-blur-sm">🔌</div>
+          <div className="flex-1">
+            <h2 className="text-lg font-bold">API Hub</h2>
+            <p className="text-sm text-white/80">Tra cứu nhanh API để tích hợp hệ thống bên ngoài.</p>
+          </div>
+          <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-3 py-1 text-sm font-bold backdrop-blur-sm">📊 {filtered.length} API</span>
         </div>
       </div>
 
       <Alert type="info" message="Không dán token thật vào tài liệu hoặc ảnh chụp màn hình. Mọi ví dụ bên dưới dùng token REDACTED." />
 
-      <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-        <h2 className="text-base font-semibold text-slate-900">Tích hợp</h2>
-        <div className="mt-2 space-y-1 text-sm text-zinc-700">
-          <p>
-            <span className="font-medium text-zinc-900">Base URL:</span> `http://localhost:3000` (local), staging/prod dùng
-            placeholder trong spec.
-          </p>
-          <p>
-            <span className="font-medium text-zinc-900">Auth:</span> `POST /api/auth/login` lấy token Bearer, sau đó làm mới qua
-            `POST /api/auth/refresh`.
-          </p>
-          <p>
-            <span className="font-medium text-zinc-900">Idempotency:</span> gửi `Idempotency-Key` cho các API tạo mới như phiếu
-            thu, danh sách gọi nhắc, gửi đi hàng đợi gọi nhắc, lịch học, nạp dữ liệu AI.
-          </p>
-          <p>
-            <span className="font-medium text-zinc-900">Webhook:</span> callback outbound tại `POST /api/outbound/callback`,
-            header hiện dùng `x-callback-secret` (có placeholder `x-signature` trong spec).
-          </p>
-        </div>
-        <div className="mt-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600">
-          <p className="font-semibold uppercase tracking-wide text-zinc-500">Tài liệu repo</p>
-          <p className="mt-1 font-mono">PERMISSION_MATRIX.md</p>
-          <p className="font-mono">API_INTEGRATION_SPEC.md</p>
-          <p className="mt-2 text-[11px] text-zinc-500">
-            Luồng mới: tạo việc từ đề xuất, tạo danh sách gọi từ đề xuất, nhắc đánh giá khi việc hoàn thành.
-          </p>
+      <section className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm animate-fadeInUp" style={{ animationDelay: "80ms" }}>
+        <div className="h-1 bg-gradient-to-r from-sky-500 to-blue-500" />
+        <div className="p-4">
+          <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">🔧 Tích hợp</h2>
+          <div className="mt-2 space-y-1 text-sm text-zinc-700">
+            <p><span className="font-medium text-zinc-900">Base URL:</span> `http://localhost:3000` (local), staging/prod dùng placeholder trong spec.</p>
+            <p><span className="font-medium text-zinc-900">Auth:</span> `POST /api/auth/login` lấy token Bearer, sau đó làm mới qua `POST /api/auth/refresh`.</p>
+            <p><span className="font-medium text-zinc-900">Idempotency:</span> gửi `Idempotency-Key` cho các API tạo mới như phiếu thu, danh sách gọi nhắc, gửi đi hàng đợi gọi nhắc, lịch học, nạp dữ liệu AI.</p>
+            <p><span className="font-medium text-zinc-900">Webhook:</span> callback outbound tại `POST /api/outbound/callback`, header hiện dùng `x-callback-secret` (có placeholder `x-signature` trong spec).</p>
+          </div>
+          <div className="mt-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600">
+            <p className="font-semibold uppercase tracking-wide text-zinc-500">Tài liệu repo</p>
+            <p className="mt-1 font-mono">PERMISSION_MATRIX.md</p>
+            <p className="font-mono">API_INTEGRATION_SPEC.md</p>
+            <p className="mt-2 text-[11px] text-zinc-500">Luồng mới: tạo việc từ đề xuất, tạo danh sách gọi từ đề xuất, nhắc đánh giá khi việc hoàn thành.</p>
+          </div>
         </div>
       </section>
 
-      <div className="rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white p-3 shadow-sm animate-fadeInUp" style={{ animationDelay: "120ms" }}>
         <div className="mb-3 inline-flex rounded-xl border border-zinc-200 bg-zinc-50 p-1">
-          <button
-            type="button"
-            onClick={() => setActiveTab("api")}
-            className={`rounded-lg px-3 py-1.5 text-sm ${activeTab === "api" ? "bg-white text-zinc-900 shadow" : "text-zinc-600"}`}
-          >
-            API tích hợp
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("n8n")}
-            className={`rounded-lg px-3 py-1.5 text-sm ${activeTab === "n8n" ? "bg-white text-zinc-900 shadow" : "text-zinc-600"}`}
-          >
-            Luồng tự động (n8n)
-          </button>
+          <button type="button" onClick={() => setActiveTab("api")} className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${activeTab === "api" ? "bg-gradient-to-r from-sky-500 to-blue-500 text-white shadow" : "text-zinc-600 hover:text-zinc-800"}`}>📡 API tích hợp</button>
+          <button type="button" onClick={() => setActiveTab("n8n")} className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${activeTab === "n8n" ? "bg-gradient-to-r from-sky-500 to-blue-500 text-white shadow" : "text-zinc-600 hover:text-zinc-800"}`}>⚙️ Luồng tự động (n8n)</button>
         </div>
-        {activeTab === "api" ? (
-          <Input
-            placeholder="Tìm API..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        ) : null}
+        {activeTab === "api" ? <Input placeholder="🔍 Tìm API..." value={query} onChange={(e) => setQuery(e.target.value)} /> : null}
       </div>
 
       {activeTab === "api" && grouped.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-zinc-300 bg-white p-6 text-sm text-zinc-600">
-          Không tìm thấy API phù hợp.
+        <div className="rounded-2xl border-2 border-dashed border-zinc-200 bg-white p-8 text-center animate-fadeInUp">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-zinc-100 text-2xl">🔍</div>
+          <p className="font-medium text-zinc-700">Không tìm thấy API phù hợp.</p>
         </div>
       ) : null}
 

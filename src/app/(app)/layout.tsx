@@ -11,6 +11,7 @@ import { MobileAdminMenu } from "@/components/mobile/MobileAdminMenu";
 import { DesktopSidebarMenu } from "@/components/admin/DesktopSidebarMenu";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { ToastProvider } from "@/components/ui/toast";
 import { APP_DESCRIPTION, APP_SHORT } from "@/lib/app-meta";
 
 function roleLabel(role: string) {
@@ -152,45 +153,54 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-100/70">
-      <div className="flex min-h-screen">
-        <DesktopSidebarMenu permissions={user?.permissions} isAdmin={Boolean(user && isAdminRole(user.role))} />
+    <ToastProvider>
+      <div className="min-h-screen bg-zinc-100/70">
+        {/* Skip to content — visible on keyboard focus */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[9999] focus:rounded-xl focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-zinc-900 focus:shadow-lg"
+        >
+          Bỏ qua điều hướng
+        </a>
+        <div className="flex min-h-screen">
+          <DesktopSidebarMenu permissions={user?.permissions} isAdmin={Boolean(user && isAdminRole(user.role))} />
 
-        <div className="min-w-0 flex-1">
-          {!usePageMobileShell ? (
-            <MobileTopbar
-              title={pageMeta.title}
-              subtitle={pageMeta.subtitle}
-              rightAction={
-                <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700">
-                  {user ? roleLabel(user.role) : ""}
-                </span>
-              }
-            />
-          ) : null}
+          <div className="min-w-0 flex-1">
+            {!usePageMobileShell ? (
+              <MobileTopbar
+                title={pageMeta.title}
+                subtitle={pageMeta.subtitle}
+                rightAction={
+                  <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+                    {user ? roleLabel(user.role) : ""}
+                  </span>
+                }
+              />
+            ) : null}
 
-          <header className="sticky top-0 z-30 hidden border-b border-zinc-200 bg-white/95 px-5 py-3 backdrop-blur md:block">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-lg font-semibold tracking-tight text-slate-900">{pageMeta.title}</p>
-                <p className="text-xs text-zinc-500">{pageMeta.subtitle}</p>
+            <header aria-label="Thanh điều hướng desktop" className="sticky top-0 z-30 hidden border-b border-zinc-200 bg-white/95 px-5 py-3 backdrop-blur md:block">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-lg font-semibold tracking-tight text-slate-900">{pageMeta.title}</p>
+                  <p className="text-xs text-zinc-500">{pageMeta.subtitle}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="hidden rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 lg:inline-flex">
+                    {user ? `${user.name || user.email} • ${roleLabel(user.role)}` : ""}
+                  </span>
+                  <Button variant="secondary" onClick={logout}>Đăng xuất</Button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="hidden rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 lg:inline-flex">
-                  {user ? `${user.name || user.email} • ${roleLabel(user.role)}` : ""}
-                </span>
-                <Button variant="secondary" onClick={logout}>Đăng xuất</Button>
-              </div>
-            </div>
-          </header>
+            </header>
 
-          <main className={`mx-auto w-full max-w-[1280px] px-3 py-3 ${usePageMobileShell ? "pb-6" : "pb-24"} md:p-5 md:pb-8`}>
-            <ErrorBoundary>{children}</ErrorBoundary>
-          </main>
+            <main id="main-content" className={`mx-auto w-full max-w-[1280px] px-3 py-3 ${usePageMobileShell ? "pb-6" : "pb-24"} md:p-5 md:pb-8`}>
+              <ErrorBoundary>{children}</ErrorBoundary>
+            </main>
+          </div>
         </div>
-      </div>
 
-      {!usePageMobileShell ? <MobileAdminMenu /> : null}
-    </div>
+        {!usePageMobileShell ? <MobileAdminMenu /> : null}
+      </div>
+    </ToastProvider>
   );
 }

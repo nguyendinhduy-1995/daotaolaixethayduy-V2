@@ -6,6 +6,7 @@ import { clearToken, fetchMe, getToken } from "@/lib/auth-client";
 import { ACTION_KEYS, MODULE_KEYS, type ActionKey, type ModuleKey } from "@/lib/permission-keys";
 import { hasUiPermission } from "@/lib/ui-permissions";
 import { Alert } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -56,13 +57,13 @@ function keyOf(moduleKey: ModuleKey, action: ActionKey) {
 }
 
 export default function AdminPermissionPage() {
+  const toast = useToast();
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [allowed, setAllowed] = useState(false);
   const [tab, setTab] = useState<TabKey>("groups");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [searchModule, setSearchModule] = useState("");
 
   const [groups, setGroups] = useState<PermissionGroup[]>([]);
@@ -193,7 +194,6 @@ export default function AdminPermissionPage() {
     }
     setSaving(true);
     setError("");
-    setSuccess("");
     try {
       const data = await fetchJson<{ group: PermissionGroup }>("/api/admin/permission-groups", {
         method: "POST",
@@ -202,7 +202,7 @@ export default function AdminPermissionPage() {
       });
       await loadGroups();
       setSelectedGroupId(data.group.id);
-      setSuccess("Đã tạo nhóm quyền.");
+      toast.success("Đã tạo nhóm quyền.");
     } catch (e) {
       const err = e as ApiClientError;
       setError(`Không tạo được nhóm: ${parseApiError(err)}`);
@@ -220,7 +220,6 @@ export default function AdminPermissionPage() {
 
     setSaving(true);
     setError("");
-    setSuccess("");
     try {
       await fetchJson(`/api/admin/permission-groups/${selectedGroupId}`, {
         method: "PATCH",
@@ -228,7 +227,7 @@ export default function AdminPermissionPage() {
         body: { name: groupName.trim(), description: groupDescription.trim() || null },
       });
       await loadGroups();
-      setSuccess("Đã lưu thông tin nhóm quyền.");
+      toast.success("Đã lưu thông tin nhóm quyền.");
     } catch (e) {
       const err = e as ApiClientError;
       setError(`Không lưu được nhóm quyền: ${parseApiError(err)}`);
@@ -242,7 +241,6 @@ export default function AdminPermissionPage() {
     if (!token || !selectedGroupId) return;
     setSaving(true);
     setError("");
-    setSuccess("");
     try {
       await fetchJson(`/api/admin/permission-groups/${selectedGroupId}`, { method: "DELETE", token });
       setSelectedGroupId("");
@@ -250,7 +248,7 @@ export default function AdminPermissionPage() {
       setGroupDescription("");
       setGroupRules(new Map());
       await loadGroups();
-      setSuccess("Đã xóa nhóm quyền.");
+      toast.success("Đã xóa nhóm quyền.");
     } catch (e) {
       const err = e as ApiClientError;
       setError(`Không xóa được nhóm quyền: ${parseApiError(err)}`);
@@ -268,7 +266,6 @@ export default function AdminPermissionPage() {
 
     setSaving(true);
     setError("");
-    setSuccess("");
 
     try {
       const rules: PermissionRule[] = [];
@@ -284,7 +281,7 @@ export default function AdminPermissionPage() {
         token,
         body: { rules },
       });
-      setSuccess("Đã lưu ma trận quyền của nhóm.");
+      toast.success("Đã lưu ma trận quyền của nhóm.");
     } catch (e) {
       const err = e as ApiClientError;
       setError(`Không lưu được rules: ${parseApiError(err)}`);
@@ -302,7 +299,6 @@ export default function AdminPermissionPage() {
 
     setSaving(true);
     setError("");
-    setSuccess("");
     try {
       const overrides: PermissionRule[] = [];
       for (const moduleKey of MODULE_KEYS) {
@@ -321,7 +317,7 @@ export default function AdminPermissionPage() {
           overrides,
         },
       });
-      setSuccess("Đã lưu phân quyền người dùng.");
+      toast.success("Đã lưu phân quyền người dùng.");
     } catch (e) {
       const err = e as ApiClientError;
       setError(`Không lưu được override: ${parseApiError(err)}`);
@@ -348,54 +344,135 @@ export default function AdminPermissionPage() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-zinc-200 bg-white p-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant={tab === "groups" ? "primary" : "secondary"} onClick={() => setTab("groups")}>Nhóm quyền</Button>
-          <Button variant={tab === "users" ? "primary" : "secondary"} onClick={() => setTab("users")}>Phân quyền theo người dùng</Button>
-          <Input
-            value={searchModule}
-            onChange={(e) => setSearchModule(e.target.value)}
-            placeholder="Tìm module..."
-            className="min-w-[220px] md:ml-auto"
-          />
+      {/* ── Premium Header ── */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 p-4 text-white shadow-lg shadow-blue-200 animate-fadeInUp">
+        <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+        <div className="absolute -bottom-4 -left-4 h-20 w-20 rounded-full bg-white/10 blur-xl" />
+        <div className="relative flex flex-wrap items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 text-2xl backdrop-blur-sm">🔐</div>
+          <div className="flex-1">
+            <h2 className="text-lg font-bold">Phân quyền</h2>
+            <p className="text-sm text-white/80">Quản lý nhóm quyền và phân quyền người dùng</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm animate-fadeInUp" style={{ animationDelay: "80ms" }}>
+        <div className="h-1 bg-gradient-to-r from-blue-500 to-indigo-500" />
+        <div className="p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant={tab === "groups" ? "primary" : "secondary"} onClick={() => setTab("groups")}>Nhóm quyền</Button>
+            <Button variant={tab === "users" ? "primary" : "secondary"} onClick={() => setTab("users")}>Phân quyền theo người dùng</Button>
+            <Input
+              value={searchModule}
+              onChange={(e) => setSearchModule(e.target.value)}
+              placeholder="Tìm chức năng..."
+              className="min-w-[220px] md:ml-auto"
+            />
+          </div>
         </div>
       </div>
 
       {error ? <Alert type="error" message={error} /> : null}
-      {success ? <Alert type="success" message={success} /> : null}
-      {loading ? <div className="text-sm text-zinc-600">Đang tải dữ liệu...</div> : null}
+      {loading ? <div className="animate-pulse space-y-2">{[1, 2, 3].map(i => <div key={i} className="h-6 rounded bg-zinc-200" />)}</div> : null}
 
       {tab === "groups" ? (
-        <div className="grid gap-4 lg:grid-cols-[320px,1fr]">
-          <section className="space-y-3 rounded-2xl border border-zinc-200 bg-white p-3">
-            <h2 className="text-sm font-semibold text-zinc-900">Danh sách nhóm quyền</h2>
-            <Select value={selectedGroupId} onChange={(e) => setSelectedGroupId(e.target.value)}>
-              <option value="">Chọn nhóm quyền</option>
-              {groups.map((group) => (
-                <option key={group.id} value={group.id}>
-                  {group.name}{group.isSystem ? " (hệ thống)" : ""}
-                </option>
-              ))}
-            </Select>
+        <div className="grid gap-4 lg:grid-cols-[320px,1fr] animate-fadeInUp" style={{ animationDelay: "160ms" }}>
+          <section className="space-y-3 overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm">
+            <div className="h-1 bg-gradient-to-r from-blue-500 to-indigo-500" />
+            <div className="p-3">
+              <h2 className="text-sm font-semibold text-zinc-900">Danh sách nhóm quyền</h2>
+              <Select value={selectedGroupId} onChange={(e) => setSelectedGroupId(e.target.value)}>
+                <option value="">Chọn nhóm quyền</option>
+                {groups.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.name}{group.isSystem ? " (hệ thống)" : ""}
+                  </option>
+                ))}
+              </Select>
 
-            <div className="space-y-2">
-              <Input placeholder="Tên nhóm quyền" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
-              <Input placeholder="Mô tả" value={groupDescription} onChange={(e) => setGroupDescription(e.target.value)} />
-              <div className="flex gap-2">
-                <Button onClick={createGroup} disabled={saving}>Tạo nhóm</Button>
-                {selectedGroupId ? <Button variant="secondary" onClick={saveGroupInfo} disabled={saving}>Lưu thông tin</Button> : null}
-                {selectedGroupId ? <Button variant="secondary" onClick={deleteGroup} disabled={saving}>Xóa nhóm</Button> : null}
+              <div className="space-y-2">
+                <Input placeholder="Tên nhóm quyền" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
+                <Input placeholder="Mô tả" value={groupDescription} onChange={(e) => setGroupDescription(e.target.value)} />
+                <div className="flex gap-2">
+                  <Button onClick={createGroup} disabled={saving}>Tạo nhóm</Button>
+                  {selectedGroupId ? <Button variant="secondary" onClick={saveGroupInfo} disabled={saving}>Lưu thông tin</Button> : null}
+                  {selectedGroupId ? <Button variant="secondary" onClick={deleteGroup} disabled={saving}>Xóa nhóm</Button> : null}
+                </div>
               </div>
             </div>
           </section>
 
-          <section className="rounded-2xl border border-zinc-200 bg-white p-3">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-zinc-900">Ma trận quyền của nhóm</h2>
-              <Button variant="secondary" onClick={saveGroupRules} disabled={saving || !selectedGroupId}>Lưu</Button>
+          <section className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm">
+            <div className="h-1 bg-gradient-to-r from-indigo-500 to-violet-500" />
+            <div className="p-3">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-zinc-900">Ma trận quyền của nhóm</h2>
+                <Button variant="secondary" onClick={saveGroupRules} disabled={saving || !selectedGroupId}>Lưu</Button>
+              </div>
+              <div className="overflow-auto">
+                <table className="w-full min-w-[960px] border-collapse text-sm">
+                  <thead>
+                    <tr>
+                      <th className="border-b border-zinc-200 px-2 py-2 text-left">Chức năng</th>
+                      {ACTION_KEYS.map((action) => (
+                        <th key={action} className="border-b border-zinc-200 px-2 py-2 text-center">{ACTION_LABEL[action]}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredModules.map((moduleKey) => (
+                      <tr key={moduleKey}>
+                        <td className="border-b border-zinc-100 px-2 py-2 font-mono text-xs text-zinc-700">{moduleKey}</td>
+                        {ACTION_KEYS.map((action) => (
+                          <td key={action} className="border-b border-zinc-100 px-2 py-2 text-center">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(groupRules.get(keyOf(moduleKey, action)))}
+                              onChange={() => toggleGroupRule(moduleKey, action)}
+                              disabled={!selectedGroupId}
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
+          </section>
+        </div>
+      ) : (
+        <div className="space-y-4 overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm animate-fadeInUp" style={{ animationDelay: "160ms" }}>
+          <div className="h-1 bg-gradient-to-r from-blue-500 to-violet-500" />
+          <div className="p-3 space-y-4">
+            <div className="grid gap-2 md:grid-cols-2">
+              <Select value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)}>
+                <option value="">Chọn người dùng</option>
+                {users.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.name || user.email} ({user.role})
+                  </option>
+                ))}
+              </Select>
+
+              <Select value={selectedUserGroupId} onChange={(e) => setSelectedUserGroupId(e.target.value)} disabled={!selectedUserId}>
+                <option value="">Không gán nhóm</option>
+                {groups.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            <div className="flex gap-2">
+              <Button onClick={saveUserOverrides} disabled={saving || !selectedUserId}>Lưu override</Button>
+              <Button variant="secondary" onClick={resetOverrides} disabled={saving || !selectedUserId}>Reset overrides</Button>
+            </div>
+
             <div className="overflow-auto">
-              <table className="w-full min-w-[960px] border-collapse text-sm">
+              <table className="w-full min-w-[1060px] border-collapse text-sm">
                 <thead>
                   <tr>
                     <th className="border-b border-zinc-200 px-2 py-2 text-left">Module</th>
@@ -408,84 +485,27 @@ export default function AdminPermissionPage() {
                   {filteredModules.map((moduleKey) => (
                     <tr key={moduleKey}>
                       <td className="border-b border-zinc-100 px-2 py-2 font-mono text-xs text-zinc-700">{moduleKey}</td>
-                      {ACTION_KEYS.map((action) => (
-                        <td key={action} className="border-b border-zinc-100 px-2 py-2 text-center">
-                          <input
-                            type="checkbox"
-                            checked={Boolean(groupRules.get(keyOf(moduleKey, action)))}
-                            onChange={() => toggleGroupRule(moduleKey, action)}
-                            disabled={!selectedGroupId}
-                          />
-                        </td>
-                      ))}
+                      {ACTION_KEYS.map((action) => {
+                        const value = overrideMap.get(keyOf(moduleKey, action)) || "default";
+                        return (
+                          <td key={action} className="border-b border-zinc-100 px-2 py-2">
+                            <Select
+                              value={value}
+                              onChange={(e) => setOverride(moduleKey, action, e.target.value as OverrideState)}
+                              disabled={!selectedUserId}
+                            >
+                              <option value="default">Mặc định</option>
+                              <option value="allow">Cho phép</option>
+                              <option value="deny">Từ chối</option>
+                            </Select>
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </section>
-        </div>
-      ) : (
-        <div className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-3">
-          <div className="grid gap-2 md:grid-cols-2">
-            <Select value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)}>
-              <option value="">Chọn người dùng</option>
-              {users.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.name || user.email} ({user.role})
-                </option>
-              ))}
-            </Select>
-
-            <Select value={selectedUserGroupId} onChange={(e) => setSelectedUserGroupId(e.target.value)} disabled={!selectedUserId}>
-              <option value="">Không gán nhóm</option>
-              {groups.map((group) => (
-                <option key={group.id} value={group.id}>
-                  {group.name}
-                </option>
-              ))}
-            </Select>
-          </div>
-
-          <div className="flex gap-2">
-            <Button onClick={saveUserOverrides} disabled={saving || !selectedUserId}>Lưu override</Button>
-            <Button variant="secondary" onClick={resetOverrides} disabled={saving || !selectedUserId}>Reset overrides</Button>
-          </div>
-
-          <div className="overflow-auto">
-            <table className="w-full min-w-[1060px] border-collapse text-sm">
-              <thead>
-                <tr>
-                  <th className="border-b border-zinc-200 px-2 py-2 text-left">Module</th>
-                  {ACTION_KEYS.map((action) => (
-                    <th key={action} className="border-b border-zinc-200 px-2 py-2 text-center">{ACTION_LABEL[action]}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredModules.map((moduleKey) => (
-                  <tr key={moduleKey}>
-                    <td className="border-b border-zinc-100 px-2 py-2 font-mono text-xs text-zinc-700">{moduleKey}</td>
-                    {ACTION_KEYS.map((action) => {
-                      const value = overrideMap.get(keyOf(moduleKey, action)) || "default";
-                      return (
-                        <td key={action} className="border-b border-zinc-100 px-2 py-2">
-                          <Select
-                            value={value}
-                            onChange={(e) => setOverride(moduleKey, action, e.target.value as OverrideState)}
-                            disabled={!selectedUserId}
-                          >
-                            <option value="default">Mặc định</option>
-                            <option value="allow">Cho phép</option>
-                            <option value="deny">Từ chối</option>
-                          </Select>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         </div>
       )}

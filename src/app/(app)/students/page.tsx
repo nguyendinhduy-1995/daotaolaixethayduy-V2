@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { fetchJson, type ApiClientError } from "@/lib/api-client";
 import { clearToken, getToken } from "@/lib/auth-client";
 import { Alert } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
@@ -82,8 +82,36 @@ function statusLabel(status: StudyStatus) {
   return STATUS_OPTIONS.find((item) => item.value === status)?.label || status;
 }
 
+const STATUS_STYLE: Record<string, { icon: string; bg: string; text: string; border: string; gradient: string }> = {
+  studying: { icon: "📚", bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", gradient: "from-emerald-500 to-green-600" },
+  paused: { icon: "⏸️", bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", gradient: "from-amber-500 to-orange-500" },
+  done: { icon: "🎓", bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200", gradient: "from-blue-500 to-indigo-500" },
+};
+
+function getStudyStyle(status: string) {
+  return STATUS_STYLE[status] || STATUS_STYLE.studying;
+}
+
+function StudentsSkeleton() {
+  return (
+    <div className="animate-pulse space-y-2">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div key={i} className="flex items-center gap-3 rounded-xl bg-white p-3 shadow-sm">
+          <div className="h-9 w-9 rounded-full bg-zinc-200" />
+          <div className="flex-1 space-y-2">
+            <div className="h-4 w-1/3 rounded bg-zinc-200" />
+            <div className="h-3 w-1/4 rounded bg-zinc-100" />
+          </div>
+          <div className="h-6 w-16 rounded-full bg-zinc-200" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function StudentsPage() {
   const router = useRouter();
+  const toast = useToast();
   const [items, setItems] = useState<StudentItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -94,7 +122,6 @@ export default function StudentsPage() {
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
 
   const [courses, setCourses] = useState<CourseItem[]>([]);
   const [coursesLoading, setCoursesLoading] = useState(false);
@@ -244,7 +271,6 @@ export default function StudentsPage() {
 
     setCreateSaving(true);
     setError("");
-    setSuccess("");
     try {
       const payload = {
         leadId: createForm.leadId,
@@ -257,7 +283,7 @@ export default function StudentsPage() {
         body: payload,
       });
       setCreateOpen(false);
-      setSuccess("Tạo học viên thành công.");
+      toast.success("Tạo học viên thành công.");
       router.push(`/students/${response.student.id}`);
     } catch (e) {
       const err = e as ApiClientError;
@@ -278,9 +304,9 @@ export default function StudentsPage() {
       prev.map((item) =>
         item.id === change.studentId
           ? {
-              ...item,
-              studyStatus: change.prevStatus,
-            }
+            ...item,
+            studyStatus: change.prevStatus,
+          }
           : item
       )
     );
@@ -292,7 +318,6 @@ export default function StudentsPage() {
     if (!token) return;
     setStatusSaving(true);
     setError("");
-    setSuccess("");
 
     try {
       await fetchJson(`/api/students/${pendingStatus.studentId}`, {
@@ -300,7 +325,7 @@ export default function StudentsPage() {
         token,
         body: { studyStatus: pendingStatus.nextStatus },
       });
-      setSuccess("Đã cập nhật trạng thái học viên.");
+      toast.success("Đã cập nhật trạng thái học viên.");
       setPendingStatus(null);
     } catch (e) {
       const err = e as ApiClientError;
@@ -319,136 +344,145 @@ export default function StudentsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-zinc-900">Học viên</h1>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={loadStudents} disabled={loading}>
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <Spinner /> Đang tải...
+      {/* ── Premium Header ── */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 p-4 text-white shadow-lg shadow-emerald-200 animate-fadeInUp">
+        <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+        <div className="absolute -bottom-4 -left-4 h-20 w-20 rounded-full bg-white/10 blur-xl" />
+        <div className="relative flex flex-wrap items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 text-2xl backdrop-blur-sm">🎓</div>
+          <div className="flex-1">
+            <h2 className="text-lg font-bold">Học viên</h2>
+            <p className="text-sm text-white/80">Quản lý học viên & theo dõi tiến độ</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" onClick={loadStudents} disabled={loading} className="!bg-white/20 !text-white !border-white/30 hover:!bg-white/30">
+              {loading ? <span className="flex items-center gap-2"><Spinner /> Đang tải...</span> : "Làm mới"}
+            </Button>
+            <Button onClick={openCreateModal} className="!bg-white !text-emerald-700 hover:!bg-white/90">+ Tạo học viên</Button>
+          </div>
+        </div>
+        {/* Stats */}
+        <div className="relative mt-3 flex flex-wrap gap-2">
+          {STATUS_OPTIONS.map((opt) => {
+            const count = items.filter((i) => i.studyStatus === opt.value).length;
+            const s = getStudyStyle(opt.value);
+            return (
+              <span key={opt.value} className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">
+                {s.icon} {opt.label}: {count}
               </span>
-            ) : (
-              "Làm mới"
-            )}
-          </Button>
-          <Button onClick={openCreateModal}>Tạo học viên</Button>
+            );
+          })}
         </div>
       </div>
 
       {error ? <Alert type="error" message={error} /> : null}
-      {success ? <Alert type="success" message={success} /> : null}
 
-      <div className="rounded-xl bg-white p-4 shadow-sm">
-        <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <label className="mb-1 block text-sm text-zinc-600">Khóa học</label>
-            <Select
-              value={courseId}
-              onChange={(e) => {
-                setPage(1);
-                setCourseId(e.target.value);
-              }}
-              disabled={coursesLoading}
-            >
-              <option value="">Tất cả khóa học</option>
-              {courses.map((course) => (
-                <option key={course.id} value={course.id}>
-                  {course.code}
-                </option>
-              ))}
-            </Select>
-          </div>
 
-          <div>
-            <label className="mb-1 block text-sm text-zinc-600">Trạng thái học</label>
-            <Select
-              value={studyStatus}
-              onChange={(e) => {
-                setPage(1);
-                setStudyStatus(e.target.value as "" | StudyStatus);
-              }}
-            >
-              <option value="">Tất cả trạng thái</option>
-              {STATUS_OPTIONS.map((status) => (
-                <option key={status.value} value={status.value}>
-                  {status.label}
-                </option>
-              ))}
-            </Select>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm text-zinc-600">Tìm kiếm</label>
-            <Input
-              value={qInput}
-              onChange={(e) => setQInput(e.target.value)}
-              placeholder="Tìm tên hoặc SĐT"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm text-zinc-600">Kích thước trang</label>
-            <Select
-              value={String(pageSize)}
-              onChange={(e) => {
-                setPage(1);
-                setPageSize(Number(e.target.value));
-              }}
-            >
-              <option value="20">20</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-            </Select>
+      <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm animate-fadeInUp" style={{ animationDelay: "100ms" }}>
+        <div className="h-1 bg-gradient-to-r from-emerald-500 to-teal-500" />
+        <div className="p-4">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-zinc-900">
+            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 text-xs text-white">🔍</span>
+            Bộ lọc
+          </h3>
+          <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-500">Khóa học</label>
+              <Select
+                value={courseId}
+                onChange={(e) => { setPage(1); setCourseId(e.target.value); }}
+                disabled={coursesLoading}
+              >
+                <option value="">Tất cả khóa học</option>
+                {courses.map((course) => (
+                  <option key={course.id} value={course.id}>{course.code}</option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-500">Trạng thái học</label>
+              <Select
+                value={studyStatus}
+                onChange={(e) => { setPage(1); setStudyStatus(e.target.value as "" | StudyStatus); }}
+              >
+                <option value="">Tất cả trạng thái</option>
+                {STATUS_OPTIONS.map((status) => (
+                  <option key={status.value} value={status.value}>{status.label}</option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-500">Tìm kiếm</label>
+              <Input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Tìm tên hoặc SĐT" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-500">Kích thước trang</label>
+              <Select value={String(pageSize)} onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)); }}>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </Select>
+            </div>
           </div>
         </div>
       </div>
 
       {loading ? (
-        <div className="rounded-xl bg-white p-6 text-sm text-zinc-600">Đang tải danh sách học viên...</div>
+        <StudentsSkeleton />
       ) : items.length === 0 ? (
-        <div className="rounded-xl bg-white p-6 text-sm text-zinc-600">
-          Không có dữ liệu học viên phù hợp bộ lọc.
+        <div className="rounded-2xl border-2 border-dashed border-zinc-200 bg-white p-8 text-center animate-fadeInUp">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-zinc-100 text-2xl">💭</div>
+          <p className="font-medium text-zinc-700">Không có dữ liệu học viên</p>
+          <p className="mt-1 text-sm text-zinc-500">Điều chỉnh bộ lọc hoặc tạo học viên mới.</p>
         </div>
       ) : (
-        <Table headers={["Học viên", "SĐT", "Khóa học", "Trạng thái", "Ngày tạo", "Hành động"]}>
-          {items.map((item) => (
-            <tr key={item.id} className="border-t border-zinc-100 hover:bg-zinc-50">
-              <td className="px-3 py-2">
-                <div className="font-medium text-zinc-900">{item.lead.fullName || "Chưa có tên"}</div>
-                <div className="text-xs text-zinc-500">{item.id}</div>
-              </td>
-              <td className="px-3 py-2">{item.lead.phone || "-"}</td>
-              <td className="px-3 py-2">{item.course?.code || "-"}</td>
-              <td className="px-3 py-2">
-                <Badge text={statusLabel(item.studyStatus)} />
-              </td>
-              <td className="px-3 py-2 text-sm text-zinc-600">{formatDateTimeVi(item.createdAt)}</td>
-              <td className="px-3 py-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Link
-                    href={`/students/${item.id}`}
-                    className="rounded-lg border border-zinc-300 bg-white px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100"
-                  >
-                    Mở
-                  </Link>
-                  <Select
-                    className="min-w-[140px]"
-                    value={item.studyStatus}
-                    onChange={(e) =>
-                      askStatusChange(item.id, item.studyStatus, e.target.value as StudyStatus)
-                    }
-                  >
-                    {STATUS_OPTIONS.map((status) => (
-                      <option key={status.value} value={status.value}>
-                        {status.label}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </Table>
+        <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm animate-fadeInUp" style={{ animationDelay: "200ms" }}>
+          <Table headers={["Học viên", "SĐT", "Khóa học", "Trạng thái", "Ngày tạo", "Hành động"]}>
+            {items.map((item, idx) => {
+              const s = getStudyStyle(item.studyStatus);
+              return (
+                <tr key={item.id} className="border-t border-zinc-100 transition-colors hover:bg-zinc-50 animate-fadeInUp" style={{ animationDelay: `${200 + Math.min(idx * 40, 300)}ms` }}>
+                  <td className="px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${s.bg} text-sm`}>{s.icon}</span>
+                      <div>
+                        <div className="font-medium text-zinc-900">{item.lead.fullName || "Chưa có tên"}</div>
+                        <div className="text-[11px] text-zinc-400 font-mono">{item.id.slice(0, 8)}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-3 py-2 font-mono text-sm">{item.lead.phone || "-"}</td>
+                  <td className="px-3 py-2 text-sm">{item.course?.code || "-"}</td>
+                  <td className="px-3 py-2">
+                    <span className={`inline-flex items-center gap-1 rounded-full ${s.bg} ${s.text} border ${s.border} px-2 py-0.5 text-xs font-bold`}>
+                      {s.icon} {statusLabel(item.studyStatus)}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 text-sm text-zinc-600">{formatDateTimeVi(item.createdAt)}</td>
+                  <td className="px-3 py-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link
+                        href={`/students/${item.id}`}
+                        className={`inline-flex items-center gap-1 rounded-lg border ${s.border} ${s.bg} px-2.5 py-1.5 text-xs font-bold ${s.text} transition hover:shadow-sm`}
+                      >
+                        Mở
+                      </Link>
+                      <Select
+                        className="min-w-[140px]"
+                        value={item.studyStatus}
+                        onChange={(e) => askStatusChange(item.id, item.studyStatus, e.target.value as StudyStatus)}
+                      >
+                        {STATUS_OPTIONS.map((status) => (
+                          <option key={status.value} value={status.value}>{status.label}</option>
+                        ))}
+                      </Select>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </Table>
+        </div>
       )}
 
       <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />

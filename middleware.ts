@@ -19,7 +19,11 @@ function isProtectedPath(pathname: string) {
     pathname.startsWith("/outbound") ||
     pathname.startsWith("/automation") ||
     pathname.startsWith("/admin") ||
-    pathname.startsWith("/api-hub")
+    pathname.startsWith("/api-hub") ||
+    pathname.startsWith("/hr") ||
+    pathname.startsWith("/me") ||
+    pathname.startsWith("/marketing") ||
+    pathname.startsWith("/goals")
   );
 }
 

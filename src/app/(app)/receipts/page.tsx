@@ -373,168 +373,171 @@ export default function ReceiptsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-zinc-900">Phiếu thu</h1>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={loadReceipts} disabled={loading}>
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <Spinner /> Đang tải...
-              </span>
-            ) : (
-              "Làm mới"
-            )}
-          </Button>
-          {canCreateReceipt ? (
-            <Button
-              onClick={() => {
-                setCreateForm({ ...EMPTY_FORM, receivedAt: mode === "day" ? date : todayInHoChiMinh(), studentId });
-                setCreateOpen(true);
-              }}
-            >
-              Tạo phiếu thu
+      {/* ── Premium Header ── */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 p-4 text-white shadow-lg shadow-emerald-200 animate-fadeInUp">
+        <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+        <div className="absolute -bottom-4 -left-4 h-20 w-20 rounded-full bg-white/10 blur-xl" />
+        <div className="relative flex flex-wrap items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 text-2xl backdrop-blur-sm">🧾</div>
+          <div className="flex-1">
+            <h2 className="text-lg font-bold">Phiếu thu</h2>
+            <p className="text-sm text-white/80">Quản lý phiếu thu học phí</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-3 py-1 text-sm font-bold backdrop-blur-sm">📊 {total}</span>
+            <Button variant="secondary" onClick={loadReceipts} disabled={loading} className="!bg-white/20 !text-white !border-white/30 hover:!bg-white/30">
+              {loading ? "Đang tải..." : "Làm mới"}
             </Button>
-          ) : null}
+            {canCreateReceipt ? (
+              <Button onClick={() => { setCreateForm({ ...EMPTY_FORM, receivedAt: mode === "day" ? date : todayInHoChiMinh(), studentId }); setCreateOpen(true); }} className="!bg-white/20 !text-white !border-white/30 hover:!bg-white/30">
+                ➕ Tạo phiếu thu
+              </Button>
+            ) : null}
+          </div>
         </div>
       </div>
 
       {error ? <Alert type="error" message={error} /> : null}
 
-      <div className="space-y-3 rounded-xl bg-white p-4 shadow-sm">
-        <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <label className="mb-1 block text-sm text-zinc-600">Chế độ</label>
-            <Select
-              value={mode}
-              onChange={(e) => {
-                setPage(1);
-                setMode(e.target.value as "day" | "range");
-              }}
-            >
-              <option value="day">Theo ngày</option>
-              <option value="range">Theo khoảng</option>
-            </Select>
-          </div>
-
-          {mode === "day" ? (
+      {/* ── Filter Section ── */}
+      <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm animate-fadeInUp" style={{ animationDelay: "80ms" }}>
+        <div className="h-1 bg-gradient-to-r from-emerald-500 to-teal-500" />
+        <div className="space-y-3 p-4">
+          <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
             <div>
-              <label className="mb-1 block text-sm text-zinc-600">Ngày</label>
-              <Input
-                type="date"
-                value={date}
+              <label className="mb-1 block text-sm text-zinc-600">Chế độ</label>
+              <Select
+                value={mode}
                 onChange={(e) => {
                   setPage(1);
-                  setDate(e.target.value);
+                  setMode(e.target.value as "day" | "range");
                 }}
-              />
+              >
+                <option value="day">Theo ngày</option>
+                <option value="range">Theo khoảng</option>
+              </Select>
             </div>
-          ) : (
-            <>
-              <div>
-                <label className="mb-1 block text-sm text-zinc-600">Từ ngày</label>
-                <Input
-                  type="date"
-                  value={from}
-                  onChange={(e) => {
-                    setPage(1);
-                    setFrom(e.target.value);
-                  }}
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm text-zinc-600">Đến ngày</label>
-                <Input
-                  type="date"
-                  value={to}
-                  onChange={(e) => {
-                    setPage(1);
-                    setTo(e.target.value);
-                  }}
-                />
-              </div>
-            </>
-          )}
 
-          <div>
-            <label className="mb-1 block text-sm text-zinc-600">Phương thức</label>
-            <Select
-              value={method}
+            {mode === "day" ? (
+              <div>
+                <label className="mb-1 block text-sm text-zinc-600">Ngày</label>
+                <Input
+                  type="date"
+                  value={date}
+                  onChange={(e) => {
+                    setPage(1);
+                    setDate(e.target.value);
+                  }}
+                />
+              </div>
+            ) : (
+              <>
+                <div>
+                  <label className="mb-1 block text-sm text-zinc-600">Từ ngày</label>
+                  <Input
+                    type="date"
+                    value={from}
+                    onChange={(e) => {
+                      setPage(1);
+                      setFrom(e.target.value);
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm text-zinc-600">Đến ngày</label>
+                  <Input
+                    type="date"
+                    value={to}
+                    onChange={(e) => {
+                      setPage(1);
+                      setTo(e.target.value);
+                    }}
+                  />
+                </div>
+              </>
+            )}
+
+            <div>
+              <label className="mb-1 block text-sm text-zinc-600">Phương thức</label>
+              <Select
+                value={method}
+                onChange={(e) => {
+                  setPage(1);
+                  setMethod(e.target.value as ReceiptMethodFilter);
+                }}
+              >
+                <option value="">Tất cả</option>
+                <option value="cash">Tiền mặt</option>
+                <option value="bank">Chuyển khoản</option>
+                <option value="momo">Momo</option>
+                <option value="other">Khác</option>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
+            <Input
+              placeholder="Tìm tên học viên/SĐT"
+              value={q}
               onChange={(e) => {
                 setPage(1);
-                setMethod(e.target.value as ReceiptMethodFilter);
+                setQ(e.target.value);
+              }}
+            />
+
+            <Select
+              value={studentId}
+              onChange={(e) => {
+                setPage(1);
+                setStudentId(e.target.value);
               }}
             >
-              <option value="">Tất cả</option>
-              <option value="cash">Tiền mặt</option>
-              <option value="bank">Chuyển khoản</option>
-              <option value="momo">Momo</option>
-              <option value="other">Khác</option>
+              <option value="">Tất cả học viên</option>
+              {studentOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.lead.fullName || "Không tên"} - {option.lead.phone || "Không SĐT"}
+                </option>
+              ))}
+            </Select>
+
+            <Input
+              placeholder="Tìm học viên để lọc..."
+              value={studentQuery}
+              onChange={(e) => setStudentQuery(e.target.value)}
+            />
+
+            <Select
+              value={String(pageSize)}
+              onChange={(e) => {
+                setPage(1);
+                setPageSize(Number(e.target.value));
+              }}
+            >
+              <option value="20">20 / trang</option>
+              <option value="50">50 / trang</option>
+              <option value="100">100 / trang</option>
             </Select>
           </div>
-        </div>
 
-        <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
-          <Input
-            placeholder="Tìm tên học viên/SĐT"
-            value={q}
-            onChange={(e) => {
-              setPage(1);
-              setQ(e.target.value);
-            }}
-          />
-
-          <Select
-            value={studentId}
-            onChange={(e) => {
-              setPage(1);
-              setStudentId(e.target.value);
-            }}
-          >
-            <option value="">Tất cả học viên</option>
-            {studentOptions.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.lead.fullName || "Không tên"} - {option.lead.phone || "Không SĐT"}
-              </option>
-            ))}
-          </Select>
-
-          <Input
-            placeholder="Tìm học viên để lọc..."
-            value={studentQuery}
-            onChange={(e) => setStudentQuery(e.target.value)}
-          />
-
-          <Select
-            value={String(pageSize)}
-            onChange={(e) => {
-              setPage(1);
-              setPageSize(Number(e.target.value));
-            }}
-          >
-            <option value="20">20 / trang</option>
-            <option value="50">50 / trang</option>
-            <option value="100">100 / trang</option>
-          </Select>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" onClick={() => applyPreset("today")}>
-            Hôm nay
-          </Button>
-          <Button variant="secondary" onClick={() => applyPreset("yesterday")}>
-            Hôm qua
-          </Button>
-          <Button variant="secondary" onClick={() => applyPreset("last7")}>
-            7 ngày gần nhất
-          </Button>
-          <Button variant="secondary" onClick={() => applyPreset("thisMonth")}>
-            Tháng này
-          </Button>
-          {studentsLoading ? (
-            <span className="inline-flex items-center gap-2 text-sm text-zinc-500">
-              <Spinner /> Đang tải học viên...
-            </span>
-          ) : null}
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" onClick={() => applyPreset("today")}>
+              Hôm nay
+            </Button>
+            <Button variant="secondary" onClick={() => applyPreset("yesterday")}>
+              Hôm qua
+            </Button>
+            <Button variant="secondary" onClick={() => applyPreset("last7")}>
+              7 ngày gần nhất
+            </Button>
+            <Button variant="secondary" onClick={() => applyPreset("thisMonth")}>
+              Tháng này
+            </Button>
+            {studentsLoading ? (
+              <span className="inline-flex items-center gap-2 text-sm text-zinc-500">
+                <Spinner /> Đang tải học viên...
+              </span>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -555,39 +558,53 @@ export default function ReceiptsPage() {
       ) : null}
 
       {loading ? (
-        <div className="rounded-xl bg-white p-6 text-sm text-zinc-600">Đang tải...</div>
-      ) : items.length === 0 ? (
-        <div className="rounded-xl bg-white p-6 text-sm text-zinc-600">Không có dữ liệu</div>
-      ) : (
-        <Table headers={["Ngày thu", "Học viên", "Số tiền", "Phương thức", "Ghi chú", "Hành động"]}>
-          {items.map((item) => (
-            <tr key={item.id} className="border-t border-zinc-100">
-              <td className="px-3 py-2 text-sm text-zinc-700">{formatDateTimeVi(item.receivedAt)}</td>
-              <td className="px-3 py-2">
-                <div className="font-medium text-zinc-900">{item.student?.lead?.fullName || "Không rõ"}</div>
-                <div className="text-xs text-zinc-500">{item.student?.lead?.phone || "-"}</div>
-              </td>
-              <td className="px-3 py-2 font-medium text-zinc-900">{formatCurrencyVnd(item.amount)}</td>
-              <td className="px-3 py-2">
-                <Badge text={formatMethod(item.method)} />
-              </td>
-              <td className="px-3 py-2 text-sm text-zinc-700">{item.note || "-"}</td>
-              <td className="px-3 py-2">
-                <div className="flex gap-2">
-                  <Link
-                    href={`/students/${item.studentId}?tab=receipts`}
-                    className="rounded-lg border border-zinc-300 bg-white px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100"
-                  >
-                    Xem
-                  </Link>
-                  <Button variant="secondary" className="h-7 px-2 py-1 text-xs" onClick={() => openEdit(item)}>
-                    Sửa
-                  </Button>
-                </div>
-              </td>
-            </tr>
+        <div className="animate-pulse space-y-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-3 rounded-xl bg-white p-3 shadow-sm">
+              <div className="h-8 w-8 rounded-lg bg-zinc-200" />
+              <div className="flex-1 space-y-2"><div className="h-4 w-1/4 rounded bg-zinc-200" /><div className="h-3 w-1/3 rounded bg-zinc-100" /></div>
+              <div className="h-6 w-20 rounded-full bg-zinc-200" />
+            </div>
           ))}
-        </Table>
+        </div>
+      ) : items.length === 0 ? (
+        <div className="rounded-2xl border-2 border-dashed border-zinc-200 bg-white p-8 text-center animate-fadeInUp">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-zinc-100 text-2xl">📭</div>
+          <p className="font-medium text-zinc-700">Không có dữ liệu</p>
+          <p className="mt-1 text-sm text-zinc-500">Không tìm thấy phiếu thu phù hợp bộ lọc.</p>
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm animate-fadeInUp" style={{ animationDelay: "160ms" }}>
+          <Table headers={["Ngày thu", "Học viên", "Số tiền", "Phương thức", "Ghi chú", "Hành động"]}>
+            {items.map((item, idx) => (
+              <tr key={item.id} className="border-t border-zinc-100 transition-colors hover:bg-zinc-50 animate-fadeInUp" style={{ animationDelay: `${160 + Math.min(idx * 40, 300)}ms` }}>
+                <td className="px-3 py-2 text-sm text-zinc-700">{formatDateTimeVi(item.receivedAt)}</td>
+                <td className="px-3 py-2">
+                  <div className="font-medium text-zinc-900">{item.student?.lead?.fullName || "Không rõ"}</div>
+                  <div className="text-xs text-zinc-500">{item.student?.lead?.phone || "-"}</div>
+                </td>
+                <td className="px-3 py-2 font-medium text-zinc-900">{formatCurrencyVnd(item.amount)}</td>
+                <td className="px-3 py-2">
+                  <Badge text={formatMethod(item.method)} />
+                </td>
+                <td className="px-3 py-2 text-sm text-zinc-700">{item.note || "-"}</td>
+                <td className="px-3 py-2">
+                  <div className="flex gap-2">
+                    <Link
+                      href={`/students/${item.studentId}?tab=receipts`}
+                      className="rounded-lg border border-zinc-300 bg-white px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100"
+                    >
+                      Xem
+                    </Link>
+                    <Button variant="secondary" className="h-7 px-2 py-1 text-xs" onClick={() => openEdit(item)}>
+                      Sửa
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </Table>
+        </div>
       )}
 
       <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />

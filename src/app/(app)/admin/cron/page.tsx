@@ -155,11 +155,17 @@ export default function AdminCronPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-zinc-900">Vận hành tự động</h1>
-        <p className="text-sm text-zinc-600">
-          Lần chạy gần nhất: {lastRunAt ? formatDateTimeVi(lastRunAt) : "Chưa có dữ liệu"}
-        </p>
+      {/* ── Premium Header ── */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-red-600 via-orange-600 to-amber-600 p-4 text-white shadow-lg shadow-red-200 animate-fadeInUp">
+        <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+        <div className="absolute -bottom-4 -left-4 h-20 w-20 rounded-full bg-white/10 blur-xl" />
+        <div className="relative flex flex-wrap items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 text-2xl backdrop-blur-sm">⏰</div>
+          <div className="flex-1">
+            <h2 className="text-lg font-bold">Vận hành tự động</h2>
+            <p className="text-sm text-white/80">Lần chạy gần nhất: {lastRunAt ? formatDateTimeVi(lastRunAt) : "Chưa có dữ liệu"}</p>
+          </div>
+        </div>
       </div>
 
       {error ? <Alert type="error" message={error} /> : null}
@@ -172,19 +178,22 @@ export default function AdminCronPage() {
       {result?.warning ? <Alert type="error" message={result.warning} /> : null}
       {result?.warnings?.map((w) => <Alert key={w} type="error" message={w} />)}
 
-      <div className="rounded-xl bg-white p-4 shadow-sm">
-        <p className="text-sm text-zinc-700">Chạy tác vụ ngày để tạo thông báo tài chính và xếp hàng gửi tin nhắc.</p>
-        <label className="mt-3 flex items-center gap-2 text-sm text-zinc-700">
-          <input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)} />
-          Bỏ qua giờ yên tĩnh (Force)
-        </label>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Button variant="secondary" onClick={() => runCron(true)} disabled={runningDry || runningReal}>
-            {runningDry ? "Đang chạy..." : "Chạy thử (Dry run)"}
-          </Button>
-          <Button onClick={() => runCron(false)} disabled={runningDry || runningReal}>
-            {runningReal ? "Đang chạy..." : "Chạy thật (Thực thi)"}
-          </Button>
+      <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm animate-fadeInUp" style={{ animationDelay: "80ms" }}>
+        <div className="h-1 bg-gradient-to-r from-red-500 to-orange-500" />
+        <div className="p-4">
+          <p className="text-sm text-zinc-700">Chạy tác vụ ngày để tạo thông báo tài chính và xếp hàng gửi tin nhắc.</p>
+          <label className="mt-3 flex items-center gap-2 text-sm text-zinc-700">
+            <input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)} />
+            Bỏ qua giờ yên tĩnh (Force)
+          </label>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button variant="secondary" onClick={() => runCron(true)} disabled={runningDry || runningReal}>
+              {runningDry ? "Đang chạy..." : "🧪 Chạy thử (Dry run)"}
+            </Button>
+            <Button onClick={() => runCron(false)} disabled={runningDry || runningReal}>
+              {runningReal ? "Đang chạy..." : "🚀 Chạy thật (Thực thi)"}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -208,7 +217,7 @@ export default function AdminCronPage() {
             </div>
           </div>
           <div className="rounded-xl bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-zinc-900">Top telesales theo queue</p>
+            <p className="text-sm font-medium text-zinc-900">Tư vấn viên theo hàng đợi</p>
             <div className="mt-2 space-y-1 text-sm text-zinc-700">
               {result.breakdowns.countsByOwner.length === 0 ? (
                 <p>Không có dữ liệu</p>
@@ -241,7 +250,7 @@ export default function AdminCronPage() {
                 <tr className="border-b border-zinc-200 text-left text-zinc-600">
                   <th className="px-2 py-2">Học viên</th>
                   <th className="px-2 py-2">Người phụ trách</th>
-                  <th className="px-2 py-2">Template</th>
+                  <th className="px-2 py-2">Mẫu tin</th>
                   <th className="px-2 py-2">Ưu tiên</th>
                   <th className="px-2 py-2">Kết quả</th>
                   <th className="px-2 py-2">Lý do</th>

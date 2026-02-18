@@ -7,6 +7,16 @@ export type AdminMenuItem = {
   icon?: string;
 };
 
+/* ── Group-level colour tokens (gradient pair + accent for active state) ── */
+export const GROUP_COLORS: Record<string, { from: string; to: string; accent: string; bg: string; text: string; icon: string }> = {
+  "Tổng quan": { from: "from-blue-600", to: "to-indigo-600", accent: "bg-blue-600", bg: "bg-blue-50", text: "text-blue-700", icon: "📊" },
+  "Khách & Tư vấn": { from: "from-amber-500", to: "to-orange-500", accent: "bg-amber-500", bg: "bg-amber-50", text: "text-amber-700", icon: "👥" },
+  "Tài chính": { from: "from-emerald-600", to: "to-teal-600", accent: "bg-emerald-600", bg: "bg-emerald-50", text: "text-emerald-700", icon: "💰" },
+  "Học viên & Lịch": { from: "from-violet-600", to: "to-purple-600", accent: "bg-violet-600", bg: "bg-violet-50", text: "text-violet-700", icon: "🎓" },
+  "Tự động hoá": { from: "from-rose-500", to: "to-red-500", accent: "bg-rose-500", bg: "bg-rose-50", text: "text-rose-700", icon: "⚡" },
+  "Quản trị": { from: "from-slate-700", to: "to-zinc-700", accent: "bg-slate-700", bg: "bg-slate-50", text: "text-slate-700", icon: "⚙️" },
+};
+
 export const ADMIN_MENU: AdminMenuItem[] = [
   {
     key: "dashboard",
@@ -14,7 +24,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/dashboard",
     group: "Tổng quan",
     keywords: ["home", "tong quan", "trang chu", "dashboard"],
-    icon: "dot",
+    icon: "🏠",
   },
   {
     key: "kpi-daily",
@@ -22,7 +32,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/kpi/daily",
     group: "Tổng quan",
     keywords: ["kpi", "chi so", "bao cao"],
-    icon: "dot",
+    icon: "📈",
   },
   {
     key: "ai-kpi-coach",
@@ -30,7 +40,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/ai/kpi-coach",
     group: "Tổng quan",
     keywords: ["tro ly cong viec", "goi y", "khuyen nghi", "hieu suat"],
-    icon: "dot",
+    icon: "🤖",
   },
   {
     key: "kpi-targets",
@@ -38,7 +48,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/kpi/targets",
     group: "Tổng quan",
     keywords: ["target", "chi tieu", "kpi target", "ngay trong tuan"],
-    icon: "dot",
+    icon: "🎯",
   },
   {
     key: "goals",
@@ -46,7 +56,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/goals",
     group: "Tổng quan",
     keywords: ["goals", "muc tieu", "doanh thu", "ho so", "chi phi"],
-    icon: "dot",
+    icon: "📅",
   },
   {
     key: "notifications",
@@ -54,7 +64,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/notifications",
     group: "Tổng quan",
     keywords: ["viec can lam", "task", "nhac viec"],
-    icon: "dot",
+    icon: "🔔",
   },
   {
     key: "leads",
@@ -62,7 +72,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/leads",
     group: "Khách & Tư vấn",
     keywords: ["lead", "kh", "khach", "khach hang", "data", "sdt", "sđt"],
-    icon: "dot",
+    icon: "👤",
   },
   {
     key: "leads-board",
@@ -70,7 +80,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/leads/board",
     group: "Khách & Tư vấn",
     keywords: ["pipeline", "kanban", "trang thai", "lead board"],
-    icon: "dot",
+    icon: "📋",
   },
   {
     key: "outbound",
@@ -78,7 +88,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/outbound",
     group: "Khách & Tư vấn",
     keywords: ["goi nhac", "goi", "sms", "zns", "nhan tin"],
-    icon: "dot",
+    icon: "📞",
   },
   {
     key: "receipts",
@@ -86,7 +96,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/receipts",
     group: "Tài chính",
     keywords: ["thu tien", "bien lai", "receipt", "doanh thu"],
-    icon: "dot",
+    icon: "🧾",
   },
   {
     key: "expenses-monthly",
@@ -94,7 +104,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/expenses/monthly",
     group: "Tài chính",
     keywords: ["chi phi", "expense", "tong hop", "luong co ban"],
-    icon: "dot",
+    icon: "💸",
   },
   {
     key: "me-payroll",
@@ -102,7 +112,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/me/payroll",
     group: "Tài chính",
     keywords: ["payroll", "luong ca nhan", "commission", "hoa hong"],
-    icon: "dot",
+    icon: "💵",
   },
   {
     key: "hr-payroll",
@@ -110,7 +120,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/hr/payroll",
     group: "Tài chính",
     keywords: ["payroll", "luong", "hoa hong", "commission"],
-    icon: "dot",
+    icon: "📊",
   },
   {
     key: "hr-kpi",
@@ -118,7 +128,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/hr/kpi",
     group: "Tài chính",
     keywords: ["kpi nhan su", "hr", "hieu suat"],
-    icon: "dot",
+    icon: "📉",
   },
   {
     key: "students",
@@ -126,7 +136,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/students",
     group: "Học viên & Lịch",
     keywords: ["student", "hoc vien", "hoc vien moi"],
-    icon: "dot",
+    icon: "🧑‍🎓",
   },
   {
     key: "courses",
@@ -134,7 +144,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/courses",
     group: "Học viên & Lịch",
     keywords: ["course", "khoa", "lop", "dao tao"],
-    icon: "dot",
+    icon: "📚",
   },
   {
     key: "schedule",
@@ -142,7 +152,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/schedule",
     group: "Học viên & Lịch",
     keywords: ["lich", "ca hoc", "calendar", "lich hoc"],
-    icon: "dot",
+    icon: "🗓️",
   },
   {
     key: "admin-student-content",
@@ -150,7 +160,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/admin/student-content",
     group: "Học viên & Lịch",
     keywords: ["noi dung", "tai lieu", "hoc lieu"],
-    icon: "dot",
+    icon: "📝",
   },
   {
     key: "instructors",
@@ -158,7 +168,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/admin/instructors",
     group: "Học viên & Lịch",
     keywords: ["giao vien", "instructor", "thuc hanh", "gv"],
-    icon: "dot",
+    icon: "👨‍🏫",
   },
   {
     key: "automation-run",
@@ -166,7 +176,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/automation/run",
     group: "Tự động hoá",
     keywords: ["automation", "chay tay", "workflow", "tu dong"],
-    icon: "dot",
+    icon: "🔄",
   },
   {
     key: "automation-logs",
@@ -174,7 +184,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/automation/logs",
     group: "Tự động hoá",
     keywords: ["log", "lich su chay", "retry", "job"],
-    icon: "dot",
+    icon: "📜",
   },
   {
     key: "admin-cron",
@@ -182,7 +192,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/admin/cron",
     group: "Tự động hoá",
     keywords: ["cron", "scheduler", "lich chay"],
-    icon: "dot",
+    icon: "⏱️",
   },
   {
     key: "admin-scheduler",
@@ -190,7 +200,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/admin/scheduler",
     group: "Tự động hoá",
     keywords: ["scheduler", "lich", "job"],
-    icon: "dot",
+    icon: "📆",
   },
   {
     key: "admin-worker",
@@ -198,7 +208,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/admin/worker",
     group: "Tự động hoá",
     keywords: ["worker", "queue", "hang doi", "tin nhan"],
-    icon: "dot",
+    icon: "📨",
   },
   {
     key: "admin-n8n",
@@ -206,7 +216,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/admin/n8n",
     group: "Tự động hoá",
     keywords: ["n8n", "workflow", "integration", "ops"],
-    icon: "dot",
+    icon: "🔗",
   },
   {
     key: "admin-automation-monitor",
@@ -214,7 +224,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/admin/automation-monitor",
     group: "Tự động hoá",
     keywords: ["giam sat", "luong tu dong", "monitor", "run", "job", "log"],
-    icon: "dot",
+    icon: "📡",
   },
   {
     key: "admin-ops",
@@ -222,7 +232,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/admin/ops",
     group: "Tự động hoá",
     keywords: ["ops pulse", "marketing", "bao cao", "report"],
-    icon: "dot",
+    icon: "📊",
   },
   {
     key: "marketing",
@@ -230,7 +240,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/marketing",
     group: "Tự động hoá",
     keywords: ["marketing", "meta", "ads", "bao cao"],
-    icon: "dot",
+    icon: "📣",
   },
   {
     key: "admin-users",
@@ -238,7 +248,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/admin/users",
     group: "Quản trị",
     keywords: ["user", "tai khoan", "phan quyen"],
-    icon: "dot",
+    icon: "👥",
   },
   {
     key: "admin-permissions",
@@ -246,7 +256,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/admin/phan-quyen",
     group: "Quản trị",
     keywords: ["rbac", "phan quyen", "group", "override"],
-    icon: "dot",
+    icon: "🔐",
   },
   {
     key: "admin-guide",
@@ -254,7 +264,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/admin/guide",
     group: "Quản trị",
     keywords: ["huong dan", "runbook", "quy trinh", "tai lieu"],
-    icon: "dot",
+    icon: "📖",
   },
   {
     key: "admin-ai-guide",
@@ -262,7 +272,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/admin/huong-dan-ai",
     group: "Quản trị",
     keywords: ["tro ly cong viec", "huong dan ai", "goi y", "kpi"],
-    icon: "dot",
+    icon: "🤖",
   },
   {
     key: "admin-ops-guide",
@@ -270,7 +280,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/admin/huong-dan-van-hanh",
     group: "Quản trị",
     keywords: ["so tay", "huong dan van hanh", "quy trinh", "van hanh"],
-    icon: "dot",
+    icon: "📒",
   },
   {
     key: "api-hub",
@@ -278,7 +288,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/api-hub",
     group: "Quản trị",
     keywords: ["api", "integration", "tich hop", "hub", "swagger"],
-    icon: "dot",
+    icon: "🌐",
   },
   {
     key: "admin-branches",
@@ -286,7 +296,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/admin/branches",
     group: "Quản trị",
     keywords: ["branch", "co so", "dia diem"],
-    icon: "dot",
+    icon: "🏢",
   },
   {
     key: "admin-assign-leads",
@@ -294,7 +304,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/admin/assign-leads",
     group: "Quản trị",
     keywords: ["phan bo", "chia lead", "chia khach"],
-    icon: "dot",
+    icon: "🔀",
   },
   {
     key: "admin-notifications",
@@ -302,7 +312,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/admin/notifications",
     group: "Quản trị",
     keywords: ["thong bao", "notification"],
-    icon: "dot",
+    icon: "🔔",
   },
   {
     key: "admin-tuition-plans",
@@ -310,7 +320,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/admin/tuition-plans",
     group: "Quản trị",
     keywords: ["hoc phi", "tuition", "goi hoc phi"],
-    icon: "dot",
+    icon: "💳",
   },
   {
     key: "hr-attendance",
@@ -318,7 +328,7 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/hr/attendance",
     group: "Quản trị",
     keywords: ["attendance", "cong", "diem danh nhan su"],
-    icon: "dot",
+    icon: "✅",
   },
   {
     key: "hr-salary-profiles",
@@ -326,6 +336,6 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     href: "/hr/salary-profiles",
     group: "Quản trị",
     keywords: ["salary profile", "muc luong", "ho so"],
-    icon: "dot",
+    icon: "📄",
   },
 ];

@@ -7,6 +7,7 @@ import { fetchJson, type ApiClientError } from "@/lib/api-client";
 import { clearToken, fetchMe, getToken } from "@/lib/auth-client";
 import { isAdminRole } from "@/lib/admin-auth";
 import { Alert } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { Spinner } from "@/components/ui/spinner";
@@ -51,12 +52,12 @@ function formatApiError(err: ApiClientError) {
 
 export default function AdminSchedulerPage() {
   const router = useRouter();
+  const toast = useToast();
   const [checkingRole, setCheckingRole] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(false);
   const [runningDry, setRunningDry] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [dryResult, setDryResult] = useState<DryRunResult | null>(null);
   const [openResult, setOpenResult] = useState(false);
@@ -108,7 +109,6 @@ export default function AdminSchedulerPage() {
     if (!token) return;
     setRunningDry(true);
     setError("");
-    setSuccess("");
     try {
       const data = await fetchJson<DryRunResult>("/api/admin/worker/outbound", {
         method: "POST",
@@ -117,7 +117,7 @@ export default function AdminSchedulerPage() {
       });
       setDryResult(data);
       setOpenResult(true);
-      setSuccess("Đã chạy thử worker thành công.");
+      toast.success("Đã chạy thử worker thành công.");
       await loadHealth();
     } catch (e) {
       const err = e as ApiClientError;
@@ -153,20 +153,28 @@ export default function AdminSchedulerPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-zinc-900">Bộ lập lịch (n8n)</h1>
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={loadHealth} disabled={loading}>
-            {loading ? "Đang tải..." : "Làm mới"}
-          </Button>
-          <Button onClick={runDry} disabled={runningDry}>
-            {runningDry ? "Đang chạy..." : "Chạy thử (dry-run)"}
-          </Button>
+      {/* ── Premium Header ── */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 p-4 text-white shadow-lg shadow-green-200 animate-fadeInUp">
+        <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+        <div className="absolute -bottom-4 -left-4 h-20 w-20 rounded-full bg-white/10 blur-xl" />
+        <div className="relative flex flex-wrap items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 text-2xl backdrop-blur-sm">📅</div>
+          <div className="flex-1">
+            <h2 className="text-lg font-bold">Bộ lập lịch (n8n)</h2>
+            <p className="text-sm text-white/80">Quản lý hàng chờ và vận hành worker</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="secondary" onClick={loadHealth} disabled={loading} className="!bg-white/20 !text-white !border-white/30 hover:!bg-white/30">
+              {loading ? "Đang tải..." : "🔄 Làm mới"}
+            </Button>
+            <Button onClick={runDry} disabled={runningDry} className="!bg-white !text-green-700 hover:!bg-white/90">
+              {runningDry ? "Đang chạy..." : "🧪 Chạy thử"}
+            </Button>
+          </div>
         </div>
       </div>
 
       {error ? <Alert type="error" message={error} /> : null}
-      {success ? <Alert type="success" message={success} /> : null}
       {health?.warnings.map((w) => <Alert key={w} type="error" message={w} />)}
 
       <div className="grid gap-3 md:grid-cols-4">
@@ -209,19 +217,22 @@ export default function AdminSchedulerPage() {
         </div>
       </div>
 
-      <div className="rounded-xl bg-white p-4 shadow-sm">
-        <p className="text-sm font-medium text-zinc-900">Hướng dẫn n8n</p>
-        <div className="mt-3 space-y-3 text-sm text-zinc-700">
-          <p>1. Tạo node Cron trong n8n với tần suất mỗi 1-2 phút.</p>
-          <p>2. Thêm node HTTP Request gọi endpoint worker:</p>
-          <pre className="rounded-lg bg-zinc-900 p-3 text-xs text-zinc-100">{endpointUrl}</pre>
-          <p>3. Header bắt buộc:</p>
-          <pre className="rounded-lg bg-zinc-900 p-3 text-xs text-zinc-100">{`x-worker-secret: <WORKER_SECRET>\nContent-Type: application/json`}</pre>
-          <p>4. Body mẫu:</p>
-          <pre className="rounded-lg bg-zinc-900 p-3 text-xs text-zinc-100">{`{"dryRun":false,"batchSize":50,"force":false}`}</pre>
-          <p>5. Gợi ý cảnh báo: nếu `failed &gt; 0` hoặc `queued` tăng cao thì gửi cảnh báo Telegram/Email.</p>
-          <p>6. Test local nhanh bằng curl:</p>
-          <pre className="rounded-lg bg-zinc-900 p-3 text-xs text-zinc-100">{`curl -X POST ${endpointUrl} \\\n  -H "x-worker-secret: $WORKER_SECRET" \\\n  -H "Content-Type: application/json" \\\n  -d '{"dryRun":true,"batchSize":20}'`}</pre>
+      <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm animate-fadeInUp" style={{ animationDelay: "160ms" }}>
+        <div className="h-1 bg-gradient-to-r from-green-500 to-emerald-500" />
+        <div className="p-4">
+          <p className="text-sm font-medium text-zinc-900">📖 Hướng dẫn n8n</p>
+          <div className="mt-3 space-y-3 text-sm text-zinc-700">
+            <p>1. Tạo node Cron trong n8n với tần suất mỗi 1-2 phút.</p>
+            <p>2. Thêm node HTTP Request gọi endpoint worker:</p>
+            <pre className="rounded-lg bg-zinc-900 p-3 text-xs text-zinc-100">{endpointUrl}</pre>
+            <p>3. Header bắt buộc:</p>
+            <pre className="rounded-lg bg-zinc-900 p-3 text-xs text-zinc-100">{`x-worker-secret: <WORKER_SECRET>\nContent-Type: application/json`}</pre>
+            <p>4. Body mẫu:</p>
+            <pre className="rounded-lg bg-zinc-900 p-3 text-xs text-zinc-100">{`{"dryRun":false,"batchSize":50,"force":false}`}</pre>
+            <p>5. Gợi ý cảnh báo: nếu `failed &gt; 0` hoặc `queued` tăng cao thì gửi cảnh báo Telegram/Email.</p>
+            <p>6. Test local nhanh bằng curl:</p>
+            <pre className="rounded-lg bg-zinc-900 p-3 text-xs text-zinc-100">{`curl -X POST ${endpointUrl} \\\n  -H "x-worker-secret: $WORKER_SECRET" \\\n  -H "Content-Type: application/json" \\\n  -d '{"dryRun":true,"batchSize":20}'`}</pre>
+          </div>
         </div>
       </div>
 

@@ -8,6 +8,7 @@ import { fetchMe, getToken, type MeResponse } from "@/lib/auth-client";
 import { formatCurrencyVnd, todayInHoChiMinh } from "@/lib/date-utils";
 import { hasUiPermission } from "@/lib/ui-permissions";
 import { Alert } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -41,6 +42,7 @@ function currentMonthKey() {
 }
 
 export default function ExpensesMonthlyPage() {
+  const toast = useToast();
   const searchParams = useSearchParams();
   const [monthKey, setMonthKey] = useState(searchParams.get("month") || currentMonthKey());
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
@@ -50,7 +52,6 @@ export default function ExpensesMonthlyPage() {
   const [saving, setSaving] = useState(false);
   const [showSalary, setShowSalary] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
 
   const canEditSalary = hasUiPermission(user?.permissions, "salary", "EDIT");
 
@@ -64,7 +65,6 @@ export default function ExpensesMonthlyPage() {
     if (!token) return;
     setLoading(true);
     setError("");
-    setSuccess("");
     try {
       const [me, summaryRes, salaryRes] = await Promise.all([
         fetchMe(),
@@ -92,7 +92,6 @@ export default function ExpensesMonthlyPage() {
     if (!token) return;
     setSaving(true);
     setError("");
-    setSuccess("");
     try {
       const data = await fetchJson<BaseSalaryResponse>("/api/expenses/base-salary", {
         method: "POST",
@@ -107,7 +106,7 @@ export default function ExpensesMonthlyPage() {
         },
       });
       setSalary(data);
-      setSuccess("Đã lưu lương cơ bản theo tháng.");
+      toast.success("Đã lưu lương cơ bản theo tháng.");
     } catch (e) {
       const err = e as ApiClientError;
       setError(err.message);
@@ -118,62 +117,78 @@ export default function ExpensesMonthlyPage() {
 
   return (
     <div className="space-y-4 pb-20 md:pb-4">
-      <SectionCard
-        title="Tổng hợp chi phí tháng"
-        subtitle="Theo dõi chi phí vận hành, lương cơ bản và insight theo chi nhánh."
-        rightAction={
-          <div className="flex flex-wrap items-center gap-2">
-            <Link
-              href={`/expenses/daily?date=${monthKey}-01`}
-              className="inline-flex h-10 items-center rounded-xl border border-zinc-300 px-3 text-sm text-zinc-700 hover:bg-zinc-100"
-            >
-              Nhập chi phí ngày
-            </Link>
-            <Input type="month" value={monthKey} onChange={(e) => setMonthKey(e.target.value)} />
+      {/* ── Premium Header ── */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-600 via-orange-600 to-red-500 p-4 text-white shadow-lg shadow-amber-200 animate-fadeInUp">
+        <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+        <div className="absolute -bottom-4 -left-4 h-20 w-20 rounded-full bg-white/10 blur-xl" />
+        <div className="relative flex flex-wrap items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 text-2xl backdrop-blur-sm">📊</div>
+          <div className="flex-1">
+            <h2 className="text-lg font-bold">Tổng hợp chi phí tháng</h2>
+            <p className="text-sm text-white/80">Theo dõi chi phí vận hành, lương cơ bản và insight theo chi nhánh.</p>
           </div>
-        }
-      >
-        <></>
-      </SectionCard>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href={`/expenses/daily?date=${monthKey}-01`} className="inline-flex h-10 items-center rounded-xl bg-white/20 border border-white/30 px-3 text-sm text-white hover:bg-white/30 backdrop-blur-sm transition">✏️ Nhập chi phí ngày</Link>
+            <Input type="month" value={monthKey} onChange={(e) => setMonthKey(e.target.value)} className="!bg-white/20 !text-white !border-white/30" />
+          </div>
+        </div>
+      </div>
 
       {error ? <Alert type="error" message={error} /> : null}
-      {success ? <Alert type="success" message={success} /> : null}
 
       {loading || !summary || !salary ? (
-        <div className="flex items-center gap-2 text-zinc-700">
-          <Spinner /> Đang tải dữ liệu...
+        <div className="animate-pulse space-y-3">
+          <div className="grid gap-3 md:grid-cols-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="rounded-2xl bg-white p-4 shadow-sm"><div className="h-3 w-1/2 rounded bg-zinc-200 mb-2" /><div className="h-6 w-2/3 rounded bg-zinc-200" /></div>
+            ))}
+          </div>
+          <div className="rounded-2xl bg-white p-4 shadow-sm space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-10 rounded-xl bg-zinc-100" />)}</div>
         </div>
       ) : (
         <>
-          <div className="grid gap-3 md:grid-cols-3">
-            <div className="rounded-xl border border-zinc-200 bg-white p-3">
-              <p className="text-xs uppercase tracking-wide text-zinc-500">Chi phí vận hành</p>
-              <p className="text-xl font-semibold text-zinc-900">{formatCurrencyVnd(summary.expensesTotalVnd)}</p>
+          <div className="grid gap-3 md:grid-cols-3 animate-fadeInUp" style={{ animationDelay: "80ms" }}>
+            <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm">
+              <div className="h-1 bg-gradient-to-r from-amber-500 to-orange-500" />
+              <div className="p-3">
+                <p className="text-xs uppercase tracking-wide text-amber-600">💸 Chi phí vận hành</p>
+                <p className="text-xl font-semibold text-zinc-900">{formatCurrencyVnd(summary.expensesTotalVnd)}</p>
+              </div>
             </div>
             <button
               type="button"
               onClick={() => setShowSalary((v) => !v)}
-              className="rounded-xl border border-zinc-200 bg-white p-3 text-left transition hover:bg-zinc-50"
+              className="overflow-hidden rounded-2xl border border-zinc-100 bg-white text-left shadow-sm transition hover:shadow-md"
             >
-              <p className="text-xs uppercase tracking-wide text-zinc-500">Lương cơ bản (drilldown)</p>
-              <p className="text-xl font-semibold text-zinc-900">{formatCurrencyVnd(summary.baseSalaryTotalVnd)}</p>
+              <div className="h-1 bg-gradient-to-r from-blue-500 to-indigo-500" />
+              <div className="p-3">
+                <p className="text-xs uppercase tracking-wide text-blue-600">💵 Lương cơ bản (drilldown)</p>
+                <p className="text-xl font-semibold text-zinc-900">{formatCurrencyVnd(summary.baseSalaryTotalVnd)}</p>
+              </div>
             </button>
-            <div className="rounded-xl border border-zinc-200 bg-white p-3">
-              <p className="text-xs uppercase tracking-wide text-zinc-500">Tổng chi tháng</p>
-              <p className="text-xl font-semibold text-zinc-900">{formatCurrencyVnd(summary.grandTotalVnd)}</p>
+            <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm">
+              <div className="h-1 bg-gradient-to-r from-red-500 to-rose-500" />
+              <div className="p-3">
+                <p className="text-xs uppercase tracking-wide text-red-600">📊 Tổng chi tháng</p>
+                <p className="text-xl font-semibold text-zinc-900">{formatCurrencyVnd(summary.grandTotalVnd)}</p>
+              </div>
             </div>
           </div>
 
-          <SectionCard title="Breakdown theo danh mục">
-            <div className="space-y-2">
-              {summary.totalsByCategory.map((item) => (
-                <div key={item.categoryId} className="flex items-center justify-between rounded-xl border border-zinc-200 bg-white p-3">
-                  <p className="text-sm text-zinc-800">{item.categoryName}</p>
-                  <p className="text-sm font-semibold text-zinc-900">{formatCurrencyVnd(item.totalVnd)}</p>
-                </div>
-              ))}
+          <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm animate-fadeInUp" style={{ animationDelay: "160ms" }}>
+            <div className="h-1 bg-gradient-to-r from-amber-500 to-orange-500" />
+            <div className="p-4">
+              <h3 className="text-sm font-semibold text-zinc-800 mb-2">📋 Breakdown theo danh mục</h3>
+              <div className="space-y-2">
+                {summary.totalsByCategory.map((item, idx) => (
+                  <div key={item.categoryId} className="flex items-center justify-between rounded-xl border border-zinc-200 bg-white p-3 transition-colors hover:bg-zinc-50 animate-fadeInUp" style={{ animationDelay: `${160 + Math.min(idx * 40, 200)}ms` }}>
+                    <p className="text-sm text-zinc-800">{item.categoryName}</p>
+                    <p className="text-sm font-semibold text-zinc-900">{formatCurrencyVnd(item.totalVnd)}</p>
+                  </div>
+                ))}
+              </div>
             </div>
-          </SectionCard>
+          </div>
 
           {showSalary ? (
             <SectionCard
@@ -238,19 +253,25 @@ export default function ExpensesMonthlyPage() {
             </SectionCard>
           ) : null}
 
-          <SectionCard title="Insight chi phí">
-            {summary.insights.length === 0 ? (
-              <p className="text-sm text-zinc-600">Chưa có insight cho kỳ này.</p>
-            ) : (
-              <div className="space-y-2">
-                {summary.insights.map((item) => (
-                  <div key={item.id} className="rounded-xl border border-zinc-200 bg-white p-3 text-sm text-zinc-800">
-                    {item.summary}
-                  </div>
-                ))}
-              </div>
-            )}
-          </SectionCard>
+          <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm animate-fadeInUp" style={{ animationDelay: "240ms" }}>
+            <div className="h-1 bg-gradient-to-r from-yellow-500 to-amber-500" />
+            <div className="p-4">
+              <h3 className="text-sm font-semibold text-zinc-800 mb-2">💡 Insight chi phí</h3>
+              {summary.insights.length === 0 ? (
+                <div className="rounded-2xl border-2 border-dashed border-zinc-200 bg-zinc-50 p-6 text-center">
+                  <p className="text-sm text-zinc-600">Chưa có insight cho kỳ này.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {summary.insights.map((item) => (
+                    <div key={item.id} className="rounded-xl border border-zinc-200 bg-white p-3 text-sm text-zinc-800">
+                      {item.summary}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </>
       )}
     </div>

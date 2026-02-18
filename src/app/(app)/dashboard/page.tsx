@@ -14,7 +14,6 @@ import { Pagination } from "@/components/ui/pagination";
 import { Spinner } from "@/components/ui/spinner";
 import { Table } from "@/components/ui/table";
 import { PageHeader } from "@/components/ui/page-header";
-import { SectionCard } from "@/components/ui/section-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { MobileShell } from "@/components/mobile/MobileShell";
@@ -157,6 +156,107 @@ async function fetchLeadsCountByStatus(date: string, status: MetricStatus, token
   });
   const res = await fetchJson<LeadsResponse>(`/api/leads?${params.toString()}`, { token });
   return res.total;
+}
+
+/* ── Mini stat card ──────────────────────────────────────────── */
+const LEAD_STATUS_STYLE: Record<MetricStatus, { icon: string; gradient: string; text: string }> = {
+  NEW: { icon: "🆕", gradient: "from-blue-500 to-indigo-500", text: "text-blue-600" },
+  HAS_PHONE: { icon: "📱", gradient: "from-cyan-500 to-blue-500", text: "text-cyan-600" },
+  APPOINTED: { icon: "📋", gradient: "from-violet-500 to-purple-500", text: "text-violet-600" },
+  ARRIVED: { icon: "🏢", gradient: "from-amber-500 to-orange-500", text: "text-amber-600" },
+  SIGNED: { icon: "✅", gradient: "from-emerald-500 to-green-500", text: "text-emerald-600" },
+  LOST: { icon: "❌", gradient: "from-rose-500 to-red-500", text: "text-rose-600" },
+};
+
+function MiniMetricCard({ status, label, count, onClick, delay }: {
+  status: MetricStatus; label: string; count: number; onClick: () => void; delay: string;
+}) {
+  const style = LEAD_STATUS_STYLE[status];
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`animate-fadeInUp ${delay} group relative overflow-hidden rounded-xl border border-zinc-200/60 bg-white p-3.5 text-left transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 active:scale-95`}
+    >
+      <div className={`absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r ${style.gradient} opacity-60 group-hover:opacity-100 transition-opacity`} />
+      <div className="flex items-center gap-2">
+        <span className="text-base">{style.icon}</span>
+        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">{label}</p>
+      </div>
+      <p className={`mt-2 text-2xl font-bold ${style.text}`}>{count}</p>
+    </button>
+  );
+}
+
+/* ── KPI mini gauge ──────────────────────────────────────────── */
+function KpiGauge({ label, value, color }: { label: string; value: number; color: string }) {
+  const pct = Math.min(100, Math.max(0, value));
+  return (
+    <div className="rounded-xl border border-zinc-200/60 bg-white p-3.5 transition-all duration-300 hover:shadow-md">
+      <p className="text-xs font-medium uppercase tracking-wide text-zinc-400 mb-2">{label}</p>
+      <p className="text-xl font-bold text-zinc-900">{value.toFixed(2)}%</p>
+      <div className="mt-2 h-1.5 rounded-full bg-zinc-100 overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-700 ease-out"
+          style={{ width: `${pct}%`, backgroundColor: color }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ── Finance stat ────────────────────────────────────────────── */
+function FinanceStat({ label, value, icon }: { label: string; value: string; icon: string }) {
+  return (
+    <div className="rounded-xl border border-zinc-200/60 bg-white p-3.5 transition-all duration-300 hover:shadow-md">
+      <div className="flex items-center gap-2 mb-1.5">
+        <span className="text-sm">{icon}</span>
+        <p className="text-xs uppercase tracking-wide text-zinc-400">{label}</p>
+      </div>
+      <p className="text-lg font-bold text-zinc-900">{value}</p>
+    </div>
+  );
+}
+
+/* ── Section Header ──────────────────────────────────────────── */
+function SectionHeader({ icon, gradient, title, badge, action }: {
+  icon: string; gradient: string; title: string; badge?: React.ReactNode; action?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center gap-2.5">
+        <div className={`flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br ${gradient} text-white text-sm shadow-sm`}>
+          {icon}
+        </div>
+        <h2 className="text-sm font-bold text-zinc-700">{title}</h2>
+      </div>
+      <div className="flex items-center gap-2">
+        {badge}
+        {action}
+      </div>
+    </div>
+  );
+}
+
+/* ── Loading skeleton ────────────────────────────────────────── */
+function DashboardSkeleton() {
+  return (
+    <div className="grid gap-4 lg:grid-cols-2 animate-pulse">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="rounded-2xl border border-zinc-200/60 bg-white p-5">
+          <Skeleton className="mb-3 h-5 w-28" />
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, j) => (
+              <div key={j} className="rounded-xl border border-zinc-100 bg-zinc-50 p-3">
+                <Skeleton className="mb-2 h-3 w-16" />
+                <Skeleton className="h-7 w-12" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function DashboardPage() {
@@ -387,24 +487,25 @@ export default function DashboardPage() {
         </button>
       }
     >
-      <div className="space-y-4 pb-24 md:pb-0">
+      <div className="space-y-5 pb-24 md:pb-0">
+        {/* ── Desktop Header ─────────────────────────────── */}
         <div className="hidden md:block">
           <PageHeader
-            title="Trang chủ hôm nay"
+            title="🏠 Tổng quan hôm nay"
             subtitle={`Ngày ${today}${lastUpdated ? ` • Cập nhật lần cuối: ${formatTimeHms(lastUpdated)}` : ""}`}
             actions={
               <>
-                <label className="flex items-center gap-2 rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-700">
-                  <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />
-                  Tự làm mới 60 giây
+                <label className="flex items-center gap-2 rounded-xl border border-zinc-200/60 bg-white px-3 py-2 text-sm text-zinc-600 cursor-pointer hover:bg-zinc-50 transition-colors">
+                  <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} className="accent-blue-600" />
+                  Tự làm mới 60s
                 </label>
-                <Button variant="secondary" onClick={loadSnapshot} disabled={loading}>
+                <Button variant="accent" onClick={loadSnapshot} disabled={loading}>
                   {loading ? (
                     <span className="inline-flex items-center gap-2">
                       <Spinner /> Đang tải...
                     </span>
                   ) : (
-                    "Làm mới"
+                    "🔄 Làm mới"
                   )}
                 </Button>
               </>
@@ -413,6 +514,8 @@ export default function DashboardPage() {
         </div>
 
         {error ? <Alert type="error" message={`Có lỗi xảy ra: ${error}`} /> : null}
+
+        {/* ── Mobile quick search ─────────────────────────── */}
         <section className="ios-glass space-y-3 rounded-2xl border border-zinc-200/70 p-3 md:hidden">
           <Input
             placeholder="Tìm nhanh tên/SĐT khách..."
@@ -441,61 +544,55 @@ export default function DashboardPage() {
           ]}
         />
 
+        {/* ── AI Suggestions Banner ──────────────────────── */}
         {aiSummary?.hasSummary ? (
-          <Link href="/ai/kpi-coach" className="block">
-            <SectionCard
-              title="🤖 AI Gợi ý hôm nay"
-              rightAction={<Badge text={`${aiSummary.totalActive} gợi ý`} tone="primary" />}
-              className="p-4 transition hover:shadow-md"
-            >
-              <p className="text-sm text-zinc-700">{aiSummary.summary}</p>
+          <Link href="/ai/kpi-coach" className="block animate-fadeInUp">
+            <div className="group relative overflow-hidden rounded-2xl border border-violet-200/60 bg-gradient-to-br from-violet-50 via-white to-indigo-50 p-4 shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
+              <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-violet-500 to-indigo-500" />
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-sm">🤖</div>
+                  <div>
+                    <p className="text-sm font-bold text-zinc-800">AI Gợi ý hôm nay</p>
+                    <p className="text-xs text-zinc-500 mt-0.5 line-clamp-1">{aiSummary.summary}</p>
+                  </div>
+                </div>
+                <Badge text={`${aiSummary.totalActive} gợi ý`} tone="primary" pulse />
+              </div>
               {aiSummary.topSuggestion?.preview ? (
-                <p className="mt-1 text-xs text-zinc-500 line-clamp-2">{aiSummary.topSuggestion.preview}</p>
+                <p className="mt-2 text-xs text-zinc-600 line-clamp-2 pl-11">{aiSummary.topSuggestion.preview}</p>
               ) : null}
-            </SectionCard>
+            </div>
           </Link>
         ) : null}
 
+        {/* ── Stale alert ────────────────────────────────── */}
         {staleCount > 0 ? (
-          <Alert type="info" message={`⚠️ Có ${staleCount} khách hàng lâu chưa follow-up — cần xử lý sớm`} />
-        ) : null}
-
-        {loading && !kpi ? (
-          <div className="grid gap-4 lg:grid-cols-2">
-            <SectionCard title="Khách hàng hôm nay" className="p-4">
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-                    <Skeleton className="mb-2 h-3 w-16" />
-                    <Skeleton className="h-7 w-12" />
-                  </div>
-                ))}
-              </div>
-            </SectionCard>
-            <SectionCard title="Tỷ lệ KPI hôm nay" className="p-4">
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-                    <Skeleton className="mb-2 h-3 w-24" />
-                    <Skeleton className="h-6 w-16" />
-                  </div>
-                ))}
-              </div>
-            </SectionCard>
+          <div className="animate-fadeInUp rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3 text-sm text-amber-800 flex items-center gap-2">
+            <span className="text-lg">⚠️</span>
+            <span>Có <strong>{staleCount}</strong> khách hàng lâu chưa follow-up — cần xử lý sớm</span>
           </div>
         ) : null}
 
+        {/* ── Loading skeletons ──────────────────────────── */}
+        {loading && !kpi ? <DashboardSkeleton /> : null}
+
         {!isAdmin && (isTelesales || user) ? (
-          <Alert type="info" message="Bạn đang xem dữ liệu trong phạm vi quyền được cấp." />
+          <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm text-blue-700 flex items-center gap-2">
+            <span>🔒</span> Bạn đang xem dữ liệu trong phạm vi quyền được cấp.
+          </div>
         ) : null}
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          <SectionCard
-            title="Khách hàng hôm nay"
-            rightAction={<Badge text="Khách hàng" tone="accent" />}
-            className="p-4"
-          >
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {/* ── Main sections grid ─────────────────────────── */}
+        <div className="grid gap-5 lg:grid-cols-2">
+
+          {/* ── Khách hàng hôm nay ───────────────────────── */}
+          <div className="animate-fadeInUp delay-1 rounded-2xl border border-zinc-200/60 bg-white p-5 shadow-sm">
+            <SectionHeader
+              icon="👥" gradient="from-blue-500 to-indigo-600" title="Khách hàng hôm nay"
+              badge={<Badge text="Khách hàng" tone="accent" />}
+            />
+            <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
               {(
                 [
                   ["NEW", "Khách mới"],
@@ -505,125 +602,104 @@ export default function DashboardPage() {
                   ["SIGNED", "Đã ký"],
                   ["LOST", "Rớt"],
                 ] as Array<[MetricStatus, string]>
-              ).map(([status, label]) => (
-                <button
+              ).map(([status, label], i) => (
+                <MiniMetricCard
                   key={status}
-                  type="button"
+                  status={status}
+                  label={label}
+                  count={leadsByStatus[status]}
                   onClick={() => openDrilldown(status, label)}
-                  className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-left transition hover:bg-zinc-100"
-                >
-                  <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{label}</p>
-                  <p className="mt-1 text-2xl font-semibold text-zinc-900">{leadsByStatus[status]}</p>
-                </button>
+                  delay={`delay-${i + 1}`}
+                />
               ))}
             </div>
-          </SectionCard>
+          </div>
 
-          <SectionCard title="Tỷ lệ KPI hôm nay" rightAction={<Badge text="KPI %" tone="primary" />} className="p-4">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-left">
-                <p className="text-xs uppercase tracking-wide text-zinc-500">Tỉ lệ lấy được số</p>
-                <p className="text-xl font-semibold text-zinc-900">{(kpi?.directPage.hasPhoneRate.daily.valuePct ?? 0).toFixed(2)}%</p>
-              </div>
-              <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-left">
-                <p className="text-xs uppercase tracking-wide text-zinc-500">Tỉ lệ hẹn từ data</p>
-                <p className="text-xl font-semibold text-zinc-900">{(kpi?.tuVan.appointedRate.daily.valuePct ?? 0).toFixed(2)}%</p>
-              </div>
-              <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-left">
-                <p className="text-xs uppercase tracking-wide text-zinc-500">Tỉ lệ đến từ hẹn</p>
-                <p className="text-xl font-semibold text-zinc-900">{(kpi?.tuVan.arrivedRate.daily.valuePct ?? 0).toFixed(2)}%</p>
-              </div>
-              <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-left">
-                <p className="text-xs uppercase tracking-wide text-zinc-500">Tỉ lệ ký từ đến</p>
-                <p className="text-xl font-semibold text-zinc-900">{(kpi?.tuVan.signedRate.daily.valuePct ?? 0).toFixed(2)}%</p>
-              </div>
+          {/* ── KPI % hôm nay ────────────────────────────── */}
+          <div className="animate-fadeInUp delay-2 rounded-2xl border border-zinc-200/60 bg-white p-5 shadow-sm">
+            <SectionHeader icon="📊" gradient="from-emerald-500 to-teal-600" title="Tỷ lệ KPI hôm nay" badge={<Badge text="KPI %" tone="primary" />} />
+            <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+              <KpiGauge label="Tỉ lệ lấy số" value={kpi?.directPage.hasPhoneRate.daily.valuePct ?? 0} color="#3b82f6" />
+              <KpiGauge label="Tỉ lệ hẹn/data" value={kpi?.tuVan.appointedRate.daily.valuePct ?? 0} color="#8b5cf6" />
+              <KpiGauge label="Tỉ lệ đến/hẹn" value={kpi?.tuVan.arrivedRate.daily.valuePct ?? 0} color="#f59e0b" />
+              <KpiGauge label="Tỉ lệ ký/đến" value={kpi?.tuVan.signedRate.daily.valuePct ?? 0} color="#10b981" />
             </div>
-          </SectionCard>
+          </div>
 
-          <SectionCard title="Tài chính hôm nay" rightAction={<Badge text="Thu tiền" tone="accent" />} className="p-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-                <p className="text-xs uppercase tracking-wide text-zinc-500">Tổng thu</p>
-                <p className="text-xl font-semibold text-zinc-900">
-                  {formatCurrencyVnd(receiptsSummary?.totalThu ?? 0)}
-                </p>
-              </div>
-              <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-                <p className="text-xs uppercase tracking-wide text-zinc-500">Tổng phiếu thu</p>
-                <p className="text-xl font-semibold text-zinc-900">
-                  {receiptsSummary?.totalPhieuThu ?? 0}
-                </p>
-              </div>
-              <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-                <p className="text-xs uppercase tracking-wide text-zinc-500">Còn phải thu</p>
-                <p className="text-xl font-semibold text-zinc-900">Xem tại mục Phiếu thu</p>
-              </div>
-              <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-                <p className="text-xs uppercase tracking-wide text-zinc-500">Đã đóng &gt;= 50%</p>
-                <p className="text-xl font-semibold text-zinc-900">Xem tại mục Phiếu thu</p>
-              </div>
+          {/* ── Tài chính hôm nay ────────────────────────── */}
+          <div className="animate-fadeInUp delay-3 rounded-2xl border border-zinc-200/60 bg-white p-5 shadow-sm">
+            <SectionHeader icon="💰" gradient="from-amber-500 to-orange-600" title="Tài chính hôm nay" badge={<Badge text="Thu tiền" tone="accent" />} />
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              <FinanceStat label="Tổng thu" value={formatCurrencyVnd(receiptsSummary?.totalThu ?? 0)} icon="💵" />
+              <FinanceStat label="Tổng phiếu thu" value={String(receiptsSummary?.totalPhieuThu ?? 0)} icon="🧾" />
+              <FinanceStat label="Còn phải thu" value="Xem Phiếu thu" icon="📥" />
+              <FinanceStat label="Đã đóng >= 50%" value="Xem Phiếu thu" icon="✅" />
             </div>
             <div className="mt-3">
               <Link
                 href={`/receipts?from=${today}&to=${today}`}
-                className="inline-flex items-center rounded-xl border border-zinc-300 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200/60 bg-zinc-50 px-3.5 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-800 transition-all duration-200"
               >
-                Mở danh sách phiếu thu hôm nay
+                <span>📋</span> Mở phiếu thu hôm nay
               </Link>
             </div>
-          </SectionCard>
+          </div>
 
-          <SectionCard title="Chi phí tháng" rightAction={<Badge text="Chi phí" tone="accent" />} className="p-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-                <p className="text-xs uppercase tracking-wide text-zinc-500">Chi phí vận hành</p>
-                <p className="text-xl font-semibold text-zinc-900">{formatCurrencyVnd(expenseSummary?.expensesTotalVnd ?? 0)}</p>
-              </div>
-              <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-                <p className="text-xs uppercase tracking-wide text-zinc-500">Lương cơ bản</p>
-                <p className="text-xl font-semibold text-zinc-900">{formatCurrencyVnd(expenseSummary?.baseSalaryTotalVnd ?? 0)}</p>
-              </div>
-              <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 sm:col-span-2">
-                <p className="text-xs uppercase tracking-wide text-zinc-500">Tổng chi tháng</p>
-                <p className="text-xl font-semibold text-zinc-900">{formatCurrencyVnd(expenseSummary?.grandTotalVnd ?? 0)}</p>
+          {/* ── Chi phí tháng ────────────────────────────── */}
+          <div className="animate-fadeInUp delay-4 rounded-2xl border border-zinc-200/60 bg-white p-5 shadow-sm">
+            <SectionHeader icon="💳" gradient="from-rose-500 to-pink-600" title="Chi phí tháng" badge={<Badge text="Chi phí" tone="accent" />} />
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              <FinanceStat label="Chi phí vận hành" value={formatCurrencyVnd(expenseSummary?.expensesTotalVnd ?? 0)} icon="🏭" />
+              <FinanceStat label="Lương cơ bản" value={formatCurrencyVnd(expenseSummary?.baseSalaryTotalVnd ?? 0)} icon="💼" />
+              <div className="sm:col-span-2 rounded-xl border border-zinc-200/60 bg-gradient-to-r from-rose-50 to-pink-50 p-3.5 transition-all duration-300">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-sm">📊</span>
+                  <p className="text-xs uppercase tracking-wide text-zinc-400">Tổng chi tháng</p>
+                </div>
+                <p className="text-xl font-bold text-rose-700">{formatCurrencyVnd(expenseSummary?.grandTotalVnd ?? 0)}</p>
               </div>
             </div>
             {expenseSummary?.insights?.[0]?.summary ? (
-              <p className="mt-3 rounded-lg border border-zinc-200 bg-white p-3 text-sm text-zinc-700">
-                Insight: {expenseSummary.insights[0].summary}
-              </p>
+              <div className="mt-3 rounded-xl border border-amber-200/60 bg-amber-50 p-3 text-sm text-amber-800 flex items-start gap-2">
+                <span className="mt-0.5">💡</span>
+                <span>{expenseSummary.insights[0].summary}</span>
+              </div>
             ) : null}
             <div className="mt-3">
               <Link
                 href={`/expenses/monthly?month=${today.slice(0, 7)}`}
-                className="inline-flex items-center rounded-xl border border-zinc-300 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200/60 bg-zinc-50 px-3.5 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-800 transition-all duration-200"
               >
-                Mở trang chi phí
+                <span>📊</span> Mở trang chi phí
               </Link>
             </div>
-          </SectionCard>
+          </div>
 
-          <SectionCard title="Trợ lý công việc hôm nay" rightAction={<Badge text="Công việc" tone="primary" />} className="p-4">
+          {/* ── Trợ lý công việc ─────────────────────────── */}
+          <div className="animate-fadeInUp delay-5 rounded-2xl border border-zinc-200/60 bg-white p-5 shadow-sm">
+            <SectionHeader icon="🤖" gradient="from-violet-500 to-purple-600" title="Trợ lý công việc" badge={<Badge text="Công việc" tone="primary" />} />
             {aiSuggestions.length === 0 ? (
-              <p className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-600">
-                Chưa có gợi ý AI trong hôm nay.
-              </p>
+              <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-4 text-center">
+                <p className="text-sm text-zinc-500">Chưa có gợi ý AI trong hôm nay.</p>
+              </div>
             ) : (
               <div className="space-y-2">
                 {aiSuggestions.map((item) => (
-                  <div key={item.id} className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-                    <div className="flex items-center gap-2">
+                  <div key={item.id} className="rounded-xl border border-zinc-200/60 bg-white p-3.5 transition-all duration-300 hover:shadow-md">
+                    <div className="flex items-center gap-2.5">
                       <span
-                        className={`inline-block h-2.5 w-2.5 rounded-full ${item.scoreColor === "RED"
-                          ? "bg-rose-500"
-                          : item.scoreColor === "YELLOW"
-                            ? "bg-amber-500"
-                            : "bg-emerald-500"
+                        className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-white text-xs font-bold shadow-sm ${item.scoreColor === "RED"
+                            ? "bg-gradient-to-br from-rose-500 to-red-600"
+                            : item.scoreColor === "YELLOW"
+                              ? "bg-gradient-to-br from-amber-500 to-orange-600"
+                              : "bg-gradient-to-br from-emerald-500 to-green-600"
                           }`}
-                      />
+                      >
+                        {item.scoreColor === "RED" ? "!" : item.scoreColor === "YELLOW" ? "?" : "✓"}
+                      </span>
                       <p className="text-sm font-semibold text-zinc-900">{item.title}</p>
                     </div>
-                    <p className="mt-1 text-sm text-zinc-600">{item.content}</p>
+                    <p className="mt-1.5 text-sm text-zinc-600 pl-8">{item.content}</p>
                   </div>
                 ))}
               </div>
@@ -631,74 +707,89 @@ export default function DashboardPage() {
             <div className="mt-3">
               <Link
                 href={`/ai/kpi-coach?date=${today}`}
-                className="inline-flex items-center rounded-xl border border-zinc-300 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200/60 bg-zinc-50 px-3.5 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-800 transition-all duration-200"
               >
-                Mở Trợ lý công việc
+                <span>🤖</span> Mở Trợ lý công việc
               </Link>
             </div>
-          </SectionCard>
+          </div>
 
-          <SectionCard title="Automation hôm nay" rightAction={<Badge text="Vận hành" tone="primary" />} className="p-4">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-                <p className="text-xs uppercase tracking-wide text-zinc-500">Đã gửi</p>
-                <p className="text-xl font-semibold text-zinc-900">{automationStats.sent}</p>
+          {/* ── Automation hôm nay ───────────────────────── */}
+          <div className="animate-fadeInUp delay-5 rounded-2xl border border-zinc-200/60 bg-white p-5 shadow-sm">
+            <SectionHeader icon="⚡" gradient="from-cyan-500 to-blue-600" title="Automation hôm nay" badge={<Badge text="Vận hành" tone="primary" />} />
+            <div className="grid gap-2.5 sm:grid-cols-3">
+              <div className="rounded-xl border border-zinc-200/60 bg-white p-3.5 transition-all duration-300 hover:shadow-md">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-sm">✅</span>
+                  <p className="text-xs uppercase tracking-wide text-zinc-400">Đã gửi</p>
+                </div>
+                <p className="text-xl font-bold text-emerald-600">{automationStats.sent}</p>
               </div>
-              <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-                <p className="text-xs uppercase tracking-wide text-zinc-500">Thất bại</p>
-                <p className="text-xl font-semibold text-zinc-900">{automationStats.failed}</p>
+              <div className="rounded-xl border border-zinc-200/60 bg-white p-3.5 transition-all duration-300 hover:shadow-md">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-sm">❌</span>
+                  <p className="text-xs uppercase tracking-wide text-zinc-400">Thất bại</p>
+                </div>
+                <p className={`text-xl font-bold ${automationStats.failed > 0 ? "text-rose-600" : "text-zinc-900"}`}>{automationStats.failed}</p>
               </div>
-              <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-                <p className="text-xs uppercase tracking-wide text-zinc-500">Bỏ qua</p>
-                <p className="text-xl font-semibold text-zinc-900">{automationStats.skipped}</p>
+              <div className="rounded-xl border border-zinc-200/60 bg-white p-3.5 transition-all duration-300 hover:shadow-md">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-sm">⏭️</span>
+                  <p className="text-xs uppercase tracking-wide text-zinc-400">Bỏ qua</p>
+                </div>
+                <p className="text-xl font-bold text-zinc-900">{automationStats.skipped}</p>
               </div>
             </div>
             <div className="mt-3">
               <Link
                 href={`/automation/logs?status=failed&from=${today}&to=${today}`}
-                className="inline-flex items-center rounded-xl border border-zinc-300 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200/60 bg-zinc-50 px-3.5 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-800 transition-all duration-200"
               >
-                Xem lỗi
+                <span>🔍</span> Xem lỗi
               </Link>
             </div>
-          </SectionCard>
+          </div>
 
-          <SectionCard title="Việc cần làm" rightAction={<Badge text="Thông báo" tone="accent" />} className="p-4">
-            <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-              <p className="text-xs uppercase tracking-wide text-zinc-500">Mới + Đang xử lý</p>
-              <p className="text-2xl font-semibold text-zinc-900">{todoCount}</p>
-            </div>
-            <div className="mt-3">
+          {/* ── Việc cần làm ─────────────────────────────── */}
+          <div className="animate-fadeInUp delay-5 rounded-2xl border border-zinc-200/60 bg-white p-5 shadow-sm lg:col-span-2">
+            <SectionHeader icon="📝" gradient="from-pink-500 to-rose-600" title="Việc cần làm" badge={<Badge text="Thông báo" tone="accent" />} />
+            <div className="flex items-center gap-4">
+              <div className="rounded-xl border border-zinc-200/60 bg-gradient-to-br from-pink-50 to-rose-50 p-4 flex-1">
+                <p className="text-xs uppercase tracking-wide text-zinc-400 mb-1">Mới + Đang xử lý</p>
+                <p className={`text-3xl font-bold ${todoCount > 0 ? "text-pink-600" : "text-zinc-900"}`}>{todoCount}</p>
+              </div>
               <Link
                 href="/notifications"
-                className="inline-flex items-center rounded-xl border border-zinc-300 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200/60 bg-zinc-50 px-4 py-3 text-sm font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-800 transition-all duration-200"
               >
-                Mở hàng đợi thông báo
+                <span>📬</span> Mở hàng đợi
               </Link>
             </div>
-          </SectionCard>
+          </div>
         </div>
 
+        {/* ── Alerts ─────────────────────────────────────── */}
         <div className="space-y-2">
           {automationStats.failed > 0 ? (
-            <Alert
-              type="error"
-              message={`Có ${automationStats.failed} lượt chạy automation thất bại hôm nay. Mở nhật ký để kiểm tra nguyên nhân.`}
-            />
+            <div className="rounded-xl border border-rose-200 bg-gradient-to-r from-rose-50 to-red-50 px-4 py-3 text-sm text-rose-700 flex items-center gap-2">
+              <span>🚨</span>
+              Có <strong>{automationStats.failed}</strong> lượt automation thất bại hôm nay.
+            </div>
           ) : null}
           {isAdmin && unassignedCount > 0 ? (
-            <Alert
-              type="info"
-              message={`Có ${unassignedCount} khách chưa được gán người phụ trách hôm nay. Vào mục phân khách hàng để xử lý.`}
-            />
-          ) : null}
-          {isAdmin && unassignedCount > 0 ? (
-            <Link href="/admin/assign-leads" className="inline-flex text-sm text-blue-700 hover:underline">
-              Đi tới phân khách hàng
-            </Link>
+            <div className="rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3 text-sm text-amber-700 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span>⚠️</span>
+                <span>Có <strong>{unassignedCount}</strong> khách chưa được gán phụ trách hôm nay.</span>
+              </div>
+              <Link href="/admin/assign-leads" className="text-sm font-semibold text-amber-800 hover:underline whitespace-nowrap">
+                Gán ngay →
+              </Link>
+            </div>
           ) : null}
         </div>
 
+        {/* ── Drilldown Modal ────────────────────────────── */}
         <Modal
           open={drilldown.open}
           title={`Danh sách khách - ${drilldown.title}`}
@@ -709,7 +800,10 @@ export default function DashboardPage() {
               <Spinner /> Đang tải...
             </div>
           ) : drilldown.items.length === 0 ? (
-            <p className="text-sm text-zinc-600">Không có dữ liệu.</p>
+            <div className="text-center py-8">
+              <p className="text-3xl mb-2">📭</p>
+              <p className="text-sm text-zinc-500">Không có dữ liệu.</p>
+            </div>
           ) : (
             <div className="space-y-3">
               <Table headers={["Họ tên", "SĐT", "Nguồn", "Kênh", "Hạng bằng", "Trạng thái", "Ngày tạo", "Hành động"]}>
@@ -748,10 +842,11 @@ export default function DashboardPage() {
           )}
         </Modal>
 
-        <div className="text-xs text-zinc-500">
-          Múi giờ hiển thị: Asia/Ho_Chi_Minh • Giờ hiện tại: {formatTimeHm(new Date())}
+        {/* ── Footer ─────────────────────────────────────── */}
+        <div className="text-xs text-zinc-400 text-center py-2">
+          Múi giờ: Asia/Ho_Chi_Minh • {formatTimeHm(new Date())}
         </div>
       </div>
-    </MobileShell >
+    </MobileShell>
   );
 }

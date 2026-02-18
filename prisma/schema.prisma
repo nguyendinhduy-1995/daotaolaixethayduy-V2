@@ -171,6 +171,7 @@ enum OpsPulseRole {
 enum EmployeeKpiRole {
   PAGE
   TELESALES
+  BRANCH
 }
 
 enum InstructorStatus {

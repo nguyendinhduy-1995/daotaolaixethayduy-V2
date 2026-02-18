@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Input } from "@/components/ui/input";
-import { ADMIN_MENU, type AdminMenuItem } from "@/lib/admin-menu";
+import { ADMIN_MENU, GROUP_COLORS, type AdminMenuItem } from "@/lib/admin-menu";
 import { fetchMe } from "@/lib/auth-client";
 import { isAdminRole } from "@/lib/admin-auth";
 import { hasUiPermission, moduleKeyFromHref } from "@/lib/ui-permissions";
@@ -24,9 +24,9 @@ function normalizeVi(input: string) {
 }
 
 const QUICK_ADD_ACTIONS = [
-  { key: "create-customer", label: "Tạo khách hàng", href: "/leads" },
-  { key: "create-receipt", label: "Tạo phiếu thu", href: "/receipts" },
-  { key: "create-student", label: "Tạo học viên", href: "/students" },
+  { key: "create-customer", label: "Tạo khách hàng", href: "/leads", icon: "👤" },
+  { key: "create-receipt", label: "Tạo phiếu thu", href: "/receipts", icon: "🧾" },
+  { key: "create-student", label: "Tạo học viên", href: "/students", icon: "🎓" },
 ];
 
 export function MobileAdminMenu({ items = ADMIN_MENU, enableQuickAdd = true }: MobileAdminMenuProps) {
@@ -106,21 +106,31 @@ export function MobileAdminMenu({ items = ADMIN_MENU, enableQuickAdd = true }: M
       );
     }
 
-    return grouped.map(([group, menuItems]) => {
+    return grouped.map(([group, menuItems], groupIdx) => {
       const expanded = openGroups.includes(group);
+      const colors = GROUP_COLORS[group] || GROUP_COLORS["Quản trị"];
       return (
-        <div key={group} className="space-y-1.5 rounded-2xl border border-zinc-200 bg-white p-2">
+        <div
+          key={group}
+          className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm animate-fadeInUp"
+          style={{ animationDelay: `${groupIdx * 50}ms` }}
+        >
+          {/* ── Group gradient accent ── */}
+          <div className={`h-0.5 bg-gradient-to-r ${colors.from} ${colors.to}`} />
           <button
             type="button"
             onClick={() => toggleGroup(group)}
-            className="flex w-full items-center justify-between rounded-xl px-2 py-2 text-left text-sm font-semibold text-zinc-800"
+            className="flex w-full items-center justify-between px-3 py-2.5 text-left text-sm font-semibold text-zinc-700 transition active:bg-zinc-50"
           >
-            <span>{group}</span>
-            <span className="text-zinc-400">{expanded ? "−" : "+"}</span>
+            <span className="flex items-center gap-2">
+              <span>{colors.icon}</span>
+              <span>{group}</span>
+            </span>
+            <span className={`text-zinc-400 transition-transform duration-200 ${expanded ? "rotate-0" : "-rotate-90"}`}>▾</span>
           </button>
           {expanded ? (
-            <div className="space-y-1">
-              {menuItems.map((item) => {
+            <div className="space-y-0.5 px-2 pb-2">
+              {menuItems.map((item, idx) => {
                 const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
                 return (
                   <button
@@ -130,11 +140,19 @@ export function MobileAdminMenu({ items = ADMIN_MENU, enableQuickAdd = true }: M
                       router.push(item.href);
                       setMenuOpen(false);
                     }}
-                    className={`tap-feedback active:scale-[0.98] flex h-[48px] w-full items-center rounded-xl border px-3 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 ${
-                      active ? "border-slate-900 bg-slate-900 text-white" : "border-zinc-200 bg-white text-zinc-800"
-                    }`}
+                    className={`tap-feedback active:scale-[0.98] group/item relative flex h-[44px] w-full items-center gap-2.5 rounded-xl px-3 text-left text-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 ${active
+                      ? `${colors.accent} text-white shadow-md shadow-black/10`
+                      : "text-zinc-600 hover:bg-zinc-50 active:bg-zinc-100"
+                      }`}
+                    style={{ animationDelay: `${groupIdx * 50 + idx * 25}ms` }}
                   >
-                    <span className="truncate">{item.label}</span>
+                    <span className={`text-sm transition-transform duration-200 group-hover/item:scale-110 ${active ? "drop-shadow-sm" : ""}`}>
+                      {item.icon || "•"}
+                    </span>
+                    <span className="truncate font-medium">{item.label}</span>
+                    {active && (
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 h-1.5 w-1.5 rounded-full bg-white/80 animate-pulse" />
+                    )}
                   </button>
                 );
               })}
@@ -147,34 +165,47 @@ export function MobileAdminMenu({ items = ADMIN_MENU, enableQuickAdd = true }: M
 
   return (
     <>
-      <div className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[max(env(safe-area-inset-bottom),10px)] md:hidden">
-        <div className="mx-auto flex w-full max-w-screen-sm items-center gap-2 rounded-2xl border border-zinc-200/80 bg-white/80 p-2 shadow-lg backdrop-blur-xl">
+      {/* ── Bottom Dock Bar ── */}
+      <nav aria-label="Thanh điều hướng chính" className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[max(env(safe-area-inset-bottom),10px)] md:hidden">
+        <div className="mx-auto flex w-full max-w-screen-sm items-center gap-2 rounded-2xl border border-zinc-200/60 bg-white/90 p-2 shadow-lg shadow-black/5 backdrop-blur-xl">
           <button
             type="button"
+            aria-label="Mở menu quản trị"
             onClick={() => setMenuOpen(true)}
-            className="tap-feedback active:scale-[0.98] flex h-12 flex-1 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+            className="tap-feedback active:scale-[0.97] flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 text-sm font-semibold text-white shadow-md shadow-blue-200 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
           >
-            Menu
+            <span>☰</span>
+            <span>Menu</span>
           </button>
           {enableQuickAdd && quickActions.length > 0 ? (
             <button
               type="button"
+              aria-label="Thêm nhanh"
               onClick={() => setQuickAddOpen(true)}
-              className="tap-feedback active:scale-[0.98] h-12 rounded-xl border border-zinc-200 bg-white/90 px-4 text-sm font-semibold text-zinc-800 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+              className="tap-feedback active:scale-[0.97] h-12 rounded-xl border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-700 shadow-sm transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
             >
-              + Thêm
+              ＋ Thêm
             </button>
           ) : null}
         </div>
-      </div>
+      </nav>
 
+      {/* ── Menu Bottom Sheet ── */}
       <BottomSheet open={menuOpen} onOpenChange={setMenuOpen} title="Menu quản trị">
         <div className="space-y-3">
-          <Input placeholder="Tìm tính năng..." value={query} onChange={(e) => setQuery(e.target.value)} />
+          <div className="relative">
+            <Input
+              placeholder="🔍 Tìm tính năng..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="!rounded-xl !border-zinc-200 !bg-zinc-50 focus:!border-blue-400 focus:!ring-2 focus:!ring-blue-100 transition-all"
+            />
+          </div>
           {renderGroupList()}
         </div>
       </BottomSheet>
 
+      {/* ── Quick Add Bottom Sheet ── */}
       <BottomSheet open={quickAddOpen} onOpenChange={setQuickAddOpen} title="Thêm nhanh">
         <div className="space-y-2">
           {quickActions.map((action) => (
@@ -185,9 +216,10 @@ export function MobileAdminMenu({ items = ADMIN_MENU, enableQuickAdd = true }: M
                 router.push(action.href);
                 setQuickAddOpen(false);
               }}
-              className="tap-feedback active:scale-[0.98] flex h-[50px] w-full items-center rounded-xl border border-zinc-200 bg-white px-3 text-left text-sm font-medium text-zinc-800 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+              className="tap-feedback active:scale-[0.98] flex h-[50px] w-full items-center gap-3 rounded-xl border border-zinc-200 bg-white px-3 text-left text-sm font-medium text-zinc-800 shadow-sm transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
             >
-              {action.label}
+              <span className="text-lg">{action.icon}</span>
+              <span>{action.label}</span>
             </button>
           ))}
         </div>

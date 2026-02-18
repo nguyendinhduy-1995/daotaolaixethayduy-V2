@@ -7,6 +7,7 @@ import { fetchJson, type ApiClientError } from "@/lib/api-client";
 import { clearToken, fetchMe, getToken } from "@/lib/auth-client";
 import { isAdminRole } from "@/lib/admin-auth";
 import { Alert } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +18,6 @@ import { Spinner } from "@/components/ui/spinner";
 import { Table } from "@/components/ui/table";
 import { DataCard } from "@/components/mobile/DataCard";
 import { EmptyState } from "@/components/mobile/EmptyState";
-import { MobileHeader } from "@/components/app/mobile-header";
 import { MobileToolbar } from "@/components/app/mobile-toolbar";
 import { MobileFiltersSheet } from "@/components/mobile/MobileFiltersSheet";
 import { formatCurrencyVnd, formatDateTimeVi } from "@/lib/date-utils";
@@ -59,6 +59,7 @@ function parseApiError(error: ApiClientError) {
 
 export default function AdminBranchesPage() {
   const router = useRouter();
+  const toast = useToast();
   const [checkingRole, setCheckingRole] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -71,7 +72,6 @@ export default function AdminBranchesPage() {
   const [activeFilter, setActiveFilter] = useState<"" | "true" | "false">("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -167,7 +167,6 @@ export default function AdminBranchesPage() {
 
     setCreateSaving(true);
     setError("");
-    setSuccess("");
     try {
       await fetchJson<{ branch: BranchItem }>("/api/admin/branches", {
         method: "POST",
@@ -181,7 +180,7 @@ export default function AdminBranchesPage() {
       });
       setCreateOpen(false);
       setCreateForm(EMPTY_FORM);
-      setSuccess("Tạo chi nhánh thành công.");
+      toast.success("Tạo chi nhánh thành công.");
       await loadBranches();
     } catch (e) {
       const err = e as ApiClientError;
@@ -218,7 +217,6 @@ export default function AdminBranchesPage() {
 
     setEditSaving(true);
     setError("");
-    setSuccess("");
     try {
       await fetchJson<{ branch: BranchItem }>(`/api/admin/branches/${editTarget.id}`, {
         method: "PATCH",
@@ -232,7 +230,7 @@ export default function AdminBranchesPage() {
       });
       setEditOpen(false);
       setEditTarget(null);
-      setSuccess("Cập nhật chi nhánh thành công.");
+      toast.success("Cập nhật chi nhánh thành công.");
       await loadBranches();
     } catch (e) {
       const err = e as ApiClientError;
@@ -263,32 +261,26 @@ export default function AdminBranchesPage() {
 
   return (
     <div className="space-y-4">
-      <MobileHeader
-        title="Quản trị chi nhánh"
-        subtitle="Quản lý thông tin chi nhánh"
-        rightActions={<Button onClick={() => setCreateOpen(true)}>Tạo</Button>}
-      />
-
-      <div className="hidden md:block">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-xl font-semibold text-zinc-900">Quản trị chi nhánh</h1>
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" onClick={loadBranches} disabled={loading}>
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <Spinner /> Đang tải...
-                </span>
-              ) : (
-                "Làm mới"
-              )}
+      {/* ── Premium Header ── */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 p-4 text-white shadow-lg shadow-emerald-200 animate-fadeInUp">
+        <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+        <div className="absolute -bottom-4 -left-4 h-20 w-20 rounded-full bg-white/10 blur-xl" />
+        <div className="relative flex flex-wrap items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 text-2xl backdrop-blur-sm">🏢</div>
+          <div className="flex-1">
+            <h2 className="text-lg font-bold">Quản trị chi nhánh</h2>
+            <p className="text-sm text-white/80">Quản lý thông tin chi nhánh</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="secondary" onClick={loadBranches} disabled={loading} className="!bg-white/20 !text-white !border-white/30 hover:!bg-white/30">
+              {loading ? "Đang tải..." : "🔄 Làm mới"}
             </Button>
-            <Button onClick={() => setCreateOpen(true)}>Tạo chi nhánh</Button>
+            <Button onClick={() => setCreateOpen(true)} className="!bg-white !text-emerald-700 hover:!bg-white/90">➕ Tạo chi nhánh</Button>
           </div>
         </div>
       </div>
 
       {error ? <Alert type="error" message={error} /> : null}
-      {success ? <Alert type="success" message={success} /> : null}
 
       <div className="sticky top-[116px] z-20 rounded-2xl border border-zinc-200 bg-zinc-100/90 p-2 backdrop-blur md:hidden">
         <MobileToolbar
@@ -307,39 +299,43 @@ export default function AdminBranchesPage() {
         />
       </div>
 
-      <div className="hidden rounded-xl bg-white p-4 shadow-sm md:block">
-        <div className="grid gap-2 md:grid-cols-3">
-          <div>
-            <label className="mb-1 block text-sm text-zinc-600">Tìm kiếm</label>
-            <Input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Tên hoặc mã" />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-zinc-600">Trạng thái</label>
-            <Select
-              value={activeFilter}
-              onChange={(e) => {
-                setPage(1);
-                setActiveFilter(e.target.value as "" | "true" | "false");
-              }}
-            >
-              <option value="">Tất cả</option>
-              <option value="true">Đang hoạt động</option>
-              <option value="false">Tạm ngưng</option>
-            </Select>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-zinc-600">Kích thước trang</label>
-            <Select
-              value={String(pageSize)}
-              onChange={(e) => {
-                setPage(1);
-                setPageSize(Number(e.target.value));
-              }}
-            >
-              <option value="20">20</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-            </Select>
+      <div className="hidden overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm md:block animate-fadeInUp" style={{ animationDelay: "80ms" }}>
+        <div className="h-1 bg-gradient-to-r from-emerald-500 to-teal-500" />
+        <div className="p-4">
+          <h3 className="text-sm font-semibold text-zinc-800 mb-3">🔍 Bộ lọc</h3>
+          <div className="grid gap-2 md:grid-cols-3">
+            <div>
+              <label className="mb-1 block text-sm text-zinc-600">Tìm kiếm</label>
+              <Input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Tên hoặc mã" />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-zinc-600">Trạng thái</label>
+              <Select
+                value={activeFilter}
+                onChange={(e) => {
+                  setPage(1);
+                  setActiveFilter(e.target.value as "" | "true" | "false");
+                }}
+              >
+                <option value="">Tất cả</option>
+                <option value="true">Đang hoạt động</option>
+                <option value="false">Tạm ngưng</option>
+              </Select>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-zinc-600">Kích thước trang</label>
+              <Select
+                value={String(pageSize)}
+                onChange={(e) => {
+                  setPage(1);
+                  setPageSize(Number(e.target.value));
+                }}
+              >
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </Select>
+            </div>
           </div>
         </div>
       </div>
@@ -378,28 +374,38 @@ export default function AdminBranchesPage() {
 
       <div className="hidden md:block">
         {loading ? (
-          <div className="rounded-xl bg-white p-6 text-sm text-zinc-600">Đang tải danh sách chi nhánh...</div>
+          <div className="animate-pulse space-y-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center gap-3 rounded-xl bg-white p-3 shadow-sm">
+                <div className="h-8 w-8 rounded-lg bg-zinc-200" />
+                <div className="flex-1 space-y-2"><div className="h-4 w-1/4 rounded bg-zinc-200" /><div className="h-3 w-1/3 rounded bg-zinc-100" /></div>
+                <div className="h-6 w-16 rounded-full bg-zinc-200" />
+              </div>
+            ))}
+          </div>
         ) : items.length === 0 ? (
           <div className="rounded-xl bg-white p-6 text-sm text-zinc-600">Không có dữ liệu chi nhánh.</div>
         ) : (
-          <Table headers={["Tên chi nhánh", "Mã", "Trạng thái", "Hoa hồng/HS 50%", "Ngày tạo", "Hành động"]}>
-            {items.map((branch) => (
-              <tr key={branch.id} className="border-t border-zinc-100">
-                <td className="px-3 py-2">{branch.name}</td>
-                <td className="px-3 py-2">{branch.code || "-"}</td>
-                <td className="px-3 py-2">
-                  <Badge text={branch.isActive ? "Đang hoạt động" : "Tạm ngưng"} />
-                </td>
-                <td className="px-3 py-2">{branch.commissionPerPaid50 !== null ? formatCurrencyVnd(branch.commissionPerPaid50) : "-"}</td>
-                <td className="px-3 py-2 text-sm text-zinc-600">{formatDateTimeVi(branch.createdAt)}</td>
-                <td className="px-3 py-2">
-                  <Button variant="secondary" className="h-7 px-2 py-1 text-xs" onClick={() => openEdit(branch)}>
-                    Sửa
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </Table>
+          <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm animate-fadeInUp" style={{ animationDelay: "160ms" }}>
+            <Table headers={["Tên chi nhánh", "Mã", "Trạng thái", "Hoa hồng/HS 50%", "Ngày tạo", "Hành động"]}>
+              {items.map((branch, idx) => (
+                <tr key={branch.id} className="border-t border-zinc-100 transition-colors hover:bg-zinc-50 animate-fadeInUp" style={{ animationDelay: `${160 + Math.min(idx * 30, 200)}ms` }}>
+                  <td className="px-3 py-2">{branch.name}</td>
+                  <td className="px-3 py-2">{branch.code || "-"}</td>
+                  <td className="px-3 py-2">
+                    <Badge text={branch.isActive ? "Đang hoạt động" : "Tạm ngưng"} />
+                  </td>
+                  <td className="px-3 py-2">{branch.commissionPerPaid50 !== null ? formatCurrencyVnd(branch.commissionPerPaid50) : "-"}</td>
+                  <td className="px-3 py-2 text-sm text-zinc-600">{formatDateTimeVi(branch.createdAt)}</td>
+                  <td className="px-3 py-2">
+                    <Button variant="secondary" className="h-7 px-2 py-1 text-xs" onClick={() => openEdit(branch)}>
+                      Sửa
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </Table>
+          </div>
         )}
       </div>
 

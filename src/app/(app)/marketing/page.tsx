@@ -6,6 +6,7 @@ import { fetchJson, type ApiClientError } from "@/lib/api-client";
 import { clearToken, fetchMe, getToken } from "@/lib/auth-client";
 import { isAdminRole } from "@/lib/admin-auth";
 import { Alert } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FilterCard } from "@/components/ui/filter-card";
@@ -60,6 +61,7 @@ function daysAgo(ymd: string, days: number) {
 
 export default function MarketingPage() {
   const router = useRouter();
+  const toast = useToast();
   const today = useMemo(() => todayInHoChiMinh(), []);
 
   const [checkingRole, setCheckingRole] = useState(true);
@@ -76,7 +78,6 @@ export default function MarketingPage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
 
   const [manualOpen, setManualOpen] = useState(false);
   const [manualDate, setManualDate] = useState(today);
@@ -163,7 +164,6 @@ export default function MarketingPage() {
     if (!token) return;
     setSubmitting(true);
     setError("");
-    setSuccess("");
     try {
       let meta: unknown = undefined;
       if (manualMeta.trim()) {
@@ -181,7 +181,7 @@ export default function MarketingPage() {
           meta,
         },
       });
-      setSuccess("Đã lưu báo cáo marketing.");
+      toast.success("Đã lưu báo cáo marketing.");
       setManualOpen(false);
       await loadData();
     } catch (e) {
@@ -230,7 +230,6 @@ export default function MarketingPage() {
       />
 
       {error ? <Alert type="error" message={error} /> : null}
-      {success ? <Alert type="success" message={success} /> : null}
 
       <QuickSearchRow
         value={listState.q}

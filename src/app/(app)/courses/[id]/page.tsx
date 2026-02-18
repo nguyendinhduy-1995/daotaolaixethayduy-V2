@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { fetchJson, type ApiClientError } from "@/lib/api-client";
 import { clearToken, getToken } from "@/lib/auth-client";
 import { Alert } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,10 +77,10 @@ function toIsoAtHcm(date: string, time: string) {
 export default function CourseDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const toast = useToast();
   const [tab, setTab] = useState<"info" | "schedule">("info");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
 
   const [course, setCourse] = useState<Course | null>(null);
   const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([]);
@@ -177,7 +178,6 @@ export default function CourseDetailPage() {
     }
     setEditSaving(true);
     setError("");
-    setSuccess("");
     try {
       const data = await fetchJson<CourseDetailResponse>(`/api/courses/${course.id}`, {
         method: "PATCH",
@@ -193,7 +193,7 @@ export default function CourseDetailPage() {
         },
       });
       setCourse(data.course);
-      setSuccess("Đã cập nhật thông tin khóa học.");
+      toast.success("Đã cập nhật thông tin khóa học.");
       setEditOpen(false);
     } catch (e) {
       const err = e as ApiClientError;
@@ -221,7 +221,6 @@ export default function CourseDetailPage() {
 
     setAddScheduleSaving(true);
     setError("");
-    setSuccess("");
     try {
       const startAt = toIsoAtHcm(scheduleForm.date, scheduleForm.startTime);
       const endAt = scheduleForm.endTime ? toIsoAtHcm(scheduleForm.date, scheduleForm.endTime) : null;
@@ -253,7 +252,7 @@ export default function CourseDetailPage() {
         note: "",
         isActive: true,
       });
-      setSuccess("Đã thêm buổi học.");
+      toast.success("Đã thêm buổi học.");
       await loadSchedule();
     } catch (e) {
       const err = e as ApiClientError;
@@ -291,7 +290,6 @@ export default function CourseDetailPage() {
       </div>
 
       {error ? <Alert type="error" message={error} /> : null}
-      {success ? <Alert type="success" message={success} /> : null}
 
       <div className="flex gap-2">
         <Button variant={tab === "info" ? "primary" : "secondary"} onClick={() => setTab("info")}>

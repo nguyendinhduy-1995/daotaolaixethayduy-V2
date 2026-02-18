@@ -7,6 +7,7 @@ import { fetchJson, type ApiClientError } from "@/lib/api-client";
 import { clearToken, fetchMe, getToken } from "@/lib/auth-client";
 import { isAdminRole } from "@/lib/admin-auth";
 import { Alert } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
@@ -45,11 +46,11 @@ function formatApiError(err: ApiClientError) {
 
 export default function AdminWorkerPage() {
   const router = useRouter();
+  const toast = useToast();
   const [checkingRole, setCheckingRole] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [result, setResult] = useState<WorkerResult | null>(null);
   const [batchSize, setBatchSize] = useState(50);
   const [concurrency, setConcurrency] = useState(5);
@@ -110,7 +111,6 @@ export default function AdminWorkerPage() {
     if (!token) return;
     setLoading(true);
     setError("");
-    setSuccess("");
     try {
       const data = await fetchJson<WorkerResult>("/api/admin/worker/outbound", {
         method: "POST",
@@ -124,7 +124,7 @@ export default function AdminWorkerPage() {
         },
       });
       setResult(data);
-      setSuccess("Worker chạy thành công.");
+      toast.success("Worker chạy thành công.");
       await loadFailures();
     } catch (e) {
       const err = e as ApiClientError;
@@ -155,29 +155,40 @@ export default function AdminWorkerPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-zinc-900">Worker gửi tin</h1>
-        <Button variant="secondary" onClick={loadFailures} disabled={loading}>
-          Làm mới
-        </Button>
+      {/* ── Premium Header ── */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 p-4 text-white shadow-lg shadow-violet-200 animate-fadeInUp">
+        <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+        <div className="absolute -bottom-4 -left-4 h-20 w-20 rounded-full bg-white/10 blur-xl" />
+        <div className="relative flex flex-wrap items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 text-2xl backdrop-blur-sm">📨</div>
+          <div className="flex-1">
+            <h2 className="text-lg font-bold">Tiến trình gửi tin</h2>
+            <p className="text-sm text-white/80">Quản lý xử lý và gửi tin nhắn tự động</p>
+          </div>
+          <Button variant="secondary" onClick={loadFailures} disabled={loading} className="!bg-white/20 !text-white !border-white/30 hover:!bg-white/30">
+            🔄 Làm mới
+          </Button>
+        </div>
       </div>
 
       {error ? <Alert type="error" message={error} /> : null}
-      {success ? <Alert type="success" message={success} /> : null}
 
-      <div className="grid gap-2 rounded-xl bg-white p-4 shadow-sm md:grid-cols-3">
-        <label className="space-y-1 text-sm text-zinc-700">
-          <span>Kích thước lô</span>
-          <Input type="number" min={1} max={200} value={batchSize} onChange={(e) => setBatchSize(Number(e.target.value) || 1)} />
-        </label>
-        <label className="space-y-1 text-sm text-zinc-700">
-          <span>Concurrency</span>
-          <Input type="number" min={1} max={20} value={concurrency} onChange={(e) => setConcurrency(Number(e.target.value) || 1)} />
-        </label>
-        <label className="flex items-end gap-2 pb-2 text-sm text-zinc-700">
-          <input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)} />
-          Bỏ qua kiểm tra thời điểm (Force)
-        </label>
+      <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm animate-fadeInUp" style={{ animationDelay: "80ms" }}>
+        <div className="h-1 bg-gradient-to-r from-violet-500 to-purple-500" />
+        <div className="grid gap-2 p-4 md:grid-cols-3">
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span>Kích thước lô</span>
+            <Input type="number" min={1} max={200} value={batchSize} onChange={(e) => setBatchSize(Number(e.target.value) || 1)} />
+          </label>
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span>Concurrency</span>
+            <Input type="number" min={1} max={20} value={concurrency} onChange={(e) => setConcurrency(Number(e.target.value) || 1)} />
+          </label>
+          <label className="flex items-end gap-2 pb-2 text-sm text-zinc-700">
+            <input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)} />
+            Bỏ qua kiểm tra thời điểm (Force)
+          </label>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -204,13 +215,13 @@ export default function AdminWorkerPage() {
       {result ? (
         <div className="grid gap-3 lg:grid-cols-2">
           <div className="rounded-xl bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-zinc-900">Theo ưu tiên</p>
+            <p className="text-sm font-medium text-zinc-900">Theo mức ưu tiên</p>
             <p className="mt-2 text-sm text-zinc-700">Cao: {result.breakdownByPriority.HIGH}</p>
             <p className="text-sm text-zinc-700">Trung bình: {result.breakdownByPriority.MEDIUM}</p>
             <p className="text-sm text-zinc-700">Thấp: {result.breakdownByPriority.LOW}</p>
           </div>
           <div className="rounded-xl bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-zinc-900">Theo telesales</p>
+            <p className="text-sm font-medium text-zinc-900">Theo tư vấn viên</p>
             <div className="mt-2 space-y-1 text-sm text-zinc-700">
               {result.breakdownByOwner.length === 0 ? <p>Không có dữ liệu</p> : result.breakdownByOwner.map((o) => <p key={o.ownerId}>{o.ownerName}: {o.count}</p>)}
             </div>
@@ -230,32 +241,35 @@ export default function AdminWorkerPage() {
         </Link>
       </div>
 
-      <div className="rounded-xl bg-white p-4 shadow-sm">
-        <p className="text-sm font-medium text-zinc-900">Lỗi gần đây (20 bản ghi)</p>
-        {failedItems.length === 0 ? (
-          <p className="mt-3 text-sm text-zinc-600">Không có dữ liệu.</p>
-        ) : (
-          <Table headers={["Thời gian", "Template", "Lỗi", "Số lần thử", "Hành động"]}>
-            {failedItems.map((row) => (
-              <tr key={row.id} className="border-t border-zinc-100">
-                <td className="px-3 py-2 text-sm text-zinc-700">{formatDateTimeVi(row.createdAt)}</td>
-                <td className="px-3 py-2 text-sm text-zinc-700">{row.templateKey}</td>
-                <td className="px-3 py-2 text-sm text-red-700">{row.error || "-"}</td>
-                <td className="px-3 py-2 text-sm text-zinc-700">{row.retryCount}</td>
-                <td className="px-3 py-2">
-                  <div className="flex gap-2">
-                    <Button variant="secondary" className="h-7 px-2 py-1 text-xs" onClick={() => setDetail(row)}>
-                      Xem JSON
-                    </Button>
-                    <Link href="/outbound" className="rounded-lg border border-zinc-300 px-2 py-1 text-xs text-zinc-700">
-                      Mở
-                    </Link>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </Table>
-        )}
+      <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm animate-fadeInUp" style={{ animationDelay: "160ms" }}>
+        <div className="h-1 bg-gradient-to-r from-purple-500 to-fuchsia-500" />
+        <div className="p-4">
+          <p className="text-sm font-medium text-zinc-900">⚠️ Lỗi gần đây (20 bản ghi)</p>
+          {failedItems.length === 0 ? (
+            <p className="mt-3 text-sm text-zinc-600">Không có dữ liệu.</p>
+          ) : (
+            <Table headers={["Thời gian", "Mẫu tin", "Lỗi", "Số lần thử", "Hành động"]}>
+              {failedItems.map((row, idx) => (
+                <tr key={row.id} className="border-t border-zinc-100 transition-colors hover:bg-zinc-50 animate-fadeInUp" style={{ animationDelay: `${160 + Math.min(idx * 30, 200)}ms` }}>
+                  <td className="px-3 py-2 text-sm text-zinc-700">{formatDateTimeVi(row.createdAt)}</td>
+                  <td className="px-3 py-2 text-sm text-zinc-700">{row.templateKey}</td>
+                  <td className="px-3 py-2 text-sm text-red-700">{row.error || "-"}</td>
+                  <td className="px-3 py-2 text-sm text-zinc-700">{row.retryCount}</td>
+                  <td className="px-3 py-2">
+                    <div className="flex gap-2">
+                      <Button variant="secondary" className="h-7 px-2 py-1 text-xs" onClick={() => setDetail(row)}>
+                        Xem JSON
+                      </Button>
+                      <Link href="/outbound" className="rounded-lg border border-zinc-300 px-2 py-1 text-xs text-zinc-700">
+                        Mở
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </Table>
+          )}
+        </div>
       </div>
 
       <Modal open={Boolean(detail)} title="Chi tiết lỗi worker" onClose={() => setDetail(null)}>

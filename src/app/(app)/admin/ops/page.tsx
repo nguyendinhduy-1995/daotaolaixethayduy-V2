@@ -10,7 +10,6 @@ import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MobileHeader } from "@/components/app/mobile-header";
 import { MobileToolbar } from "@/components/app/mobile-toolbar";
 import { MobileFiltersSheet } from "@/components/mobile/MobileFiltersSheet";
 import { DataCard } from "@/components/mobile/DataCard";
@@ -199,20 +198,18 @@ export default function AdminOpsPage() {
 
   return (
     <div className="space-y-4">
-      <MobileHeader
-        title="AI hỗ trợ nhân sự"
-        subtitle="Snapshot 10 phút và gợi ý xử lý ngay"
-        rightActions={<Button onClick={loadData}>Làm mới</Button>}
-      />
-
-      <div className="hidden md:block">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-semibold text-zinc-900">AI hỗ trợ nhân sự</h1>
-            <p className="text-sm text-zinc-500">Theo dõi snapshot 10 phút từ n8n và gợi ý việc cần làm.</p>
+      {/* ── Premium Header ── */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-600 via-blue-600 to-sky-600 p-4 text-white shadow-lg shadow-indigo-200 animate-fadeInUp">
+        <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+        <div className="absolute -bottom-4 -left-4 h-20 w-20 rounded-full bg-white/10 blur-xl" />
+        <div className="relative flex flex-wrap items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 text-2xl backdrop-blur-sm">🤖</div>
+          <div className="flex-1">
+            <h2 className="text-lg font-bold">AI hỗ trợ nhân sự</h2>
+            <p className="text-sm text-white/80">Theo dõi snapshot 10 phút từ n8n và gợi ý việc cần làm</p>
           </div>
-          <Button variant="secondary" onClick={loadData} disabled={loading}>
-            {loading ? "Đang tải..." : "Làm mới"}
+          <Button variant="secondary" onClick={loadData} disabled={loading} className="!bg-white/20 !text-white !border-white/30 hover:!bg-white/30">
+            {loading ? "Đang tải..." : "🔄 Làm mới"}
           </Button>
         </div>
       </div>
@@ -222,7 +219,7 @@ export default function AdminOpsPage() {
       <div className="sticky top-[116px] z-20 rounded-2xl border border-zinc-200 bg-zinc-100/90 p-2 backdrop-blur md:hidden">
         <MobileToolbar
           value=""
-          onChange={() => {}}
+          onChange={() => { }}
           onOpenFilter={() => setMobileFilterOpen(true)}
           activeFilterCount={(role ? 1 : 0) + (ownerId ? 1 : 0) + (dateKey ? 1 : 0)}
           quickActions={<Button variant="secondary" onClick={loadData}>Làm mới</Button>}
@@ -241,13 +238,13 @@ export default function AdminOpsPage() {
             <div>Data hôm nay: <span className="font-semibold">{latestPage?.computedJson?.daily?.dataToday ?? 0}</span></div>
             <div>% ra Data hôm nay: <span className="font-semibold">{formatPct(latestPage?.computedJson?.daily?.dataRatePctDaily)}</span></div>
             <div>Target %: <span className="font-semibold">{formatPct(latestPage?.computedJson?.target?.dataRatePctTarget)}</span></div>
-            <div className="col-span-2">Gap %: <span className="font-semibold">{formatPct(latestPage?.computedJson?.gap?.dataRatePct)}</span></div>
+            <div className="col-span-2">Chênh lệch %: <span className="font-semibold">{formatPct(latestPage?.computedJson?.gap?.dataRatePct)}</span></div>
           </div>
           <div className="mt-2 text-sm text-zinc-700">{latestPage?.computedJson?.suggestions?.[0] || "Chưa có snapshot mới."}</div>
         </div>
 
         <div className="rounded-xl bg-white p-4 shadow-sm">
-          <p className="text-xs uppercase tracking-wide text-zinc-500">Telesales (10p)</p>
+          <p className="text-xs uppercase tracking-wide text-zinc-500">Tư vấn viên (10 phút)</p>
           <div className="mt-2 flex items-center gap-2">
             <Badge text={latestSales?.computedJson?.status || "Chưa có"} tone={statusTone(latestSales?.computedJson?.status)} />
             <span className="text-xs text-zinc-500">{latestSales ? formatDateTimeVi(latestSales.createdAt) : "-"}</span>
@@ -258,44 +255,56 @@ export default function AdminOpsPage() {
         </div>
       </div>
 
-      <div className="hidden rounded-xl bg-white p-4 shadow-sm md:block">
-        <div className="grid gap-2 md:grid-cols-4">
-          <div>
-            <label className="mb-1 block text-sm text-zinc-600">Ngày</label>
-            <Input type="date" value={dateKey} onChange={(e) => setDateKey(e.target.value)} />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-zinc-600">Vai trò</label>
-            <Select value={role} onChange={(e) => setRole(e.target.value as "" | Role)}>
-              <option value="">Tất cả</option>
-              <option value="PAGE">Trực Page</option>
-              <option value="TELESALES">Telesales</option>
-            </Select>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-zinc-600">Nhân sự</label>
-            <Select value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
-              <option value="">Tất cả</option>
-              {owners.map((owner) => (
-                <option key={owner.id} value={owner.id}>
-                  {owner.name || owner.email}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-zinc-600">Số bản ghi</label>
-            <Select value={limit} onChange={(e) => setLimit(e.target.value)}>
-              <option value="20">20</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-            </Select>
+      <div className="hidden overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm md:block animate-fadeInUp" style={{ animationDelay: "80ms" }}>
+        <div className="h-1 bg-gradient-to-r from-indigo-500 to-blue-500" />
+        <div className="p-4">
+          <h3 className="text-sm font-semibold text-zinc-800 mb-3">🔍 Bộ lọc</h3>
+          <div className="grid gap-2 md:grid-cols-4">
+            <div>
+              <label className="mb-1 block text-sm text-zinc-600">Ngày</label>
+              <Input type="date" value={dateKey} onChange={(e) => setDateKey(e.target.value)} />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-zinc-600">Vai trò</label>
+              <Select value={role} onChange={(e) => setRole(e.target.value as "" | Role)}>
+                <option value="">Tất cả</option>
+                <option value="PAGE">Trực Page</option>
+                <option value="TELESALES">Tư vấn viên</option>
+              </Select>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-zinc-600">Nhân sự</label>
+              <Select value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
+                <option value="">Tất cả</option>
+                {owners.map((owner) => (
+                  <option key={owner.id} value={owner.id}>
+                    {owner.name || owner.email}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-zinc-600">Số bản ghi</label>
+              <Select value={limit} onChange={(e) => setLimit(e.target.value)}>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </Select>
+            </div>
           </div>
         </div>
       </div>
 
       {loading ? (
-        <div className="rounded-xl bg-white p-6 text-sm text-zinc-600">Đang tải dữ liệu snapshot...</div>
+        <div className="animate-pulse space-y-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-3 rounded-xl bg-white p-3 shadow-sm">
+              <div className="h-8 w-8 rounded-lg bg-zinc-200" />
+              <div className="flex-1 space-y-2"><div className="h-4 w-1/4 rounded bg-zinc-200" /><div className="h-3 w-1/3 rounded bg-zinc-100" /></div>
+              <div className="h-6 w-16 rounded-full bg-zinc-200" />
+            </div>
+          ))}
+        </div>
       ) : items.length === 0 ? (
         <EmptyState title="Chưa có snapshot" description="Đợi n8n đẩy dữ liệu hoặc đổi bộ lọc." />
       ) : (

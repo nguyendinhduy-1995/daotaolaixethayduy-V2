@@ -14,9 +14,7 @@ import { Button } from "@/components/ui/button";
 import { FilterCard } from "@/components/ui/filter-card";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
-import { PageHeader } from "@/components/ui/page-header";
 import { Select } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { MobileFiltersSheet } from "@/components/mobile/MobileFiltersSheet";
 import { formatDateTimeVi } from "@/lib/date-utils";
@@ -101,10 +99,37 @@ function dateYmdLocal(date: Date) {
   return `${y}-${m}-${d}`;
 }
 
-function statusTone(status: string): "primary" | "accent" | "neutral" {
-  if (status === "SIGNED" || status === "RESULT") return "accent";
-  if (status === "LOST") return "neutral";
-  return "primary";
+
+const STATUS_STYLE: Record<string, { icon: string; bg: string; text: string; border: string; gradient: string; headerGradient: string }> = {
+  NEW: { icon: "🆕", bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200", gradient: "from-blue-500 to-cyan-500", headerGradient: "from-blue-500/10 to-cyan-500/5" },
+  HAS_PHONE: { icon: "📱", bg: "bg-teal-50", text: "text-teal-700", border: "border-teal-200", gradient: "from-teal-500 to-emerald-500", headerGradient: "from-teal-500/10 to-emerald-500/5" },
+  APPOINTED: { icon: "📅", bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-200", gradient: "from-orange-500 to-amber-500", headerGradient: "from-orange-500/10 to-amber-500/5" },
+  ARRIVED: { icon: "🏢", bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200", gradient: "from-purple-500 to-violet-500", headerGradient: "from-purple-500/10 to-violet-500/5" },
+  SIGNED: { icon: "✍️", bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", gradient: "from-emerald-500 to-green-600", headerGradient: "from-emerald-500/10 to-green-600/5" },
+  STUDYING: { icon: "📚", bg: "bg-indigo-50", text: "text-indigo-700", border: "border-indigo-200", gradient: "from-indigo-500 to-blue-600", headerGradient: "from-indigo-500/10 to-blue-600/5" },
+  EXAMED: { icon: "📝", bg: "bg-sky-50", text: "text-sky-700", border: "border-sky-200", gradient: "from-sky-500 to-blue-500", headerGradient: "from-sky-500/10 to-blue-500/5" },
+  RESULT: { icon: "🏆", bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", gradient: "from-amber-500 to-yellow-500", headerGradient: "from-amber-500/10 to-yellow-500/5" },
+  LOST: { icon: "❌", bg: "bg-red-50", text: "text-red-700", border: "border-red-200", gradient: "from-red-500 to-rose-500", headerGradient: "from-red-500/10 to-rose-500/5" },
+};
+
+function getStatusStyle(status: string) {
+  return STATUS_STYLE[status] || STATUS_STYLE.NEW;
+}
+
+function BoardSkeleton() {
+  return (
+    <div className="flex min-w-max gap-3 animate-pulse">
+      {[1, 2, 3, 4].map((i) => (
+        <div key={i} className="w-[320px] shrink-0 rounded-2xl border border-zinc-200 bg-zinc-50 p-3">
+          <div className="mb-3 h-10 rounded-xl bg-zinc-200" />
+          <div className="space-y-2">
+            <div className="h-28 rounded-xl bg-zinc-100" />
+            <div className="h-28 rounded-xl bg-zinc-100" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function LeadsBoardPage() {
@@ -336,409 +361,423 @@ export default function LeadsBoardPage() {
       title="Bảng trạng thái khách hàng"
       subtitle="Pipeline theo trạng thái"
     >
-    <div className="space-y-4 pb-24 md:pb-0">
-      <div className="hidden md:block">
-        <PageHeader
-          title="Bảng trạng thái khách hàng"
-          subtitle="Theo dõi pipeline theo trạng thái"
-          actions={
-            <>
-              {canManageOwner ? <Badge text="Admin · Quản trị" tone="accent" /> : null}
-              <Button onClick={loadBoard}>
+      <div className="space-y-4 pb-24 md:pb-0">
+
+        {/* ── Premium Header ── */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-800 via-slate-700 to-zinc-800 p-4 text-white shadow-lg shadow-slate-300 animate-fadeInUp">
+          <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/5 blur-2xl" />
+          <div className="absolute -bottom-4 -left-4 h-20 w-20 rounded-full bg-white/5 blur-xl" />
+          <div className="relative flex flex-wrap items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-2xl backdrop-blur-sm">📊</div>
+            <div className="flex-1">
+              <h2 className="text-lg font-bold">Pipeline khách hàng</h2>
+              <p className="text-sm text-white/70">Theo dõi & kéo thả chuyển đổi trạng thái</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {canManageOwner ? <Badge text="Admin" tone="accent" /> : null}
+              <Button onClick={loadBoard} className="!bg-white/10 !text-white hover:!bg-white/20 backdrop-blur-sm">
                 {loading ? (
-                  <span className="inline-flex items-center gap-2">
-                    <Spinner /> Đang tải...
-                  </span>
-                ) : (
-                  "Làm mới"
-                )}
+                  <span className="inline-flex items-center gap-2"><Spinner /> Đang tải...</span>
+                ) : "Làm mới"}
               </Button>
-            </>
-          }
-        />
-      </div>
-
-      <div className="sticky top-[116px] z-20 space-y-2 rounded-[16px] border border-[var(--border)] bg-zinc-100/90 p-2 backdrop-blur md:top-[72px]">
-        <MobileToolbar
-          value={filters.q}
-          onChange={(value) => setFilters((s) => ({ ...s, q: value }))}
-          onOpenFilter={() => setFilterOpen(true)}
-          activeFilterCount={Object.values(filters).filter(Boolean).length}
-          quickActions={
-            <>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  const today = dateYmdLocal(new Date());
-                  const next = { ...filters, createdFrom: today, createdTo: today };
-                  setFilters(next);
-                  applyFiltersToUrl(next);
-                }}
-              >
-                Hôm nay
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  const now = new Date();
-                  const start = new Date(now);
-                  start.setDate(now.getDate() - 6);
-                  const next = { ...filters, createdFrom: dateYmdLocal(start), createdTo: dateYmdLocal(now) };
-                  setFilters(next);
-                  applyFiltersToUrl(next);
-                }}
-              >
-                Tuần này
-              </Button>
-            </>
-          }
-        />
-        <div className="surface flex flex-wrap items-center gap-2 px-3 py-2">
-          <Button variant="secondary" onClick={() => setFilterOpen(true)}>
-            Bộ lọc
-          </Button>
-          {filters.q ? <Badge text={`Từ khóa: ${filters.q}`} tone="primary" /> : null}
-          {filters.source ? <Badge text={`Nguồn: ${filters.source}`} tone="accent" /> : null}
-          {filters.channel ? <Badge text={`Kênh: ${filters.channel}`} tone="accent" /> : null}
-          {filters.licenseType ? <Badge text={`Hạng bằng: ${filters.licenseType}`} tone="primary" /> : null}
-          {filters.createdFrom || filters.createdTo ? (
-            <Badge text={`Ngày: ${filters.createdFrom || "..."} - ${filters.createdTo || "..."}`} tone="neutral" />
-          ) : null}
-          <div className="ml-auto flex items-center gap-2">
-            <Button variant="secondary" onClick={() => applyFiltersToUrl(filters)}>
-              Áp dụng
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setFilters(EMPTY_FILTERS);
-                applyFiltersToUrl(EMPTY_FILTERS);
-              }}
-            >
-              Xóa lọc
-            </Button>
+            </div>
           </div>
-        </div>
-
-        <div className="surface flex gap-2 overflow-x-auto p-2 md:hidden">
-          {STATUSES.map((status) => (
-            <button
-              key={status}
-              type="button"
-              onClick={() => setMobileStatus(status)}
-              className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium ${
-                mobileStatus === status
-                  ? "bg-slate-900 text-white"
-                  : "border border-zinc-300 bg-white text-zinc-700"
-              }`}
-            >
-              {STATUS_LABELS[status] || status}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {error ? <Alert type="error" message={error} /> : null}
-
-      {loading ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 flex items-center gap-2 text-sm text-zinc-600">
-            <Spinner /> Đang tải bảng trạng thái...
-          </div>
-          <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-          </div>
-        </div>
-      ) : (
-        <div className="overflow-x-auto pb-1">
-          <div className="flex min-w-max gap-3">
-            {STATUSES.map((status) => {
-              const items = byStatus[status] || [];
+          {/* Column totals */}
+          <div className="relative mt-3 flex flex-wrap gap-1.5">
+            {STATUSES.map((st) => {
+              const s = getStatusStyle(st);
+              const count = (byStatus[st] || []).length;
               return (
-                <section
-                  key={status}
-                  className={`w-[320px] shrink-0 rounded-2xl border border-zinc-200 bg-zinc-100/70 p-2 ${
-                    mobileStatus === status ? "block" : "hidden md:block"
-                  }`}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={() => onDrop(status)}
-                >
-                  <div className="sticky top-0 z-10 mb-2 flex items-center justify-between rounded-xl border border-zinc-200 bg-white px-3 py-2 shadow-sm">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-slate-900">{STATUS_LABELS[status] || status}</p>
-                      <span className="inline-flex min-w-6 items-center justify-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
-                        {items.length}
-                      </span>
-                    </div>
-                    <Badge text={status} tone={statusTone(status)} />
-                  </div>
-
-                  <div className="space-y-2">
-                    {items.length === 0 ? (
-                      <div className="rounded-xl border border-dashed border-zinc-300 bg-white px-3 py-5 text-center text-xs text-zinc-500">
-                        Chưa có khách trong cột này.
-                        <br />
-                        Thử điều chỉnh bộ lọc để xem thêm dữ liệu.
-                      </div>
-                    ) : (
-                      items.map((lead) => (
-                        <article
-                          key={lead.id}
-                          draggable
-                          onDragStart={() => setDraggingLead(lead)}
-                          className="rounded-xl border border-zinc-200 bg-white p-3 text-xs shadow-sm transition hover:border-slate-300 hover:shadow"
-                        >
-                          <div className="mb-1 flex items-start justify-between gap-2">
-                            <p className="line-clamp-2 text-sm font-semibold text-slate-900">{lead.fullName || "Chưa có tên"}</p>
-                            <div className="flex items-center gap-1">
-                              <Badge text={lead.licenseType || "-"} tone="accent" />
-                            </div>
-                          </div>
-
-                          <p className="font-mono text-sm text-zinc-800">{lead.phone || "-"}</p>
-
-                          <div className="mt-2 grid gap-1 text-zinc-600">
-                            <p>
-                              <span className="text-zinc-500">Nguồn:</span> {lead.source || "-"} · {lead.channel || "-"}
-                            </p>
-                            <p>
-                              <span className="text-zinc-500">Phụ trách:</span> {lead.owner?.name || lead.owner?.email || "-"}
-                            </p>
-                            <p>
-                              <span className="text-zinc-500">Liên hệ gần nhất:</span>{" "}
-                              {lead.lastContactAt ? formatDateTimeVi(lead.lastContactAt) : "-"}
-                            </p>
-                          </div>
-
-                          <div className="mt-3 space-y-2">
-                            <Select
-                              value={lead.status}
-                              onChange={(e) => changeStatus(lead.id, lead.status, e.target.value)}
-                              disabled={updatingId === lead.id}
-                            >
-                              {STATUSES.map((s) => (
-                                <option key={s} value={s}>
-                                  {STATUS_LABELS[s] || s}
-                                </option>
-                              ))}
-                            </Select>
-
-                            <div className="flex items-center justify-between gap-2">
-                              <Link
-                                href={`/leads/${lead.id}`}
-                                className="inline-flex items-center rounded-xl border border-zinc-300 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100"
-                              >
-                                Chi tiết
-                              </Link>
-
-                              <details className="relative">
-                                <summary className="list-none cursor-pointer rounded-xl border border-zinc-300 px-2 py-1 text-sm text-zinc-700 hover:bg-zinc-100">
-                                  ...
-                                </summary>
-                                <div className="absolute right-0 z-20 mt-1 w-40 rounded-xl border border-zinc-200 bg-white p-1 shadow-lg">
-                                  {canManageOwner ? (
-                                    <button
-                                      type="button"
-                                      className="block w-full rounded-lg px-2 py-1.5 text-left text-xs text-zinc-700 hover:bg-zinc-100"
-                                      onClick={() => {
-                                        setAssignLead(lead);
-                                        setAssignOwnerId(lead.ownerId || "");
-                                      }}
-                                    >
-                                      Gán telesale
-                                    </button>
-                                  ) : null}
-                                  <button
-                                    type="button"
-                                    className="block w-full rounded-lg px-2 py-1.5 text-left text-xs text-zinc-700 hover:bg-zinc-100"
-                                    onClick={() => {
-                                      setEventLeadId(lead.id);
-                                      setEventOpen(true);
-                                    }}
-                                  >
-                                    Thêm sự kiện
-                                  </button>
-                                  <Link
-                                    href={`/leads/${lead.id}`}
-                                    className="block w-full rounded-lg px-2 py-1.5 text-left text-xs text-zinc-700 hover:bg-zinc-100"
-                                  >
-                                    Mở chi tiết
-                                  </Link>
-                                </div>
-                              </details>
-                            </div>
-
-                            <p className="text-[11px] text-zinc-500">Tạo: {formatDateTimeVi(lead.createdAt)}</p>
-                          </div>
-                        </article>
-                      ))
-                    )}
-                  </div>
-                </section>
+                <span key={st} className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-xs font-medium text-white/80 backdrop-blur-sm">
+                  {s.icon} {count}
+                </span>
               );
             })}
           </div>
         </div>
-      )}
 
-      <MobileFiltersSheet
-        open={filterOpen}
-        onOpenChange={setFilterOpen}
-        title="Bộ lọc bảng trạng thái"
-        onApply={() => applyFiltersToUrl(filters)}
-        onReset={() => {
-          setFilters(EMPTY_FILTERS);
-          applyFiltersToUrl(EMPTY_FILTERS);
-        }}
-      >
-        <div className="space-y-4">
-          <FilterCard title="Lọc nhanh">
-            <div className="grid gap-2 md:grid-cols-2">
-              <Input
-                value={filters.q}
-                placeholder="Tìm kiếm tên/SĐT"
-                onChange={(e) => setFilters((s) => ({ ...s, q: e.target.value }))}
-              />
-              <Input
-                value={filters.source}
-                placeholder="Nguồn"
-                onChange={(e) => setFilters((s) => ({ ...s, source: e.target.value }))}
-              />
-              <Input
-                value={filters.channel}
-                placeholder="Kênh"
-                onChange={(e) => setFilters((s) => ({ ...s, channel: e.target.value }))}
-              />
-              <Input
-                value={filters.licenseType}
-                placeholder="Hạng bằng"
-                onChange={(e) => setFilters((s) => ({ ...s, licenseType: e.target.value }))}
-              />
-              {canManageOwner ? (
-                <Select value={filters.ownerId} onChange={(e) => setFilters((s) => ({ ...s, ownerId: e.target.value }))}>
-                  <option value="">Tất cả người phụ trách</option>
-                  {owners.map((owner) => (
-                    <option key={owner.id} value={owner.id}>
-                      {owner.name || owner.email}
-                    </option>
-                  ))}
-                </Select>
-              ) : !isTelesales ? (
-                <Input
-                  value={filters.ownerId}
-                  placeholder="Mã người phụ trách"
-                  onChange={(e) => setFilters((s) => ({ ...s, ownerId: e.target.value }))}
-                />
-              ) : null}
-            </div>
-          </FilterCard>
-
-          <FilterCard title="Khoảng ngày">
-            <div className="grid gap-2 md:grid-cols-2">
-              <Input
-                type="date"
-                value={filters.createdFrom}
-                onChange={(e) => setFilters((s) => ({ ...s, createdFrom: e.target.value }))}
-              />
-              <Input
-                type="date"
-                value={filters.createdTo}
-                onChange={(e) => setFilters((s) => ({ ...s, createdTo: e.target.value }))}
-              />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  const today = dateYmdLocal(new Date());
-                  setFilters((s) => ({ ...s, createdFrom: today, createdTo: today }));
-                }}
-              >
-                Hôm nay
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  const now = new Date();
-                  const start = new Date(now);
-                  start.setDate(now.getDate() - 6);
-                  setFilters((s) => ({ ...s, createdFrom: dateYmdLocal(start), createdTo: dateYmdLocal(now) }));
-                }}
-              >
-                Tuần này
-              </Button>
-            </div>
-          </FilterCard>
-
-        </div>
-      </MobileFiltersSheet>
-
-      <Modal
-        open={eventOpen}
-        title="Thêm sự kiện khách hàng"
-        description="Ghi nhận tương tác để cập nhật timeline xử lý lead"
-        onClose={() => setEventOpen(false)}
-      >
-        <div className="space-y-3">
-          <Select value={eventType} onChange={(e) => setEventType(e.target.value)}>
-            {EVENT_OPTIONS.map((t) => (
-              <option key={t} value={t}>
-                {STATUS_LABELS[t] || t}
-              </option>
-            ))}
-          </Select>
-          <Input placeholder="Ghi chú" value={eventNote} onChange={(e) => setEventNote(e.target.value)} />
-          <Input
-            placeholder="Dữ liệu JSON (không bắt buộc)"
-            value={eventMeta}
-            onChange={(e) => setEventMeta(e.target.value)}
+        <div className="sticky top-[116px] z-20 space-y-2 rounded-[16px] border border-[var(--border)] bg-zinc-100/90 p-2 backdrop-blur md:top-[72px]">
+          <MobileToolbar
+            value={filters.q}
+            onChange={(value) => setFilters((s) => ({ ...s, q: value }))}
+            onOpenFilter={() => setFilterOpen(true)}
+            activeFilterCount={Object.values(filters).filter(Boolean).length}
+            quickActions={
+              <>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    const today = dateYmdLocal(new Date());
+                    const next = { ...filters, createdFrom: today, createdTo: today };
+                    setFilters(next);
+                    applyFiltersToUrl(next);
+                  }}
+                >
+                  Hôm nay
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    const now = new Date();
+                    const start = new Date(now);
+                    start.setDate(now.getDate() - 6);
+                    const next = { ...filters, createdFrom: dateYmdLocal(start), createdTo: dateYmdLocal(now) };
+                    setFilters(next);
+                    applyFiltersToUrl(next);
+                  }}
+                >
+                  Tuần này
+                </Button>
+              </>
+            }
           />
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setEventOpen(false)}>
-              Hủy
+          <div className="surface flex flex-wrap items-center gap-2 px-3 py-2">
+            <Button variant="secondary" onClick={() => setFilterOpen(true)}>
+              Bộ lọc
             </Button>
-            <Button onClick={submitEvent} disabled={eventSaving}>
-              {eventSaving ? (
-                <span className="flex items-center gap-2">
-                  <Spinner /> Đang lưu...
-                </span>
-              ) : (
-                "Lưu sự kiện"
-              )}
-            </Button>
+            {filters.q ? <Badge text={`Từ khóa: ${filters.q}`} tone="primary" /> : null}
+            {filters.source ? <Badge text={`Nguồn: ${filters.source}`} tone="accent" /> : null}
+            {filters.channel ? <Badge text={`Kênh: ${filters.channel}`} tone="accent" /> : null}
+            {filters.licenseType ? <Badge text={`Hạng bằng: ${filters.licenseType}`} tone="primary" /> : null}
+            {filters.createdFrom || filters.createdTo ? (
+              <Badge text={`Ngày: ${filters.createdFrom || "..."} - ${filters.createdTo || "..."}`} tone="neutral" />
+            ) : null}
+            <div className="ml-auto flex items-center gap-2">
+              <Button variant="secondary" onClick={() => applyFiltersToUrl(filters)}>
+                Áp dụng
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setFilters(EMPTY_FILTERS);
+                  applyFiltersToUrl(EMPTY_FILTERS);
+                }}
+              >
+                Xóa lọc
+              </Button>
+            </div>
           </div>
-        </div>
-      </Modal>
 
-      <Modal
-        open={Boolean(assignLead)}
-        title="Gán telesale phụ trách"
-        description="Cập nhật người chịu trách nhiệm chính cho lead"
-        onClose={() => setAssignLead(null)}
-      >
-        <div className="space-y-3">
-          <p className="text-sm text-zinc-700">{assignLead ? `Khách hàng: ${assignLead.fullName || assignLead.id}` : ""}</p>
-          <Select value={assignOwnerId} onChange={(e) => setAssignOwnerId(e.target.value)}>
-            <option value="">Chưa gán</option>
-            {owners.map((owner) => (
-              <option key={owner.id} value={owner.id}>
-                {owner.name || owner.email}
-              </option>
-            ))}
-          </Select>
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setAssignLead(null)}>
-              Hủy
-            </Button>
-            <Button onClick={submitAssignOwner} disabled={assignSaving}>
-              {assignSaving ? "Đang lưu..." : "Lưu"}
-            </Button>
+          <div className="surface flex gap-2 overflow-x-auto p-2 md:hidden">
+            {STATUSES.map((status) => {
+              const s = getStatusStyle(status);
+              const count = (byStatus[status] || []).length;
+              return (
+                <button
+                  key={status}
+                  type="button"
+                  onClick={() => setMobileStatus(status)}
+                  className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-bold transition-all ${mobileStatus === status
+                    ? `bg-gradient-to-r ${s.gradient} text-white shadow-md`
+                    : `border ${s.border} ${s.bg} ${s.text}`
+                    }`}
+                >
+                  {s.icon} {STATUS_LABELS[status] || status} ({count})
+                </button>
+              );
+            })}
           </div>
         </div>
-      </Modal>
-    </div>
+
+        {error ? <Alert type="error" message={error} /> : null}
+
+        {loading ? (
+          <div className="overflow-x-auto pb-1">
+            <BoardSkeleton />
+          </div>
+        ) : (
+          <div className="overflow-x-auto pb-1">
+            <div className="flex min-w-max gap-3">
+              {STATUSES.map((status, colIdx) => {
+                const items = byStatus[status] || [];
+                const s = getStatusStyle(status);
+                return (
+                  <section
+                    key={status}
+                    className={`w-[320px] shrink-0 rounded-2xl border border-zinc-200 bg-gradient-to-b ${s.headerGradient} to-zinc-50 p-2 animate-fadeInUp ${mobileStatus === status ? "block" : "hidden md:block"
+                      }`}
+                    style={{ animationDelay: `${colIdx * 80}ms` }}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => onDrop(status)}
+                  >
+                    {/* Column header */}
+                    <div className="sticky top-0 z-10 mb-2 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+                      <div className={`h-1 bg-gradient-to-r ${s.gradient}`} />
+                      <div className="flex items-center justify-between px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${s.bg} text-sm`}>{s.icon}</span>
+                          <p className="text-sm font-bold text-zinc-900">{STATUS_LABELS[status] || status}</p>
+                        </div>
+                        <span className={`inline-flex min-w-6 items-center justify-center rounded-full bg-gradient-to-r ${s.gradient} px-2 py-0.5 text-xs font-bold text-white shadow-sm`}>
+                          {items.length}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      {items.length === 0 ? (
+                        <div className="rounded-xl border-2 border-dashed border-zinc-200 bg-white/50 px-3 py-6 text-center text-xs text-zinc-500">
+                          📭 Chưa có khách trong cột này.
+                          <br />
+                          Kéo thả hoặc điều chỉnh bộ lọc.
+                        </div>
+                      ) : (
+                        items.map((lead, idx) => (
+                          <article
+                            key={lead.id}
+                            draggable
+                            onDragStart={() => setDraggingLead(lead)}
+                            className="group relative overflow-hidden rounded-xl border border-zinc-200 bg-white text-xs shadow-sm transition-all hover:border-zinc-300 hover:shadow-md animate-fadeInUp"
+                            style={{ animationDelay: `${colIdx * 80 + idx * 50}ms` }}
+                          >
+                            <div className={`absolute inset-y-0 left-0 w-1 bg-gradient-to-b ${s.gradient}`} />
+                            <div className="p-3 pl-4">
+                              <div className="mb-1 flex items-start justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                  <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${s.bg} text-xs`}>{s.icon}</span>
+                                  <p className="line-clamp-2 text-sm font-bold text-zinc-900">{lead.fullName || "Chưa có tên"}</p>
+                                </div>
+                                <span className={`shrink-0 rounded-full ${s.bg} ${s.text} border ${s.border} px-1.5 py-0.5 text-[10px] font-bold`}>
+                                  {lead.licenseType || "-"}
+                                </span>
+                              </div>
+
+                              <p className="font-mono text-sm text-zinc-800">{lead.phone || "-"}</p>
+
+                              <div className="mt-2 grid gap-1 text-zinc-500">
+                                <p>📡 {lead.source || "-"} · {lead.channel || "-"}</p>
+                                <p>👤 {lead.owner?.name || lead.owner?.email || "-"}</p>
+                                <p>📞 {lead.lastContactAt ? formatDateTimeVi(lead.lastContactAt) : "-"}</p>
+                              </div>
+
+                              <div className="mt-3 space-y-2">
+                                <Select
+                                  value={lead.status}
+                                  onChange={(e) => changeStatus(lead.id, lead.status, e.target.value)}
+                                  disabled={updatingId === lead.id}
+                                >
+                                  {STATUSES.map((st) => (
+                                    <option key={st} value={st}>
+                                      {STATUS_LABELS[st] || st}
+                                    </option>
+                                  ))}
+                                </Select>
+
+                                <div className="flex items-center justify-between gap-2">
+                                  <Link
+                                    href={`/leads/${lead.id}`}
+                                    className={`inline-flex items-center gap-1 rounded-lg border ${s.border} ${s.bg} px-2.5 py-1.5 text-xs font-bold ${s.text} transition hover:shadow-sm`}
+                                  >
+                                    Chi tiết
+                                  </Link>
+
+                                  <details className="relative">
+                                    <summary className="list-none cursor-pointer rounded-lg border border-zinc-200 px-2 py-1 text-sm text-zinc-600 hover:bg-zinc-50">
+                                      ⋯
+                                    </summary>
+                                    <div className="absolute right-0 z-20 mt-1 w-40 rounded-xl border border-zinc-200 bg-white p-1 shadow-lg">
+                                      {canManageOwner ? (
+                                        <button
+                                          type="button"
+                                          className="block w-full rounded-lg px-2 py-1.5 text-left text-xs text-zinc-700 hover:bg-zinc-100"
+                                          onClick={() => {
+                                            setAssignLead(lead);
+                                            setAssignOwnerId(lead.ownerId || "");
+                                          }}
+                                        >
+                                          👤 Gán telesale
+                                        </button>
+                                      ) : null}
+                                      <button
+                                        type="button"
+                                        className="block w-full rounded-lg px-2 py-1.5 text-left text-xs text-zinc-700 hover:bg-zinc-100"
+                                        onClick={() => {
+                                          setEventLeadId(lead.id);
+                                          setEventOpen(true);
+                                        }}
+                                      >
+                                        ➕ Thêm sự kiện
+                                      </button>
+                                      <Link
+                                        href={`/leads/${lead.id}`}
+                                        className="block w-full rounded-lg px-2 py-1.5 text-left text-xs text-zinc-700 hover:bg-zinc-100"
+                                      >
+                                        🔍 Mở chi tiết
+                                      </Link>
+                                    </div>
+                                  </details>
+                                </div>
+
+                                <p className="text-[11px] text-zinc-400">Tạo: {formatDateTimeVi(lead.createdAt)}</p>
+                              </div>
+                            </div>
+                          </article>
+                        ))
+                      )}
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <MobileFiltersSheet
+          open={filterOpen}
+          onOpenChange={setFilterOpen}
+          title="Bộ lọc bảng trạng thái"
+          onApply={() => applyFiltersToUrl(filters)}
+          onReset={() => {
+            setFilters(EMPTY_FILTERS);
+            applyFiltersToUrl(EMPTY_FILTERS);
+          }}
+        >
+          <div className="space-y-4">
+            <FilterCard title="Lọc nhanh">
+              <div className="grid gap-2 md:grid-cols-2">
+                <Input
+                  value={filters.q}
+                  placeholder="Tìm kiếm tên/SĐT"
+                  onChange={(e) => setFilters((s) => ({ ...s, q: e.target.value }))}
+                />
+                <Input
+                  value={filters.source}
+                  placeholder="Nguồn"
+                  onChange={(e) => setFilters((s) => ({ ...s, source: e.target.value }))}
+                />
+                <Input
+                  value={filters.channel}
+                  placeholder="Kênh"
+                  onChange={(e) => setFilters((s) => ({ ...s, channel: e.target.value }))}
+                />
+                <Input
+                  value={filters.licenseType}
+                  placeholder="Hạng bằng"
+                  onChange={(e) => setFilters((s) => ({ ...s, licenseType: e.target.value }))}
+                />
+                {canManageOwner ? (
+                  <Select value={filters.ownerId} onChange={(e) => setFilters((s) => ({ ...s, ownerId: e.target.value }))}>
+                    <option value="">Tất cả người phụ trách</option>
+                    {owners.map((owner) => (
+                      <option key={owner.id} value={owner.id}>
+                        {owner.name || owner.email}
+                      </option>
+                    ))}
+                  </Select>
+                ) : !isTelesales ? (
+                  <Input
+                    value={filters.ownerId}
+                    placeholder="Mã người phụ trách"
+                    onChange={(e) => setFilters((s) => ({ ...s, ownerId: e.target.value }))}
+                  />
+                ) : null}
+              </div>
+            </FilterCard>
+
+            <FilterCard title="Khoảng ngày">
+              <div className="grid gap-2 md:grid-cols-2">
+                <Input
+                  type="date"
+                  value={filters.createdFrom}
+                  onChange={(e) => setFilters((s) => ({ ...s, createdFrom: e.target.value }))}
+                />
+                <Input
+                  type="date"
+                  value={filters.createdTo}
+                  onChange={(e) => setFilters((s) => ({ ...s, createdTo: e.target.value }))}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    const today = dateYmdLocal(new Date());
+                    setFilters((s) => ({ ...s, createdFrom: today, createdTo: today }));
+                  }}
+                >
+                  Hôm nay
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    const now = new Date();
+                    const start = new Date(now);
+                    start.setDate(now.getDate() - 6);
+                    setFilters((s) => ({ ...s, createdFrom: dateYmdLocal(start), createdTo: dateYmdLocal(now) }));
+                  }}
+                >
+                  Tuần này
+                </Button>
+              </div>
+            </FilterCard>
+
+          </div>
+        </MobileFiltersSheet>
+
+        <Modal
+          open={eventOpen}
+          title="Thêm sự kiện khách hàng"
+          description="Ghi nhận tương tác để cập nhật timeline xử lý lead"
+          onClose={() => setEventOpen(false)}
+        >
+          <div className="space-y-3">
+            <Select value={eventType} onChange={(e) => setEventType(e.target.value)}>
+              {EVENT_OPTIONS.map((t) => (
+                <option key={t} value={t}>
+                  {STATUS_LABELS[t] || t}
+                </option>
+              ))}
+            </Select>
+            <Input placeholder="Ghi chú" value={eventNote} onChange={(e) => setEventNote(e.target.value)} />
+            <Input
+              placeholder="Dữ liệu JSON (không bắt buộc)"
+              value={eventMeta}
+              onChange={(e) => setEventMeta(e.target.value)}
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setEventOpen(false)}>
+                Hủy
+              </Button>
+              <Button onClick={submitEvent} disabled={eventSaving}>
+                {eventSaving ? (
+                  <span className="flex items-center gap-2">
+                    <Spinner /> Đang lưu...
+                  </span>
+                ) : (
+                  "Lưu sự kiện"
+                )}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+
+        <Modal
+          open={Boolean(assignLead)}
+          title="Gán telesale phụ trách"
+          description="Cập nhật người chịu trách nhiệm chính cho lead"
+          onClose={() => setAssignLead(null)}
+        >
+          <div className="space-y-3">
+            <p className="text-sm text-zinc-700">{assignLead ? `Khách hàng: ${assignLead.fullName || assignLead.id}` : ""}</p>
+            <Select value={assignOwnerId} onChange={(e) => setAssignOwnerId(e.target.value)}>
+              <option value="">Chưa gán</option>
+              {owners.map((owner) => (
+                <option key={owner.id} value={owner.id}>
+                  {owner.name || owner.email}
+                </option>
+              ))}
+            </Select>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setAssignLead(null)}>
+                Hủy
+              </Button>
+              <Button onClick={submitAssignOwner} disabled={assignSaving}>
+                {assignSaving ? "Đang lưu..." : "Lưu"}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      </div>
     </MobileShell>
   );
 }

@@ -6,20 +6,19 @@ import { fetchJson, type ApiClientError } from "@/lib/api-client";
 import { clearToken, fetchMe, getToken } from "@/lib/auth-client";
 import { isAdminRole } from "@/lib/admin-auth";
 import { Alert } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FilterCard } from "@/components/ui/filter-card";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { Pagination } from "@/components/ui/pagination";
-import { PageHeader } from "@/components/ui/page-header";
 import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Table } from "@/components/ui/table";
 import { DataCard } from "@/components/mobile/DataCard";
 import { formatDateVi } from "@/lib/date-utils";
 
-type Role = "PAGE" | "TELESALES";
+type Role = "PAGE" | "TELESALES" | "BRANCH";
 
 type UserOption = {
   id: string;
@@ -60,11 +59,6 @@ type FormState = {
   effectiveTo: string;
   isActive: boolean;
   dataRatePctTarget: string;
-  data: string;
-  called: string;
-  appointed: string;
-  arrived: string;
-  signed: string;
   calledPctGlobal: string;
   appointedPctGlobal: string;
   arrivedPctGlobal: string;
@@ -78,11 +72,6 @@ const DEFAULT_FORM: FormState = {
   effectiveTo: "",
   isActive: true,
   dataRatePctTarget: "20",
-  data: "4",
-  called: "0",
-  appointed: "4",
-  arrived: "0",
-  signed: "0",
   calledPctGlobal: "100",
   appointedPctGlobal: "80",
   arrivedPctGlobal: "80",
@@ -94,21 +83,63 @@ function parseApiError(err: ApiClientError) {
 }
 
 function statusBadge(active: boolean) {
-  return active ? <Badge text="Đang áp dụng" tone="success" /> : <Badge text="Ngưng áp dụng" tone="neutral" />;
+  return active
+    ? <Badge text="Đang áp dụng" tone="success" pulse />
+    : <Badge text="Ngưng" tone="neutral" />;
 }
 
+const ROLE_CONFIG: Record<Role, { label: string; color: string; bg: string; icon: string }> = {
+  PAGE: { label: "Trực Page", color: "text-blue-700", bg: "bg-blue-50 border-blue-200", icon: "📱" },
+  TELESALES: { label: "Telesales", color: "text-violet-700", bg: "bg-violet-50 border-violet-200", icon: "📞" },
+  BRANCH: { label: "Chi nhánh", color: "text-amber-700", bg: "bg-amber-50 border-amber-200", icon: "🏢" },
+};
+
 function roleLabel(role: Role) {
-  return role === "PAGE" ? "Trực Page" : "Telesales";
+  return ROLE_CONFIG[role]?.label ?? role;
+}
+
+function roleBadge(role: Role) {
+  const cfg = ROLE_CONFIG[role];
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium ${cfg.bg} ${cfg.color}`}>
+      <span>{cfg.icon}</span>
+      {cfg.label}
+    </span>
+  );
 }
 
 function summarizeTargets(role: Role, targets: Record<string, number>) {
   if (role === "PAGE") {
     const target = Number(targets.dataRatePctTarget ?? 0).toFixed(1);
-    return `Mục tiêu % ra Data: ${target}% (Data / Tin nhắn × 100)`;
+    return `Mục tiêu % ra Data: ${target}%`;
   }
-  const abs = `Data: ${targets.dataDaily ?? targets.data ?? 0} • Gọi: ${targets.calledDaily ?? targets.called ?? 0} • Hẹn: ${targets.appointedDaily ?? targets.appointed ?? 0} • Đến: ${targets.arrivedDaily ?? targets.arrived ?? 0} • Ký: ${targets.signedDaily ?? targets.signed ?? 0}`;
-  const pct = `Gọi ${targets.calledPctGlobal ?? 0}% • Hẹn ${targets.appointedPctGlobal ?? 0}% • Đến ${targets.arrivedPctGlobal ?? 0}% • Ký ${targets.signedPctGlobal ?? 0}% (MTD)`;
-  return `${abs} • ${pct}`;
+  if (role === "BRANCH") {
+    return `Hồ sơ ký = Tin nhắn × KPI Page × KPI Telesale`;
+  }
+  return `Gọi ${targets.calledPctGlobal ?? 0}%/Data • Hẹn ${targets.appointedPctGlobal ?? 0}%/Gọi • Đến ${targets.arrivedPctGlobal ?? 0}%/Hẹn • Ký ${targets.signedPctGlobal ?? 0}%/Đến`;
+}
+
+function FunnelBar({ targets }: { targets: Record<string, number> }) {
+  const steps = [
+    { label: "Gọi", value: targets.calledPctGlobal ?? 0, color: "bg-blue-500" },
+    { label: "Hẹn", value: targets.appointedPctGlobal ?? 0, color: "bg-indigo-500" },
+    { label: "Đến", value: targets.arrivedPctGlobal ?? 0, color: "bg-violet-500" },
+    { label: "Ký", value: targets.signedPctGlobal ?? 0, color: "bg-emerald-500" },
+  ];
+  return (
+    <div className="flex items-center gap-1.5">
+      {steps.map((step, i) => (
+        <div key={step.label} className="group relative flex items-center gap-1">
+          {i > 0 && <span className="text-zinc-300">→</span>}
+          <div className="flex items-center gap-1 rounded-md bg-zinc-50 px-1.5 py-0.5">
+            <div className={`h-1.5 w-1.5 rounded-full ${step.color}`} />
+            <span className="text-[11px] font-medium text-zinc-600">{step.label}</span>
+            <span className="text-[11px] font-bold text-zinc-800">{step.value}%</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function toNumber(value: string) {
@@ -118,8 +149,61 @@ function toNumber(value: string) {
   return n;
 }
 
+/* ── Stat Card ─────────────────────────────────────────────── */
+
+function StatCard({ label, value, icon, gradient, delay }: { label: string; value: number; icon: string; gradient: string; delay: string }) {
+  return (
+    <div className={`animate-fadeInUp card-hover ${delay} relative overflow-hidden rounded-2xl border border-zinc-200/60 bg-white p-5 shadow-sm`}>
+      <div className={`absolute -right-3 -top-3 h-16 w-16 rounded-full ${gradient} opacity-10`} />
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-zinc-500">{label}</p>
+          <p className="mt-1 text-3xl font-bold tracking-tight text-slate-900">{value}</p>
+        </div>
+        <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${gradient} text-xl text-white shadow-sm`}>
+          {icon}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Loading Skeleton ──────────────────────────────────────── */
+
+function TableSkeleton() {
+  return (
+    <div className="animate-fadeIn space-y-3">
+      {[1, 2, 3, 4].map((i) => (
+        <div key={i} className="flex items-center gap-4 rounded-xl border border-zinc-100 bg-white p-4">
+          <div className="h-10 w-10 animate-shimmer rounded-xl" />
+          <div className="flex-1 space-y-2">
+            <div className="h-4 w-1/3 animate-shimmer rounded-lg" />
+            <div className="h-3 w-2/3 animate-shimmer rounded-lg" />
+          </div>
+          <div className="h-6 w-20 animate-shimmer rounded-full" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ── Empty State ───────────────────────────────────────────── */
+
+function EmptyState() {
+  return (
+    <div className="animate-fadeInUp flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 bg-zinc-50/50 py-16">
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-100 text-3xl">📊</div>
+      <h3 className="mt-4 text-base font-semibold text-zinc-700">Chưa có dữ liệu KPI</h3>
+      <p className="mt-1.5 text-sm text-zinc-500">Tạo KPI nhân sự đầu tiên để bắt đầu theo dõi hiệu suất.</p>
+    </div>
+  );
+}
+
+/* ── Main Page ─────────────────────────────────────────────── */
+
 export default function EmployeeKpiPage() {
   const router = useRouter();
+  const toast = useToast();
   const [checkingRole, setCheckingRole] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -136,7 +220,6 @@ export default function EmployeeKpiPage() {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<EmployeeKpiSetting | null>(null);
@@ -199,6 +282,12 @@ export default function EmployeeKpiPage() {
     if (isAdmin) void loadData();
   }, [isAdmin, loadData]);
 
+  /* ── Stats ─────────────────────────────────────────── */
+  const stats = useMemo(() => {
+    const active = items.filter((i) => i.isActive).length;
+    return { total: items.length, active, inactive: items.length - active };
+  }, [items]);
+
   function openCreateModal() {
     setEditTarget(null);
     setForm((current) => ({
@@ -217,11 +306,6 @@ export default function EmployeeKpiPage() {
       effectiveTo: setting.effectiveTo ? setting.effectiveTo.slice(0, 10) : "",
       isActive: setting.isActive,
       dataRatePctTarget: String(setting.targetsJson.dataRatePctTarget ?? 20),
-      data: String(setting.targetsJson.dataDaily ?? setting.targetsJson.data ?? 4),
-      called: String(setting.targetsJson.calledDaily ?? setting.targetsJson.called ?? 0),
-      appointed: String(setting.targetsJson.appointedDaily ?? setting.targetsJson.appointed ?? 4),
-      arrived: String(setting.targetsJson.arrivedDaily ?? setting.targetsJson.arrived ?? 0),
-      signed: String(setting.targetsJson.signedDaily ?? setting.targetsJson.signed ?? 0),
       calledPctGlobal: String(setting.targetsJson.calledPctGlobal ?? 100),
       appointedPctGlobal: String(setting.targetsJson.appointedPctGlobal ?? 80),
       arrivedPctGlobal: String(setting.targetsJson.arrivedPctGlobal ?? 80),
@@ -236,11 +320,10 @@ export default function EmployeeKpiPage() {
 
     setSubmitting(true);
     setError("");
-    setSuccess("");
 
     try {
       if (!form.userId) {
-        setError("VALIDATION_ERROR: Vui lòng chọn nhân viên.");
+        setError("Vui lòng chọn nhân viên.");
         return;
       }
 
@@ -248,20 +331,17 @@ export default function EmployeeKpiPage() {
       if (form.role === "PAGE") {
         const dataRatePctTarget = toNumber(form.dataRatePctTarget);
         if (dataRatePctTarget === undefined || dataRatePctTarget < 0 || dataRatePctTarget > 100) {
-          setError("VALIDATION_ERROR: Mục tiêu % ra Data phải từ 0 đến 100.");
+          setError("Mục tiêu % ra Data phải từ 0 đến 100.");
           return;
         }
         targetsJson = {
           dataRatePctTarget: Math.round(dataRatePctTarget * 10) / 10,
         };
+      } else if (form.role === "BRANCH") {
+        targetsJson = { branchFormula: 1 };
       } else {
         targetsJson = {};
         const entries: Array<[string, number | undefined]> = [
-          ["dataDaily", toNumber(form.data)],
-          ["calledDaily", toNumber(form.called)],
-          ["appointedDaily", toNumber(form.appointed)],
-          ["arrivedDaily", toNumber(form.arrived)],
-          ["signedDaily", toNumber(form.signed)],
           ["calledPctGlobal", toNumber(form.calledPctGlobal)],
           ["appointedPctGlobal", toNumber(form.appointedPctGlobal)],
           ["arrivedPctGlobal", toNumber(form.arrivedPctGlobal)],
@@ -271,7 +351,7 @@ export default function EmployeeKpiPage() {
           if (value !== undefined) targetsJson[key] = value;
         }
         if (Object.keys(targetsJson).length === 0) {
-          setError("VALIDATION_ERROR: Telesales cần ít nhất 1 chỉ tiêu.");
+          setError("Telesales cần ít nhất 1 chỉ tiêu %.");
           return;
         }
       }
@@ -291,14 +371,14 @@ export default function EmployeeKpiPage() {
           token,
           body,
         });
-        setSuccess("Đã cập nhật KPI nhân sự.");
+        toast.success("Đã cập nhật KPI nhân sự thành công! ✅");
       } else {
         await fetchJson<{ setting: EmployeeKpiSetting }>("/api/admin/employee-kpi", {
           method: "POST",
           token,
           body,
         });
-        setSuccess("Đã tạo KPI nhân sự.");
+        toast.success("Đã tạo KPI nhân sự thành công! 🎉");
       }
 
       setModalOpen(false);
@@ -313,115 +393,157 @@ export default function EmployeeKpiPage() {
 
   if (checkingRole) {
     return (
-      <div className="flex items-center gap-2 text-zinc-700">
-        <Spinner /> Đang kiểm tra quyền...
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="animate-fadeInUp flex flex-col items-center gap-3">
+          <Spinner />
+          <p className="text-sm text-zinc-500">Đang kiểm tra quyền truy cập...</p>
+        </div>
       </div>
     );
   }
 
   if (!isAdmin) {
-    return <Alert type="error" message="Bạn không có quyền truy cập." />;
+    return <Alert type="error" message="Bạn không có quyền truy cập trang này." />;
   }
 
   return (
-    <div className="space-y-4">
-      <PageHeader
-        title="KPI nhân sự"
-        subtitle="Thiết lập KPI theo nhân viên và thời gian hiệu lực"
-        actions={
-          <>
-            <Button variant="secondary" onClick={() => void loadData()} disabled={loading}>
-              {loading ? "Đang tải..." : "Làm mới"}
+    <div className="space-y-5">
+      {/* ── Premium Header ── */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 p-4 text-white shadow-lg shadow-violet-200 animate-fadeInUp">
+        <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+        <div className="absolute -bottom-4 -left-4 h-20 w-20 rounded-full bg-white/10 blur-xl" />
+        <div className="relative flex flex-wrap items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 text-2xl backdrop-blur-sm">📊</div>
+          <div className="flex-1">
+            <h2 className="text-lg font-bold">KPI nhân sự</h2>
+            <p className="text-sm text-white/80">Thiết lập KPI theo nhân viên và thời gian hiệu lực</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="secondary" onClick={() => void loadData()} disabled={loading} className="!bg-white/20 !text-white !border-white/30 hover:!bg-white/30">
+              {loading ? "Đang tải..." : "🔄 Làm mới"}
             </Button>
-            <Button onClick={openCreateModal}>Tạo KPI</Button>
-          </>
-        }
-      />
-
-      {error ? <Alert type="error" message={error} /> : null}
-      {success ? <Alert type="success" message={success} /> : null}
-
-      <FilterCard title="Bộ lọc">
-        <div className="grid gap-3 md:grid-cols-5">
-          <label className="space-y-1 text-sm text-zinc-700">
-            <span>Nhân viên</span>
-            <Select value={filterUserId} onChange={(e) => setFilterUserId(e.target.value)}>
-              <option value="">Tất cả</option>
-              {users.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.name || user.email}
-                </option>
-              ))}
-            </Select>
-          </label>
-          <label className="space-y-1 text-sm text-zinc-700">
-            <span>Vai trò KPI</span>
-            <Select value={filterRole} onChange={(e) => setFilterRole(e.target.value as "" | Role)}>
-              <option value="">Tất cả</option>
-              <option value="PAGE">Trực Page</option>
-              <option value="TELESALES">Telesales</option>
-            </Select>
-          </label>
-          <label className="space-y-1 text-sm text-zinc-700">
-            <span>Trạng thái</span>
-            <Select value={filterActive} onChange={(e) => setFilterActive(e.target.value as "" | "true" | "false") }>
-              <option value="">Tất cả</option>
-              <option value="true">Đang áp dụng</option>
-              <option value="false">Ngưng áp dụng</option>
-            </Select>
-          </label>
-          <label className="space-y-1 text-sm text-zinc-700">
-            <span>Kích thước trang</span>
-            <Select
-              value={String(pageSize)}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
-                setPage(1);
-              }}
-            >
-              <option value="20">20</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-            </Select>
-          </label>
-          <div className="flex items-end">
-            <Button
-              onClick={() => {
-                setPage(1);
-                void loadData();
-              }}
-            >
-              Áp dụng
-            </Button>
+            <Button variant="accent" onClick={openCreateModal} className="!bg-white !text-violet-700 hover:!bg-white/90">✨ Tạo KPI</Button>
           </div>
         </div>
-      </FilterCard>
+      </div>
 
-      {loading ? (
-        <div className="flex items-center gap-2 text-zinc-700">
-          <Spinner /> Đang tải dữ liệu KPI nhân sự...
+      {/* Feedback */}
+      {error ? <div className="animate-scaleIn"><Alert type="error" message={error} /></div> : null}
+
+      {/* Stats Row */}
+      {!loading && items.length > 0 && (
+        <div className="grid gap-4 md:grid-cols-3">
+          <StatCard label="Tổng KPI" value={stats.total} icon="📋" gradient="gradient-blue" delay="delay-1" />
+          <StatCard label="Đang áp dụng" value={stats.active} icon="✅" gradient="gradient-emerald" delay="delay-2" />
+          <StatCard label="Ngưng áp dụng" value={stats.inactive} icon="⏸️" gradient="gradient-amber" delay="delay-3" />
         </div>
+      )}
+
+      {/* Filters */}
+      <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm animate-fadeInUp" style={{ animationDelay: "80ms" }}>
+        <div className="h-1 bg-gradient-to-r from-violet-500 to-purple-500" />
+        <div className="p-4">
+          <h3 className="text-sm font-semibold text-zinc-800 mb-3">🔍 Bộ lọc</h3>
+          <div className="grid gap-3 md:grid-cols-5">
+            <label className="space-y-1.5 text-sm text-zinc-600">
+              <span className="font-medium">Nhân viên</span>
+              <Select value={filterUserId} onChange={(e) => setFilterUserId(e.target.value)}>
+                <option value="">Tất cả</option>
+                {users.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.name || user.email}
+                  </option>
+                ))}
+              </Select>
+            </label>
+            <label className="space-y-1.5 text-sm text-zinc-600">
+              <span className="font-medium">Vai trò KPI</span>
+              <Select value={filterRole} onChange={(e) => setFilterRole(e.target.value as "" | Role)}>
+                <option value="">Tất cả</option>
+                <option value="PAGE">📱 Trực Page</option>
+                <option value="TELESALES">📞 Telesales</option>
+                <option value="BRANCH">🏢 Chi nhánh</option>
+              </Select>
+            </label>
+            <label className="space-y-1.5 text-sm text-zinc-600">
+              <span className="font-medium">Trạng thái</span>
+              <Select value={filterActive} onChange={(e) => setFilterActive(e.target.value as "" | "true" | "false")}>
+                <option value="">Tất cả</option>
+                <option value="true">✅ Đang áp dụng</option>
+                <option value="false">⏸️ Ngưng áp dụng</option>
+              </Select>
+            </label>
+            <label className="space-y-1.5 text-sm text-zinc-600">
+              <span className="font-medium">Kích thước</span>
+              <Select
+                value={String(pageSize)}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(1);
+                }}
+              >
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </Select>
+            </label>
+            <div className="flex items-end">
+              <Button
+                onClick={() => {
+                  setPage(1);
+                  void loadData();
+                }}
+              >
+                Áp dụng
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Table / Loading / Empty */}
+      {loading ? (
+        <TableSkeleton />
       ) : items.length === 0 ? (
-        <div className="rounded-xl border border-zinc-200 bg-white p-6 text-sm text-zinc-600">Không có dữ liệu KPI nhân sự.</div>
+        <EmptyState />
       ) : (
-        <>
+        <div className="animate-fadeInUp delay-3">
+          {/* Desktop Table */}
           <div className="hidden md:block">
-            <Table headers={["Nhân viên", "Vai trò KPI", "Chỉ tiêu", "Hiệu lực", "Trạng thái", "Hành động"]}>
-              {items.map((item) => (
-                <tr key={item.id}>
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-zinc-900">{item.user.name || item.user.email}</div>
-                    <div className="text-xs text-zinc-500">{item.user.email}</div>
+            <Table headers={["Nhân viên", "Vai trò", "Chỉ tiêu KPI", "Hiệu lực", "Trạng thái", ""]}>
+              {items.map((item, index) => (
+                <tr key={item.id} className="animate-fadeInUp" style={{ animationDelay: `${index * 40}ms` }}>
+                  <td className="px-4 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-slate-100 to-zinc-100 text-sm font-bold text-slate-600">
+                        {(item.user.name || item.user.email).charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-slate-900">{item.user.name || item.user.email}</div>
+                        <div className="text-xs text-zinc-400">{item.user.email}</div>
+                      </div>
+                    </div>
                   </td>
-                  <td className="px-4 py-3 text-zinc-700">{roleLabel(item.role)}</td>
-                  <td className="px-4 py-3 text-zinc-700">{summarizeTargets(item.role, item.targetsJson)}</td>
-                  <td className="px-4 py-3 text-zinc-700">
-                    {formatDateVi(item.effectiveFrom)} - {item.effectiveTo ? formatDateVi(item.effectiveTo) : "Không giới hạn"}
+                  <td className="px-4 py-3.5">{roleBadge(item.role)}</td>
+                  <td className="px-4 py-3.5">
+                    {item.role === "TELESALES" ? (
+                      <FunnelBar targets={item.targetsJson} />
+                    ) : (
+                      <span className="text-sm text-zinc-600">{summarizeTargets(item.role, item.targetsJson)}</span>
+                    )}
                   </td>
-                  <td className="px-4 py-3">{statusBadge(item.isActive)}</td>
-                  <td className="px-4 py-3">
-                    <Button variant="secondary" onClick={() => openEditModal(item)}>
-                      Sửa
+                  <td className="px-4 py-3.5">
+                    <div className="text-sm text-zinc-700">
+                      {formatDateVi(item.effectiveFrom)}
+                    </div>
+                    <div className="text-xs text-zinc-400">
+                      → {item.effectiveTo ? formatDateVi(item.effectiveTo) : "Không giới hạn"}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3.5">{statusBadge(item.isActive)}</td>
+                  <td className="px-4 py-3.5">
+                    <Button variant="ghost" onClick={() => openEditModal(item)} className="text-blue-600 hover:text-blue-800 hover:bg-blue-50">
+                      ✏️ Sửa
                     </Button>
                   </td>
                 </tr>
@@ -429,48 +551,57 @@ export default function EmployeeKpiPage() {
             </Table>
           </div>
 
-          <div className="space-y-2 md:hidden">
-            {items.map((item) => (
-              <DataCard
-                key={item.id}
-                title={item.user.name || item.user.email}
-                subtitle={`${roleLabel(item.role)} • ${formatDateVi(item.effectiveFrom)}`}
-                badge={statusBadge(item.isActive)}
-                footer={
-                  <Button variant="secondary" onClick={() => openEditModal(item)}>
-                    Sửa
-                  </Button>
-                }
-              >
-                <div className="space-y-1 text-xs">
-                  <p>{summarizeTargets(item.role, item.targetsJson)}</p>
-                  <p className="text-zinc-500">Hiệu lực đến: {item.effectiveTo ? formatDateVi(item.effectiveTo) : "Không giới hạn"}</p>
-                </div>
-              </DataCard>
+          {/* Mobile Cards */}
+          <div className="space-y-3 md:hidden">
+            {items.map((item, index) => (
+              <div key={item.id} className="animate-fadeInUp" style={{ animationDelay: `${index * 60}ms` }}>
+                <DataCard
+                  title={item.user.name || item.user.email}
+                  subtitle={`${roleLabel(item.role)} • ${formatDateVi(item.effectiveFrom)}`}
+                  badge={statusBadge(item.isActive)}
+                  footer={
+                    <Button variant="ghost" onClick={() => openEditModal(item)} className="text-blue-600">
+                      ✏️ Sửa
+                    </Button>
+                  }
+                >
+                  <div className="space-y-1.5 text-xs">
+                    {item.role === "TELESALES" ? (
+                      <FunnelBar targets={item.targetsJson} />
+                    ) : (
+                      <p className="text-zinc-600">{summarizeTargets(item.role, item.targetsJson)}</p>
+                    )}
+                    <p className="text-zinc-400">
+                      Hiệu lực đến: {item.effectiveTo ? formatDateVi(item.effectiveTo) : "Không giới hạn"}
+                    </p>
+                  </div>
+                </DataCard>
+              </div>
             ))}
           </div>
 
-          <Pagination
-            page={page}
-            pageSize={pageSize}
-            total={total}
-            onPageChange={(next) => {
-              setPage(next);
-            }}
-          />
-        </>
+          <div className="mt-4">
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={(next) => setPage(next)}
+            />
+          </div>
+        </div>
       )}
 
+      {/* Modal */}
       <Modal
         open={modalOpen}
         title={editTarget ? "Cập nhật KPI nhân sự" : "Tạo KPI nhân sự"}
         description="Thiết lập KPI theo vai trò và khoảng thời gian hiệu lực"
         onClose={() => setModalOpen(false)}
       >
-        <div className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-2">
-            <label className="space-y-1 text-sm text-zinc-700">
-              <span>Nhân viên</span>
+        <div className="space-y-5">
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="space-y-1.5 text-sm text-zinc-600">
+              <span className="font-medium text-zinc-700">Nhân viên</span>
               <Select value={form.userId} onChange={(e) => setForm((prev) => ({ ...prev, userId: e.target.value }))}>
                 <option value="">Chọn nhân viên</option>
                 {users.map((user) => (
@@ -481,38 +612,50 @@ export default function EmployeeKpiPage() {
               </Select>
             </label>
 
-            <label className="space-y-1 text-sm text-zinc-700">
-              <span>Vai trò KPI</span>
+            <label className="space-y-1.5 text-sm text-zinc-600">
+              <span className="font-medium text-zinc-700">Vai trò KPI</span>
               <Select value={form.role} onChange={(e) => setForm((prev) => ({ ...prev, role: e.target.value as Role }))}>
-                <option value="PAGE">Trực Page</option>
-                <option value="TELESALES">Telesales</option>
+                <option value="PAGE">📱 Trực Page</option>
+                <option value="TELESALES">📞 Telesales</option>
+                <option value="BRANCH">🏢 Chi nhánh</option>
               </Select>
             </label>
 
-            <label className="space-y-1 text-sm text-zinc-700">
-              <span>Hiệu lực từ ngày</span>
+            <label className="space-y-1.5 text-sm text-zinc-600">
+              <span className="font-medium text-zinc-700">Hiệu lực từ ngày</span>
               <Input type="date" value={form.effectiveFrom} onChange={(e) => setForm((prev) => ({ ...prev, effectiveFrom: e.target.value }))} />
             </label>
 
-            <label className="space-y-1 text-sm text-zinc-700">
-              <span>Hiệu lực đến ngày</span>
+            <label className="space-y-1.5 text-sm text-zinc-600">
+              <span className="font-medium text-zinc-700">Hiệu lực đến ngày</span>
               <Input type="date" value={form.effectiveTo} onChange={(e) => setForm((prev) => ({ ...prev, effectiveTo: e.target.value }))} />
             </label>
 
-            <label className="flex items-center gap-2 text-sm text-zinc-700 md:col-span-2">
-              <input
-                type="checkbox"
-                checked={form.isActive}
-                onChange={(e) => setForm((prev) => ({ ...prev, isActive: e.target.checked }))}
-              />
-              Đang áp dụng
+            <label className="flex items-center gap-3 text-sm text-zinc-700 md:col-span-2">
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  checked={form.isActive}
+                  onChange={(e) => setForm((prev) => ({ ...prev, isActive: e.target.checked }))}
+                  className="peer h-5 w-5 rounded-md border-zinc-300 text-blue-600 transition focus:ring-blue-500"
+                />
+              </div>
+              <span className="font-medium">Đang áp dụng</span>
             </label>
           </div>
 
+          {/* Role-specific fields */}
           {form.role === "PAGE" ? (
-            <div className="space-y-3">
-              <label className="space-y-1 text-sm text-zinc-700">
-                <span>Mục tiêu % ra Data</span>
+            <div className="animate-fadeInUp rounded-xl border border-blue-100 bg-blue-50/50 p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-base">📱</span>
+                <div>
+                  <p className="text-sm font-semibold text-blue-900">KPI Trực Page</p>
+                  <p className="text-xs text-blue-600">% = Data / Tin nhắn × 100</p>
+                </div>
+              </div>
+              <label className="space-y-1.5 text-sm text-zinc-700">
+                <span className="font-medium">Mục tiêu % ra Data</span>
                 <Input
                   type="number"
                   min={0}
@@ -523,60 +666,88 @@ export default function EmployeeKpiPage() {
                   onChange={(e) => setForm((prev) => ({ ...prev, dataRatePctTarget: e.target.value }))}
                 />
               </label>
-              <p className="text-xs text-zinc-500">% = Data / Tin nhắn × 100</p>
+            </div>
+          ) : form.role === "BRANCH" ? (
+            <div className="animate-fadeInUp rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-base">🏢</span>
+                <p className="text-sm font-semibold text-amber-900">Công thức KPI Chi nhánh</p>
+              </div>
+              <div className="rounded-lg border border-amber-100 bg-white/80 p-3">
+                <p className="text-sm font-mono text-zinc-800">
+                  Số hồ sơ ký = Tổng tin nhắn × KPI trực Page × KPI Telesale
+                </p>
+              </div>
+              <p className="mt-2.5 text-xs text-amber-700">
+                KPI chi nhánh được tính tự động dựa trên KPI của trực Page và Telesale đang áp dụng.
+              </p>
             </div>
           ) : (
-            <div className="space-y-4">
-              <div className="grid gap-3 md:grid-cols-3">
-              <label className="space-y-1 text-sm text-zinc-700">
-                <span>Data</span>
-                <Input value={form.data} onChange={(e) => setForm((prev) => ({ ...prev, data: e.target.value }))} />
-              </label>
-              <label className="space-y-1 text-sm text-zinc-700">
-                <span>Đã gọi</span>
-                <Input value={form.called} onChange={(e) => setForm((prev) => ({ ...prev, called: e.target.value }))} />
-              </label>
-              <label className="space-y-1 text-sm text-zinc-700">
-                <span>Đã hẹn</span>
-                <Input value={form.appointed} onChange={(e) => setForm((prev) => ({ ...prev, appointed: e.target.value }))} />
-              </label>
-              <label className="space-y-1 text-sm text-zinc-700">
-                <span>Đã đến</span>
-                <Input value={form.arrived} onChange={(e) => setForm((prev) => ({ ...prev, arrived: e.target.value }))} />
-              </label>
-              <label className="space-y-1 text-sm text-zinc-700">
-                <span>Đã ký</span>
-                <Input value={form.signed} onChange={(e) => setForm((prev) => ({ ...prev, signed: e.target.value }))} />
-              </label>
-              </div>
+            <div className="animate-fadeInUp space-y-4">
+              <div className="rounded-xl border border-violet-100 bg-violet-50/50 p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-base">📞</span>
+                  <div>
+                    <p className="text-sm font-semibold text-violet-900">KPI Telesales — Funnel tháng</p>
+                    <p className="text-xs text-violet-600">MTD: Tính từ ngày 01 đến hiện tại, tự reset đầu tháng</p>
+                  </div>
+                </div>
 
-              <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
-                <p className="text-sm font-medium text-zinc-800">KPI % theo Data (tháng)</p>
-                <p className="mt-1 text-xs text-zinc-500">Tính từ ngày 01 đến hiện tại (MTD), tự reset đầu tháng.</p>
-                <div className="mt-3 grid gap-3 md:grid-cols-2">
-                  <label className="space-y-1 text-sm text-zinc-700">
-                    <span>Gọi (% trên Data tháng)</span>
+                {/* Funnel visualization */}
+                <div className="mb-4 flex items-center justify-center gap-2">
+                  {[
+                    { label: "Data", color: "bg-zinc-500" },
+                    { label: "Gọi", color: "bg-blue-500" },
+                    { label: "Hẹn", color: "bg-indigo-500" },
+                    { label: "Đến", color: "bg-violet-500" },
+                    { label: "Ký", color: "bg-emerald-500" },
+                  ].map((step, i) => (
+                    <div key={step.label} className="flex items-center gap-2">
+                      {i > 0 && <span className="text-sm text-zinc-300">→</span>}
+                      <div className="flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 shadow-sm border border-zinc-100">
+                        <div className={`h-2 w-2 rounded-full ${step.color}`} />
+                        <span className="text-xs font-medium text-zinc-700">{step.label}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <label className="space-y-1.5 text-sm text-zinc-700">
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <span className="h-2 w-2 rounded-full bg-blue-500" />
+                      Gọi (% trên Data tháng)
+                    </span>
                     <Input
                       value={form.calledPctGlobal}
                       onChange={(e) => setForm((prev) => ({ ...prev, calledPctGlobal: e.target.value }))}
                     />
                   </label>
-                  <label className="space-y-1 text-sm text-zinc-700">
-                    <span>Hẹn (% trên Data tháng)</span>
+                  <label className="space-y-1.5 text-sm text-zinc-700">
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <span className="h-2 w-2 rounded-full bg-indigo-500" />
+                      Hẹn (% trên Gọi tháng)
+                    </span>
                     <Input
                       value={form.appointedPctGlobal}
                       onChange={(e) => setForm((prev) => ({ ...prev, appointedPctGlobal: e.target.value }))}
                     />
                   </label>
-                  <label className="space-y-1 text-sm text-zinc-700">
-                    <span>Đến (% trên Data tháng)</span>
+                  <label className="space-y-1.5 text-sm text-zinc-700">
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <span className="h-2 w-2 rounded-full bg-violet-500" />
+                      Đến (% trên Hẹn tháng)
+                    </span>
                     <Input
                       value={form.arrivedPctGlobal}
                       onChange={(e) => setForm((prev) => ({ ...prev, arrivedPctGlobal: e.target.value }))}
                     />
                   </label>
-                  <label className="space-y-1 text-sm text-zinc-700">
-                    <span>Ký (% trên Data tháng)</span>
+                  <label className="space-y-1.5 text-sm text-zinc-700">
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                      Ký (% trên Đến tháng)
+                    </span>
                     <Input
                       value={form.signedPctGlobal}
                       onChange={(e) => setForm((prev) => ({ ...prev, signedPctGlobal: e.target.value }))}
@@ -587,12 +758,13 @@ export default function EmployeeKpiPage() {
             </div>
           )}
 
-          <div className="flex justify-end gap-2 pt-2">
+          {/* Actions */}
+          <div className="flex justify-end gap-2 border-t border-zinc-100 pt-4">
             <Button variant="ghost" onClick={() => setModalOpen(false)}>
               Hủy
             </Button>
-            <Button onClick={() => void submitForm()} disabled={submitting}>
-              {submitting ? "Đang lưu..." : "Lưu"}
+            <Button variant="accent" onClick={() => void submitForm()} disabled={submitting}>
+              {submitting ? "Đang lưu..." : editTarget ? "💾 Cập nhật" : "✨ Tạo mới"}
             </Button>
           </div>
         </div>

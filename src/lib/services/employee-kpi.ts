@@ -110,6 +110,10 @@ export function validateTargets(role: EmployeeKpiRole, targetsInput: unknown): E
     return normalized;
   }
 
+  if (role === "BRANCH") {
+    return { branchFormula: 1 };
+  }
+
   const normalized: EmployeeKpiTargets = {};
   let presentAbs = 0;
   let presentPct = 0;

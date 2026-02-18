@@ -10,10 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
-import { PageHeader } from "@/components/ui/page-header";
-import { SectionCard } from "@/components/ui/section-card";
 import { Select } from "@/components/ui/select";
-import { Spinner } from "@/components/ui/spinner";
 import { Table } from "@/components/ui/table";
 import { formatDateTimeVi } from "@/lib/date-utils";
 
@@ -133,7 +130,7 @@ export default function InstructorDetailPage() {
         } catch (e) { setSchedError(parseError(e)); } finally { setScheduling(false); }
     }
 
-    if (loading) return <div className="flex items-center gap-2 text-zinc-700"><Spinner /> Đang tải...</div>;
+    if (loading) return <div className="animate-pulse space-y-3 p-4">{[1, 2, 3].map(i => <div key={i} className="h-8 rounded-xl bg-zinc-200" />)}</div>;
     if (!instructor) return <Alert type="error" message={error || "Không tìm thấy"} />;
 
     const tabs: Array<{ key: typeof tab; label: string }> = [
@@ -144,53 +141,75 @@ export default function InstructorDetailPage() {
 
     return (
         <div className="space-y-4">
-            <PageHeader title={instructor.name} subtitle={`SĐT: ${instructor.phone || "—"}`}
-                actions={<div className="flex gap-2"><Button variant="secondary" onClick={handleDelete}>Ngừng</Button><Link href="/admin/instructors"><Button variant="secondary">← Danh sách</Button></Link></div>}
-            />
+            {/* ── Premium Header ── */}
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-teal-600 via-cyan-600 to-sky-600 p-4 text-white shadow-lg shadow-teal-200 animate-fadeInUp">
+                <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+                <div className="absolute -bottom-4 -left-4 h-20 w-20 rounded-full bg-white/10 blur-xl" />
+                <div className="relative flex flex-wrap items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 text-2xl backdrop-blur-sm">👨‍🏫</div>
+                    <div className="flex-1">
+                        <h2 className="text-lg font-bold">{instructor.name}</h2>
+                        <p className="text-sm text-white/80">SĐT: {instructor.phone || "—"}</p>
+                    </div>
+                    <div className="flex gap-2">
+                        <Button variant="secondary" onClick={handleDelete} className="!bg-white/20 !text-white !border-white/30 hover:!bg-white/30">Ngừng</Button>
+                        <Link href="/admin/instructors"><Button className="!bg-white !text-teal-700 hover:!bg-white/90">← Danh sách</Button></Link>
+                    </div>
+                </div>
+            </div>
             {error ? <Alert type="error" message={error} /> : null}
 
-            <div className="flex gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-1">
-                {tabs.map((t) => (
-                    <button key={t.key} type="button" onClick={() => setTab(t.key)}
-                        className={`rounded-md px-4 py-2 text-sm font-medium transition ${tab === t.key ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"}`}
-                    >{t.label}</button>
-                ))}
+            <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm animate-fadeInUp" style={{ animationDelay: "80ms" }}>
+                <div className="h-1 bg-gradient-to-r from-teal-500 to-cyan-500" />
+                <div className="flex gap-1 p-1">
+                    {tabs.map((t) => (
+                        <button key={t.key} type="button" onClick={() => setTab(t.key)}
+                            className={`rounded-md px-4 py-2 text-sm font-medium transition ${tab === t.key ? "bg-teal-50 text-teal-800 shadow-sm" : "text-zinc-500 hover:text-zinc-700"}`}
+                        >{t.label}</button>
+                    ))}
+                </div>
             </div>
 
             {/* TAB: Overview */}
             {tab === "overview" ? (
-                <SectionCard title="Thông tin giáo viên" className="p-5">
-                    {editing ? (
-                        <div className="space-y-3 max-w-lg">
-                            <div><label className="mb-1 block text-sm font-medium text-zinc-700">Tên</label><Input value={editName} onChange={(e) => setEditName(e.target.value)} /></div>
-                            <div><label className="mb-1 block text-sm font-medium text-zinc-700">SĐT</label><Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} /></div>
-                            <div><label className="mb-1 block text-sm font-medium text-zinc-700">Trạng thái</label><Select value={editStatus} onChange={(e) => setEditStatus(e.target.value)}><option value="ACTIVE">Hoạt động</option><option value="INACTIVE">Ngừng</option></Select></div>
-                            <div><label className="mb-1 block text-sm font-medium text-zinc-700">Ghi chú</label><Input value={editNote} onChange={(e) => setEditNote(e.target.value)} /></div>
-                            <div className="flex gap-2"><Button onClick={handleSave} disabled={saving}>{saving ? "Đang lưu..." : "Lưu"}</Button><Button variant="secondary" onClick={() => setEditing(false)}>Huỷ</Button></div>
-                        </div>
-                    ) : (
-                        <div className="space-y-3">
-                            <div className="grid gap-3 sm:grid-cols-2">
-                                <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3"><p className="text-xs uppercase text-zinc-500">Trạng thái</p><div className="mt-1">{instructor.status === "ACTIVE" ? <Badge text="Hoạt động" tone="success" /> : <Badge text="Ngừng" tone="neutral" />}</div></div>
-                                <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3"><p className="text-xs uppercase text-zinc-500">Số học viên</p><p className="mt-1 text-2xl font-semibold text-zinc-900">{instructor.studentCount}</p></div>
-                                <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3"><p className="text-xs uppercase text-zinc-500">Tổng buổi dạy</p><p className="mt-1 text-2xl font-semibold text-zinc-900">{instructor.lessonCount}</p></div>
-                                <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3"><p className="text-xs uppercase text-zinc-500">Ghi chú</p><p className="mt-1 text-sm text-zinc-700">{instructor.note || "—"}</p></div>
+                <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm animate-fadeInUp" style={{ animationDelay: "160ms" }}>
+                    <div className="h-1 bg-gradient-to-r from-teal-500 to-cyan-500" />
+                    <div className="p-5">
+                        <h3 className="text-sm font-semibold text-zinc-800 mb-3">📋 Thông tin giáo viên</h3>
+                        {editing ? (
+                            <div className="space-y-3 max-w-lg">
+                                <div><label className="mb-1 block text-sm font-medium text-zinc-700">Tên</label><Input value={editName} onChange={(e) => setEditName(e.target.value)} /></div>
+                                <div><label className="mb-1 block text-sm font-medium text-zinc-700">SĐT</label><Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} /></div>
+                                <div><label className="mb-1 block text-sm font-medium text-zinc-700">Trạng thái</label><Select value={editStatus} onChange={(e) => setEditStatus(e.target.value)}><option value="ACTIVE">Hoạt động</option><option value="INACTIVE">Ngừng</option></Select></div>
+                                <div><label className="mb-1 block text-sm font-medium text-zinc-700">Ghi chú</label><Input value={editNote} onChange={(e) => setEditNote(e.target.value)} /></div>
+                                <div className="flex gap-2"><Button onClick={handleSave} disabled={saving}>{saving ? "Đang lưu..." : "Lưu"}</Button><Button variant="secondary" onClick={() => setEditing(false)}>Huỷ</Button></div>
                             </div>
-                            <Button variant="secondary" onClick={() => setEditing(true)}>Chỉnh sửa</Button>
-                        </div>
-                    )}
-                </SectionCard>
+                        ) : (
+                            <div className="space-y-3">
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3"><p className="text-xs uppercase text-zinc-500">Trạng thái</p><div className="mt-1">{instructor.status === "ACTIVE" ? <Badge text="Hoạt động" tone="success" /> : <Badge text="Ngừng" tone="neutral" />}</div></div>
+                                    <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3"><p className="text-xs uppercase text-zinc-500">Số học viên</p><p className="mt-1 text-2xl font-semibold text-zinc-900">{instructor.studentCount}</p></div>
+                                    <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3"><p className="text-xs uppercase text-zinc-500">Tổng buổi dạy</p><p className="mt-1 text-2xl font-semibold text-zinc-900">{instructor.lessonCount}</p></div>
+                                    <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3"><p className="text-xs uppercase text-zinc-500">Ghi chú</p><p className="mt-1 text-sm text-zinc-700">{instructor.note || "—"}</p></div>
+                                </div>
+                                <Button variant="secondary" onClick={() => setEditing(true)}>Chỉnh sửa</Button>
+                            </div>
+                        )}
+                    </div>
+                </div>
             ) : null}
 
             {/* TAB: Students */}
             {tab === "students" ? (
-                <SectionCard title="Học viên được gán" rightAction={<Button onClick={() => setAssignOpen(true)}>+ Gán học viên</Button>} className="p-0">
+                <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm animate-fadeInUp" style={{ animationDelay: "160ms" }}>
+                    <div className="h-1 bg-gradient-to-r from-teal-500 to-cyan-500" />
+                    <div className="flex items-center justify-between p-3"><h3 className="text-sm font-semibold text-zinc-800">👥 Học viên được gán</h3><Button onClick={() => setAssignOpen(true)}>+ Gán học viên</Button></div>
                     {students.length === 0 ? (
                         <div className="p-6 text-center text-sm text-zinc-500">Chưa có học viên nào được gán</div>
                     ) : (
                         <Table headers={["Họ tên", "SĐT", "Trạng thái", "Khoá", "Hành động"]}>
-                            {students.map((s) => (
-                                <tr key={s.id} className="border-t border-zinc-100">
+                            {students.map((s, idx) => (
+                                <tr key={s.id} className="border-t border-zinc-100 transition-colors hover:bg-zinc-50 animate-fadeInUp" style={{ animationDelay: `${160 + Math.min(idx * 30, 200)}ms` }}>
                                     <td className="px-3 py-2 font-medium text-zinc-900">{s.fullName || "-"}</td>
                                     <td className="px-3 py-2 text-zinc-700">{s.phone || "-"}</td>
                                     <td className="px-3 py-2"><Badge text={s.studyStatus} /></td>
@@ -200,18 +219,20 @@ export default function InstructorDetailPage() {
                             ))}
                         </Table>
                     )}
-                </SectionCard>
+                </div>
             ) : null}
 
             {/* TAB: Schedule */}
             {tab === "schedule" ? (
-                <SectionCard title="Lịch dạy" rightAction={<Button onClick={() => setScheduleOpen(true)}>+ Thêm lịch</Button>} className="p-0">
+                <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm animate-fadeInUp" style={{ animationDelay: "160ms" }}>
+                    <div className="h-1 bg-gradient-to-r from-cyan-500 to-sky-500" />
+                    <div className="flex items-center justify-between p-3"><h3 className="text-sm font-semibold text-zinc-800">📅 Lịch dạy</h3><Button onClick={() => setScheduleOpen(true)}>+ Thêm lịch</Button></div>
                     {lessons.length === 0 ? (
                         <div className="p-6 text-center text-sm text-zinc-500">Chưa có lịch dạy</div>
                     ) : (
                         <Table headers={["Học viên", "Thời gian", "Loại", "Trạng thái", "Địa điểm"]}>
-                            {lessons.map((l) => (
-                                <tr key={l.id} className="border-t border-zinc-100">
+                            {lessons.map((l, idx) => (
+                                <tr key={l.id} className="border-t border-zinc-100 transition-colors hover:bg-zinc-50 animate-fadeInUp" style={{ animationDelay: `${160 + Math.min(idx * 30, 200)}ms` }}>
                                     <td className="px-3 py-2 font-medium text-zinc-900">{l.studentName || "-"}</td>
                                     <td className="px-3 py-2 text-zinc-700">{formatDateTimeVi(l.startAt)}{l.endAt ? ` — ${formatDateTimeVi(l.endAt)}` : ""}</td>
                                     <td className="px-3 py-2"><Badge text={LESSON_TYPE_LABELS[l.lessonType] || l.lessonType} /></td>
@@ -221,7 +242,7 @@ export default function InstructorDetailPage() {
                             ))}
                         </Table>
                     )}
-                </SectionCard>
+                </div>
             ) : null}
 
             {/* Modal: Assign Student */}

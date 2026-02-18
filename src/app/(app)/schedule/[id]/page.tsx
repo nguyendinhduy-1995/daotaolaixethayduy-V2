@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { fetchJson, type ApiClientError } from "@/lib/api-client";
 import { clearToken, getToken } from "@/lib/auth-client";
 import { Alert } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
@@ -77,12 +78,12 @@ function studyStatusLabel(value: string) {
 export default function ScheduleDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const toast = useToast();
   const [tab, setTab] = useState<"students" | "attendance" | "logs">("students");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [data, setData] = useState<DetailResponse | null>(null);
   const [rows, setRows] = useState<AttendanceFormRow[]>([]);
   const [logDetail, setLogDetail] = useState<DetailResponse["audits"][number] | null>(null);
@@ -163,7 +164,6 @@ export default function ScheduleDetailPage() {
     if (!token) return;
     setSaving(true);
     setError("");
-    setSuccess("");
     try {
       await fetchJson(`/api/schedule/${id}/attendance`, {
         method: "POST",
@@ -176,7 +176,7 @@ export default function ScheduleDetailPage() {
           })),
         },
       });
-      setSuccess("Đã lưu điểm danh.");
+      toast.success("Đã lưu điểm danh.");
       await loadDetail();
       setTab("logs");
     } catch (e) {
@@ -192,7 +192,6 @@ export default function ScheduleDetailPage() {
     if (!token) return;
     setSaving(true);
     setError("");
-    setSuccess("");
     try {
       await fetchJson(`/api/schedule/${id}`, {
         method: "PATCH",
@@ -207,7 +206,7 @@ export default function ScheduleDetailPage() {
           isActive: editForm.isActive,
         },
       });
-      setSuccess("Đã cập nhật thông tin buổi học.");
+      toast.success("Đã cập nhật thông tin buổi học.");
       setEditing(false);
       await loadDetail();
     } catch (e) {
@@ -264,7 +263,6 @@ export default function ScheduleDetailPage() {
       </div>
 
       {error ? <Alert type="error" message={error} /> : null}
-      {success ? <Alert type="success" message={success} /> : null}
 
       <div className="flex gap-2">
         <Button variant={tab === "students" ? "primary" : "secondary"} onClick={() => setTab("students")}>

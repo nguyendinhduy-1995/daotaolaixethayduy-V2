@@ -70,22 +70,28 @@ function errText(error: unknown) {
   return `${e.code || "INTERNAL_ERROR"}: ${e.message || "Lỗi không xác định"}`;
 }
 
-function scoreColorClass(color: Suggestion["scoreColor"]) {
-  if (color === "RED") return "bg-rose-100 text-rose-700 border-rose-200";
-  if (color === "YELLOW") return "bg-amber-100 text-amber-700 border-amber-200";
-  return "bg-emerald-100 text-emerald-700 border-emerald-200";
+function scoreGradient(color: Suggestion["scoreColor"]) {
+  if (color === "RED") return "from-rose-500 to-red-600";
+  if (color === "YELLOW") return "from-amber-400 to-orange-500";
+  return "from-emerald-400 to-green-600";
+}
+
+function scoreBadgeClass(color: Suggestion["scoreColor"]) {
+  if (color === "RED") return "bg-gradient-to-r from-rose-500 to-red-600 text-white shadow-rose-200";
+  if (color === "YELLOW") return "bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-amber-200";
+  return "bg-gradient-to-r from-emerald-400 to-green-600 text-white shadow-emerald-200";
 }
 
 function scoreLabel(color: Suggestion["scoreColor"]) {
-  if (color === "RED") return "Đỏ";
-  if (color === "YELLOW") return "Vàng";
-  return "Xanh";
+  if (color === "RED") return "🔴 Cần lưu ý";
+  if (color === "YELLOW") return "🟡 Trung bình";
+  return "🟢 Tốt";
 }
 
 function feedbackTypeLabel(type: FeedbackType) {
-  if (type === "HELPFUL") return "Hữu ích";
-  if (type === "NOT_HELPFUL") return "Chưa đúng";
-  return "Đã làm xong";
+  if (type === "HELPFUL") return "✅ Hữu ích";
+  if (type === "NOT_HELPFUL") return "❌ Chưa đúng";
+  return "✔️ Đã làm xong";
 }
 
 function toFriendlyText(value: unknown) {
@@ -146,6 +152,26 @@ function wasPromptedToday(suggestionId: string, dateKey: string) {
 function markPromptedToday(suggestionId: string, dateKey: string) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(promptStorageKey(suggestionId, dateKey), "1");
+}
+
+/* ---------- Skeleton ---------- */
+function CoachSkeleton() {
+  return (
+    <div className="space-y-3 animate-pulse">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="rounded-2xl border border-zinc-100 bg-white p-4 shadow-sm">
+          <div className="h-3 w-20 rounded-full bg-zinc-200" />
+          <div className="mt-3 h-4 w-3/4 rounded bg-zinc-200" />
+          <div className="mt-2 h-3 w-full rounded bg-zinc-100" />
+          <div className="mt-1 h-3 w-5/6 rounded bg-zinc-100" />
+          <div className="mt-4 flex gap-2">
+            <div className="h-8 w-20 rounded-xl bg-zinc-200" />
+            <div className="h-8 w-20 rounded-xl bg-zinc-100" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function AiKpiCoachPage() {
@@ -454,19 +480,29 @@ export default function AiKpiCoachPage() {
   return (
     <MobileShell title="Trợ lý công việc" subtitle="Gợi ý việc nên làm theo dữ liệu hôm nay">
       <div className="space-y-4 py-3 md:py-4">
-        <div className="rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm md:p-4">
-          <div className="flex flex-wrap items-end gap-2">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Ngày dữ liệu</p>
-              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        {/* ── Header Banner ── */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 p-4 text-white shadow-lg shadow-purple-200 animate-fadeInUp">
+          <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+          <div className="absolute -bottom-4 -left-4 h-20 w-20 rounded-full bg-white/10 blur-xl" />
+          <div className="relative flex flex-wrap items-end gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 text-2xl backdrop-blur-sm">✨</div>
+            <div className="flex-1">
+              <h2 className="text-lg font-bold">AI Trợ lý KPI</h2>
+              <p className="text-sm text-white/80">Gợi ý hành động dựa trên dữ liệu thực tế</p>
             </div>
-            <Button onClick={loadData} disabled={loading}>
+          </div>
+          <div className="relative mt-3 flex flex-wrap items-end gap-2">
+            <div>
+              <p className="text-xs font-medium text-white/70">Ngày dữ liệu</p>
+              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="!border-white/30 !bg-white/20 !text-white placeholder:!text-white/50" />
+            </div>
+            <Button onClick={loadData} disabled={loading} className="!bg-white/20 !text-white hover:!bg-white/30 backdrop-blur-sm">
               {loading ? (
                 <span className="inline-flex items-center gap-2">
                   <Spinner /> Đang tải...
                 </span>
               ) : (
-                "Làm mới"
+                "🔄 Làm mới"
               )}
             </Button>
           </div>
@@ -474,101 +510,154 @@ export default function AiKpiCoachPage() {
 
         {error ? <Alert type="error" message={error} /> : null}
 
+        {/* ── Stats Summary ── */}
+        {!loading && items.length > 0 ? (
+          <div className="grid grid-cols-3 gap-2 animate-fadeInUp" style={{ animationDelay: "100ms" }}>
+            {[
+              { label: "Tổng gợi ý", value: items.length, color: "from-blue-500 to-cyan-500", bg: "bg-blue-50" },
+              { label: "Đã phản hồi", value: items.filter((i) => i.myFeedback).length, color: "from-emerald-500 to-green-500", bg: "bg-emerald-50" },
+              { label: "Đã áp dụng", value: appliedSuggestionIds.length, color: "from-violet-500 to-purple-500", bg: "bg-violet-50" },
+            ].map((stat) => (
+              <div key={stat.label} className={`rounded-2xl ${stat.bg} p-3 text-center shadow-sm`}>
+                <p className={`text-2xl font-bold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent`}>{stat.value}</p>
+                <p className="text-xs font-medium text-zinc-500">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        {/* ── Loading / Empty / Content ── */}
         {loading ? (
-          <div className="rounded-2xl border border-zinc-200 bg-white p-4 text-sm text-zinc-600">Đang tải gợi ý công việc...</div>
+          <CoachSkeleton />
         ) : items.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-zinc-300 bg-white p-4 text-sm text-zinc-600">
-            Chưa có gợi ý công việc cho ngày đã chọn.
+          <div className="rounded-2xl border-2 border-dashed border-zinc-200 bg-white p-8 text-center animate-fadeInUp">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-zinc-100 text-2xl">💤</div>
+            <p className="font-medium text-zinc-700">Chưa có gợi ý</p>
+            <p className="mt-1 text-sm text-zinc-500">Không có gợi ý công việc cho ngày đã chọn.</p>
           </div>
         ) : (
-          grouped.map(([role, rows]) => (
-            <section key={role} className="space-y-2">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Vai trò: {roleLabelVi(role)}</h2>
-              {rows.map((item) => {
+          grouped.map(([role, rows], groupIdx) => (
+            <section key={role} className="space-y-3 animate-fadeInUp" style={{ animationDelay: `${(groupIdx + 1) * 150}ms` }}>
+              {/* Role Header */}
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-sm text-white shadow-sm">
+                  {role === "telesales" ? "📞" : role === "direct_page" ? "💬" : "👤"}
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold text-zinc-900">{roleLabelVi(role)}</h2>
+                  <p className="text-xs text-zinc-500">{rows.length} gợi ý</p>
+                </div>
+              </div>
+
+              {rows.map((item, idx) => {
                 const alreadyFeedback = Boolean(item.myFeedback);
                 const alreadyApplied = appliedSuggestionIds.includes(item.id);
                 return (
-                  <article key={item.id} className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className={`rounded-full border px-2 py-1 text-xs font-semibold ${scoreColorClass(item.scoreColor)}`}>
-                        {scoreLabel(item.scoreColor)}
-                      </span>
-                      <p className="text-sm font-semibold text-zinc-900">{item.title}</p>
-                      {alreadyApplied ? (
-                        <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">Đã áp dụng</span>
-                      ) : null}
-                      {alreadyFeedback ? (
-                        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
-                          Đã phản hồi
+                  <article
+                    key={item.id}
+                    className="group relative overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm transition-all hover:shadow-md animate-fadeInUp"
+                    style={{ animationDelay: `${(groupIdx + 1) * 150 + idx * 80}ms` }}
+                  >
+                    {/* Gradient top accent */}
+                    <div className={`h-1 bg-gradient-to-r ${scoreGradient(item.scoreColor)}`} />
+
+                    <div className="p-4">
+                      {/* Header row */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold shadow-sm ${scoreBadgeClass(item.scoreColor)}`}>
+                          {scoreLabel(item.scoreColor)}
                         </span>
+                        {alreadyApplied ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 px-2.5 py-1 text-xs font-medium text-white shadow-sm">
+                            ✅ Đã áp dụng
+                          </span>
+                        ) : null}
+                        {alreadyFeedback ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-emerald-500 to-green-500 px-2.5 py-1 text-xs font-medium text-white shadow-sm">
+                            💬 Đã phản hồi
+                          </span>
+                        ) : null}
+                      </div>
+
+                      <p className="mt-2 text-sm font-bold text-zinc-900">{item.title}</p>
+                      <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-zinc-600">{toFriendlyText(item.content)}</p>
+
+                      {/* Actions list */}
+                      {Array.isArray(item.actionsJson) && item.actionsJson.length > 0 ? (
+                        <div className="mt-3 space-y-2">
+                          <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-zinc-500">
+                            <span className="inline-block h-4 w-4 rounded bg-gradient-to-br from-amber-400 to-orange-500 text-center text-[10px] leading-4 text-white">⚡</span>
+                            Gợi ý nên làm
+                          </p>
+                          {item.actionsJson.map((rawAction, actionIdx) => {
+                            const action = rawAction as Record<string, unknown>;
+                            const label = toFriendlyText(action.label || action.title || `Hành động ${actionIdx + 1}`);
+                            return (
+                              <div
+                                key={`${item.id}-${actionIdx}`}
+                                className="flex items-start gap-3 rounded-xl border border-zinc-100 bg-gradient-to-r from-zinc-50 to-white p-3 transition-all hover:border-zinc-200 hover:shadow-sm"
+                              >
+                                <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100 text-xs text-indigo-600">
+                                  {actionIdx + 1}
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium text-zinc-900">{label}</p>
+                                  <p className="text-xs text-zinc-500">{toFriendlyText(action.description || action.type || "")}</p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+
+                      {/* n8n notes */}
+                      {item.n8nNotes ? (
+                        <details className="mt-3 rounded-xl border border-sky-100 bg-gradient-to-r from-sky-50 to-blue-50 p-3">
+                          <summary className="cursor-pointer text-xs font-bold uppercase tracking-wide text-sky-700">
+                            🔧 Ghi chú n8n
+                          </summary>
+                          <p className="mt-2 whitespace-pre-wrap text-xs text-sky-800">{item.n8nNotes}</p>
+                        </details>
+                      ) : null}
+
+                      {/* Action buttons */}
+                      <div className="mt-4 flex flex-wrap items-center gap-2">
+                        <Button
+                          className="tap-feedback !bg-gradient-to-r !from-violet-600 !to-indigo-600 !text-white !shadow-md !shadow-violet-200 hover:!shadow-lg"
+                          onClick={() => applySuggestion(item)}
+                          disabled={alreadyApplied || applyingId === item.id}
+                        >
+                          {applyingId === item.id ? "⏳ Đang áp dụng..." : "🚀 Áp dụng"}
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          className="tap-feedback !border-emerald-200 !bg-emerald-50 !text-emerald-700 hover:!bg-emerald-100"
+                          disabled={alreadyFeedback || feedbackLoadingId === item.id}
+                          onClick={() => openFeedbackSheet(item.id, "HELPFUL")}
+                        >
+                          👍 Hữu ích
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          className="tap-feedback !border-rose-200 !bg-rose-50 !text-rose-700 hover:!bg-rose-100"
+                          disabled={alreadyFeedback || feedbackLoadingId === item.id}
+                          onClick={() => openFeedbackSheet(item.id, "NOT_HELPFUL")}
+                        >
+                          👎 Chưa đúng
+                        </Button>
+                      </div>
+
+                      {/* Feedback stats */}
+                      <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-zinc-100 pt-3 text-xs text-zinc-500">
+                        <span className="inline-flex items-center gap-1">📊 Tổng: {item.feedbackStats?.total ?? item._count?.feedbacks ?? 0}</span>
+                        <span className="inline-flex items-center gap-1 text-emerald-600">👍 {item.feedbackStats?.helpful ?? 0}</span>
+                        <span className="inline-flex items-center gap-1 text-rose-600">👎 {item.feedbackStats?.notHelpful ?? 0}</span>
+                        <span className="inline-flex items-center gap-1 text-blue-600">✅ {item.feedbackStats?.done ?? 0}</span>
+                      </div>
+                      {item.myFeedback ? (
+                        <div className="mt-1 text-xs font-medium text-zinc-500">Phản hồi của bạn: {feedbackTypeLabel(item.myFeedback.feedbackType)}</div>
                       ) : null}
                     </div>
-
-                    <p className="mt-2 whitespace-pre-wrap text-sm text-zinc-700">{toFriendlyText(item.content)}</p>
-
-                    {Array.isArray(item.actionsJson) && item.actionsJson.length > 0 ? (
-                      <div className="mt-3 space-y-2">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Gợi ý nên làm</p>
-                        {item.actionsJson.map((rawAction, idx) => {
-                          const action = rawAction as Record<string, unknown>;
-                          const label = toFriendlyText(action.label || action.title || `Hành động ${idx + 1}`);
-                          return (
-                            <div
-                              key={`${item.id}-${idx}`}
-                              className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-zinc-50 p-3"
-                            >
-                              <div>
-                                <p className="text-sm font-medium text-zinc-900">{label}</p>
-                                <p className="text-xs text-zinc-500">{toFriendlyText(action.description || action.type || "")}</p>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : null}
-
-                    {item.n8nNotes ? (
-                      <details className="mt-3 rounded-xl border border-sky-100 bg-sky-50/60 p-3">
-                        <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-sky-700">
-                          Ghi chú n8n
-                        </summary>
-                        <p className="mt-2 whitespace-pre-wrap text-xs text-sky-800">{item.n8nNotes}</p>
-                      </details>
-                    ) : null}
-
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <Button
-                        className="tap-feedback"
-                        onClick={() => applySuggestion(item)}
-                        disabled={alreadyApplied || applyingId === item.id}
-                      >
-                        {applyingId === item.id ? "Đang áp dụng..." : "Áp dụng"}
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        className="tap-feedback"
-                        disabled={alreadyFeedback || feedbackLoadingId === item.id}
-                        onClick={() => openFeedbackSheet(item.id, "HELPFUL")}
-                      >
-                        Hữu ích
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        className="tap-feedback"
-                        disabled={alreadyFeedback || feedbackLoadingId === item.id}
-                        onClick={() => openFeedbackSheet(item.id, "NOT_HELPFUL")}
-                      >
-                        Chưa đúng
-                      </Button>
-                    </div>
-
-                    <div className="mt-2 text-xs text-zinc-500">
-                      Tổng phản hồi: {item.feedbackStats?.total ?? item._count?.feedbacks ?? 0} | Hữu ích: {item.feedbackStats?.helpful ?? 0} |
-                      Chưa đúng: {item.feedbackStats?.notHelpful ?? 0} | Đã làm xong: {item.feedbackStats?.done ?? 0}
-                    </div>
-                    {item.myFeedback ? (
-                      <div className="mt-1 text-xs text-zinc-500">Phản hồi của bạn: {feedbackTypeLabel(item.myFeedback.feedbackType)}</div>
-                    ) : null}
                   </article>
                 );
               })}
@@ -582,10 +671,10 @@ export default function AiKpiCoachPage() {
         onOpenChange={setSheetOpen}
         title={
           feedbackDraft.feedbackType === "HELPFUL"
-            ? "Phản hồi hữu ích"
+            ? "👍 Phản hồi hữu ích"
             : feedbackDraft.feedbackType === "NOT_HELPFUL"
-              ? "Phản hồi chưa đúng"
-              : "Xác nhận đã làm xong"
+              ? "👎 Phản hồi chưa đúng"
+              : "✅ Xác nhận đã làm xong"
         }
         footer={
           <div className="flex items-center justify-end gap-2">
@@ -598,7 +687,11 @@ export default function AiKpiCoachPage() {
             >
               Để sau
             </Button>
-            <Button onClick={submitFeedback} disabled={!activeSuggestionId || feedbackLoadingId === activeSuggestionId}>
+            <Button
+              className="!bg-gradient-to-r !from-violet-600 !to-indigo-600 !text-white"
+              onClick={submitFeedback}
+              disabled={!activeSuggestionId || feedbackLoadingId === activeSuggestionId}
+            >
               {feedbackLoadingId === activeSuggestionId ? "Đang gửi..." : "Gửi phản hồi"}
             </Button>
           </div>

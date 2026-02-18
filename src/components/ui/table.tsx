@@ -9,19 +9,19 @@ type TableProps = {
 
 export function Table({ headers, children }: TableProps) {
   return (
-    <div className="table-mobile-cards overflow-hidden rounded-[16px] border border-[var(--border)] bg-white shadow-sm">
+    <div className="table-mobile-cards overflow-hidden rounded-[16px] border border-zinc-200/80 bg-white shadow-sm">
       <div className="overflow-x-auto">
         <table className="min-w-full text-left text-sm">
-          <thead className="bg-zinc-50/90 text-zinc-700">
-            <tr>
+          <thead>
+            <tr className="border-b border-zinc-100 bg-gradient-to-r from-slate-50 to-zinc-50">
               {headers.map((header) => (
-                <th key={header} className="px-4 py-3.5 font-semibold">
+                <th key={header} className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-zinc-500">
                   {header}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-100 [&>tr:hover]:bg-slate-50/60">{children}</tbody>
+          <tbody className="divide-y divide-zinc-50 [&>tr]:table-row-hover">{children}</tbody>
         </table>
       </div>
     </div>

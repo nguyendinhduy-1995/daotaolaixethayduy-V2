@@ -7,6 +7,7 @@ import { fetchJson, type ApiClientError } from "@/lib/api-client";
 import { clearToken, fetchMe, getToken } from "@/lib/auth-client";
 import { isAdminRole } from "@/lib/admin-auth";
 import { Alert } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +18,6 @@ import { Spinner } from "@/components/ui/spinner";
 import { Table } from "@/components/ui/table";
 import { DataCard } from "@/components/mobile/DataCard";
 import { EmptyState } from "@/components/mobile/EmptyState";
-import { MobileHeader } from "@/components/app/mobile-header";
 import { MobileToolbar } from "@/components/app/mobile-toolbar";
 import { MobileFiltersSheet } from "@/components/mobile/MobileFiltersSheet";
 import { formatDateTimeVi } from "@/lib/date-utils";
@@ -76,6 +76,7 @@ function branchLabel(branch: BranchOption | null | undefined) {
 
 export default function AdminUsersPage() {
   const router = useRouter();
+  const toast = useToast();
   const [checkingRole, setCheckingRole] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -91,7 +92,6 @@ export default function AdminUsersPage() {
   const [branchFilter, setBranchFilter] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -215,7 +215,6 @@ export default function AdminUsersPage() {
 
     setCreateSaving(true);
     setError("");
-    setSuccess("");
     try {
       await fetchJson<{ user: UserItem }>("/api/users", {
         method: "POST",
@@ -231,7 +230,7 @@ export default function AdminUsersPage() {
       });
       setCreateOpen(false);
       setCreateForm({ name: "", email: "", password: "", role: "viewer", isActive: true, branchId: "" });
-      setSuccess("Tạo người dùng thành công.");
+      toast.success("Tạo người dùng thành công.");
       await loadUsers();
     } catch (e) {
       const err = e as ApiClientError;
@@ -263,7 +262,6 @@ export default function AdminUsersPage() {
 
     setEditSaving(true);
     setError("");
-    setSuccess("");
     try {
       await fetchJson<{ user: UserItem }>(`/api/users/${editTarget.id}`, {
         method: "PATCH",
@@ -278,7 +276,7 @@ export default function AdminUsersPage() {
       });
       setEditOpen(false);
       setEditTarget(null);
-      setSuccess("Cập nhật người dùng thành công.");
+      toast.success("Cập nhật người dùng thành công.");
       await loadUsers();
     } catch (e) {
       const err = e as ApiClientError;
@@ -293,7 +291,6 @@ export default function AdminUsersPage() {
     if (!token || !toggleTarget) return;
     setToggleSaving(true);
     setError("");
-    setSuccess("");
     try {
       await fetchJson<{ user: UserItem }>(`/api/users/${toggleTarget.id}`, {
         method: "PATCH",
@@ -303,7 +300,7 @@ export default function AdminUsersPage() {
         },
       });
       setToggleTarget(null);
-      setSuccess(!toggleTarget.isActive ? "Đã mở khóa người dùng." : "Đã khóa người dùng.");
+      toast.success(!toggleTarget.isActive ? "Đã mở khóa người dùng." : "Đã khóa người dùng.");
       await loadUsers();
     } catch (e) {
       const err = e as ApiClientError;
@@ -334,32 +331,26 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-4">
-      <MobileHeader
-        title="Quản trị người dùng"
-        subtitle="Quản lý tài khoản và chi nhánh"
-        rightActions={<Button onClick={() => setCreateOpen(true)}>Tạo</Button>}
-      />
-
-      <div className="hidden md:block">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-xl font-semibold text-zinc-900">Quản trị người dùng</h1>
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" onClick={loadUsers} disabled={loading}>
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <Spinner /> Đang tải...
-                </span>
-              ) : (
-                "Làm mới"
-              )}
+      {/* ── Premium Header ── */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-700 via-zinc-700 to-slate-800 p-4 text-white shadow-lg shadow-slate-300 animate-fadeInUp">
+        <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+        <div className="absolute -bottom-4 -left-4 h-20 w-20 rounded-full bg-white/10 blur-xl" />
+        <div className="relative flex flex-wrap items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 text-2xl backdrop-blur-sm">👥</div>
+          <div className="flex-1">
+            <h2 className="text-lg font-bold">Quản trị người dùng</h2>
+            <p className="text-sm text-white/80">Quản lý tài khoản và chi nhánh</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="secondary" onClick={loadUsers} disabled={loading} className="!bg-white/20 !text-white !border-white/30 hover:!bg-white/30">
+              {loading ? "Đang tải..." : "🔄 Làm mới"}
             </Button>
-            <Button onClick={() => setCreateOpen(true)}>Tạo người dùng</Button>
+            <Button onClick={() => setCreateOpen(true)} className="!bg-white !text-slate-800 hover:!bg-white/90">➕ Tạo người dùng</Button>
           </div>
         </div>
       </div>
 
       {error ? <Alert type="error" message={error} /> : null}
-      {success ? <Alert type="success" message={success} /> : null}
 
       <div className="sticky top-[116px] z-20 rounded-2xl border border-zinc-200 bg-zinc-100/90 p-2 backdrop-blur md:hidden">
         <MobileToolbar
@@ -378,73 +369,77 @@ export default function AdminUsersPage() {
         />
       </div>
 
-      <div className="hidden rounded-xl bg-white p-4 shadow-sm md:block">
-        <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-5">
-          <div>
-            <label className="mb-1 block text-sm text-zinc-600">Tìm kiếm</label>
-            <Input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Tên hoặc email" />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-zinc-600">Vai trò</label>
-            <Select
-              value={roleFilter}
-              onChange={(e) => {
-                setPage(1);
-                setRoleFilter(e.target.value as "" | Role);
-              }}
-            >
-              <option value="">Tất cả vai trò</option>
-              {ROLE_OPTIONS.map((role) => (
-                <option key={role.value} value={role.value}>
-                  {role.label}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-zinc-600">Chi nhánh</label>
-            <Select
-              value={branchFilter}
-              onChange={(e) => {
-                setPage(1);
-                setBranchFilter(e.target.value);
-              }}
-            >
-              <option value="">Tất cả chi nhánh</option>
-              {branches.map((branch) => (
-                <option key={branch.id} value={branch.id}>
-                  {branchLabel(branch)}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-zinc-600">Trạng thái</label>
-            <Select
-              value={activeFilter}
-              onChange={(e) => {
-                setPage(1);
-                setActiveFilter(e.target.value as "" | "true" | "false");
-              }}
-            >
-              <option value="">Tất cả</option>
-              <option value="true">Đang hoạt động</option>
-              <option value="false">Đã khóa</option>
-            </Select>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-zinc-600">Kích thước trang</label>
-            <Select
-              value={String(pageSize)}
-              onChange={(e) => {
-                setPage(1);
-                setPageSize(Number(e.target.value));
-              }}
-            >
-              <option value="20">20</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-            </Select>
+      <div className="hidden overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm md:block animate-fadeInUp" style={{ animationDelay: "80ms" }}>
+        <div className="h-1 bg-gradient-to-r from-slate-500 to-zinc-400" />
+        <div className="p-4">
+          <h3 className="text-sm font-semibold text-zinc-800 mb-3">🔍 Bộ lọc</h3>
+          <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-5">
+            <div>
+              <label className="mb-1 block text-sm text-zinc-600">Tìm kiếm</label>
+              <Input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Tên hoặc email" />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-zinc-600">Vai trò</label>
+              <Select
+                value={roleFilter}
+                onChange={(e) => {
+                  setPage(1);
+                  setRoleFilter(e.target.value as "" | Role);
+                }}
+              >
+                <option value="">Tất cả vai trò</option>
+                {ROLE_OPTIONS.map((role) => (
+                  <option key={role.value} value={role.value}>
+                    {role.label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-zinc-600">Chi nhánh</label>
+              <Select
+                value={branchFilter}
+                onChange={(e) => {
+                  setPage(1);
+                  setBranchFilter(e.target.value);
+                }}
+              >
+                <option value="">Tất cả chi nhánh</option>
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branchLabel(branch)}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-zinc-600">Trạng thái</label>
+              <Select
+                value={activeFilter}
+                onChange={(e) => {
+                  setPage(1);
+                  setActiveFilter(e.target.value as "" | "true" | "false");
+                }}
+              >
+                <option value="">Tất cả</option>
+                <option value="true">Đang hoạt động</option>
+                <option value="false">Đã khóa</option>
+              </Select>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-zinc-600">Kích thước trang</label>
+              <Select
+                value={String(pageSize)}
+                onChange={(e) => {
+                  setPage(1);
+                  setPageSize(Number(e.target.value));
+                }}
+              >
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </Select>
+            </div>
           </div>
         </div>
       </div>
@@ -494,40 +489,50 @@ export default function AdminUsersPage() {
 
       <div className="hidden md:block">
         {loading ? (
-          <div className="rounded-xl bg-white p-6 text-sm text-zinc-600">Đang tải danh sách người dùng...</div>
+          <div className="animate-pulse space-y-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center gap-3 rounded-xl bg-white p-3 shadow-sm">
+                <div className="h-8 w-8 rounded-lg bg-zinc-200" />
+                <div className="flex-1 space-y-2"><div className="h-4 w-1/4 rounded bg-zinc-200" /><div className="h-3 w-1/3 rounded bg-zinc-100" /></div>
+                <div className="h-6 w-16 rounded-full bg-zinc-200" />
+              </div>
+            ))}
+          </div>
         ) : items.length === 0 ? (
           <div className="rounded-xl bg-white p-6 text-sm text-zinc-600">Không có dữ liệu người dùng.</div>
         ) : (
-          <Table headers={["Tên", "Email", "Vai trò", "Chi nhánh", "Trạng thái", "Ngày tạo", "Hành động"]}>
-            {items.map((user) => (
-              <tr key={user.id} className="border-t border-zinc-100">
-                <td className="px-3 py-2">{user.name || "-"}</td>
-                <td className="px-3 py-2">{user.email}</td>
-                <td className="px-3 py-2">
-                  <Badge text={roleLabel(user.role)} />
-                </td>
-                <td className="px-3 py-2 text-sm text-zinc-700">{branchLabel(user.branch)}</td>
-                <td className="px-3 py-2">
-                  <Badge text={user.isActive ? "Đang hoạt động" : "Đã khóa"} />
-                </td>
-                <td className="px-3 py-2 text-sm text-zinc-600">{formatDateTimeVi(user.createdAt)}</td>
-                <td className="px-3 py-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button variant="secondary" className="h-7 px-2 py-1 text-xs" onClick={() => openEdit(user)}>
-                      Sửa
-                    </Button>
-                    <Button
-                      variant={user.isActive ? "danger" : "secondary"}
-                      className="h-7 px-2 py-1 text-xs"
-                      onClick={() => setToggleTarget(user)}
-                    >
-                      {user.isActive ? "Khóa" : "Mở khóa"}
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </Table>
+          <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm animate-fadeInUp" style={{ animationDelay: "160ms" }}>
+            <Table headers={["Tên", "Email", "Vai trò", "Chi nhánh", "Trạng thái", "Ngày tạo", "Hành động"]}>
+              {items.map((user, idx) => (
+                <tr key={user.id} className="border-t border-zinc-100 transition-colors hover:bg-zinc-50 animate-fadeInUp" style={{ animationDelay: `${160 + Math.min(idx * 30, 200)}ms` }}>
+                  <td className="px-3 py-2">{user.name || "-"}</td>
+                  <td className="px-3 py-2">{user.email}</td>
+                  <td className="px-3 py-2">
+                    <Badge text={roleLabel(user.role)} />
+                  </td>
+                  <td className="px-3 py-2 text-sm text-zinc-700">{branchLabel(user.branch)}</td>
+                  <td className="px-3 py-2">
+                    <Badge text={user.isActive ? "Đang hoạt động" : "Đã khóa"} />
+                  </td>
+                  <td className="px-3 py-2 text-sm text-zinc-600">{formatDateTimeVi(user.createdAt)}</td>
+                  <td className="px-3 py-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button variant="secondary" className="h-7 px-2 py-1 text-xs" onClick={() => openEdit(user)}>
+                        Sửa
+                      </Button>
+                      <Button
+                        variant={user.isActive ? "danger" : "secondary"}
+                        className="h-7 px-2 py-1 text-xs"
+                        onClick={() => setToggleTarget(user)}
+                      >
+                        {user.isActive ? "Khóa" : "Mở khóa"}
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </Table>
+          </div>
         )}
       </div>
 

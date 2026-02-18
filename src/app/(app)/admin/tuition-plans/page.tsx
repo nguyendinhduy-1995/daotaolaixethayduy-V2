@@ -7,6 +7,7 @@ import { fetchJson, type ApiClientError } from "@/lib/api-client";
 import { clearToken, fetchMe, getToken } from "@/lib/auth-client";
 import { isAdminRole } from "@/lib/admin-auth";
 import { Alert } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +16,6 @@ import { Pagination } from "@/components/ui/pagination";
 import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Table } from "@/components/ui/table";
-import { MobileTopbar } from "@/components/admin/mobile-topbar";
 import { QuickSearchRow } from "@/components/admin/quick-search-row";
 import { FiltersSheet } from "@/components/admin/filters-sheet";
 import { AdminCardItem, AdminCardList } from "@/components/admin/admin-card-list";
@@ -51,6 +51,7 @@ function normalizeLicenseTypeInput(value: string) {
 
 export default function TuitionPlansAdminPage() {
   const router = useRouter();
+  const toast = useToast();
   const [checkingRole, setCheckingRole] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [items, setItems] = useState<TuitionPlan[]>([]);
@@ -64,7 +65,6 @@ export default function TuitionPlansAdminPage() {
   const [activeFilter, setActiveFilter] = useState<"" | "true" | "false">("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -179,7 +179,6 @@ export default function TuitionPlansAdminPage() {
 
     setCreateSaving(true);
     setError("");
-    setSuccess("");
     try {
       await fetchJson("/api/tuition-plans", {
         method: "POST",
@@ -195,7 +194,7 @@ export default function TuitionPlansAdminPage() {
       });
       setCreateOpen(false);
       setCreateForm({ province: "", licenseType: "", totalAmount: "", paid50Amount: "", note: "", isActive: true });
-      setSuccess("Tạo bảng học phí thành công.");
+      toast.success("Tạo bảng học phí thành công.");
       await loadTuitionPlans();
     } catch (e) {
       const err = e as ApiClientError;
@@ -245,7 +244,6 @@ export default function TuitionPlansAdminPage() {
 
     setEditSaving(true);
     setError("");
-    setSuccess("");
     try {
       await fetchJson(`/api/tuition-plans/${editTarget.id}`, {
         method: "PATCH",
@@ -261,7 +259,7 @@ export default function TuitionPlansAdminPage() {
       });
       setEditOpen(false);
       setEditTarget(null);
-      setSuccess("Cập nhật bảng học phí thành công.");
+      toast.success("Cập nhật bảng học phí thành công.");
       await loadTuitionPlans();
     } catch (e) {
       const err = e as ApiClientError;
@@ -292,30 +290,26 @@ export default function TuitionPlansAdminPage() {
 
   return (
     <div className="space-y-4">
-      <MobileTopbar
-        title="Bảng học phí"
-        subtitle="Quản trị chính sách học phí"
-        actionNode={<Button className="min-h-11" onClick={() => setCreateOpen(true)}>Tạo mới</Button>}
-      />
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-zinc-900">Bảng học phí</h1>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={loadTuitionPlans} disabled={loading}>
-            {loading ? (
-              <span className="inline-flex items-center gap-2">
-                <Spinner /> Đang tải...
-              </span>
-            ) : (
-              "Làm mới"
-            )}
-          </Button>
-          <Button onClick={() => setCreateOpen(true)}>Tạo bảng học phí</Button>
+      {/* ── Premium Header ── */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-rose-600 via-pink-600 to-fuchsia-600 p-4 text-white shadow-lg shadow-rose-200 animate-fadeInUp">
+        <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+        <div className="absolute -bottom-4 -left-4 h-20 w-20 rounded-full bg-white/10 blur-xl" />
+        <div className="relative flex flex-wrap items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 text-2xl backdrop-blur-sm">💰</div>
+          <div className="flex-1">
+            <h2 className="text-lg font-bold">Bảng học phí</h2>
+            <p className="text-sm text-white/80">Quản trị chính sách học phí</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="secondary" onClick={loadTuitionPlans} disabled={loading} className="!bg-white/20 !text-white !border-white/30 hover:!bg-white/30">
+              {loading ? "Đang tải..." : "🔄 Làm mới"}
+            </Button>
+            <Button onClick={() => setCreateOpen(true)} className="!bg-white !text-rose-700 hover:!bg-white/90">➕ Tạo bảng học phí</Button>
+          </div>
         </div>
       </div>
 
       {error ? <Alert type="error" message={error} /> : null}
-      {success ? <Alert type="success" message={success} /> : null}
 
       <QuickSearchRow
         value={qInput}
@@ -358,35 +352,39 @@ export default function TuitionPlansAdminPage() {
         </div>
       </FiltersSheet>
 
-      <div className="hidden rounded-xl bg-white p-4 shadow-sm md:block">
-        <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-5">
-          <div>
-            <label className="mb-1 block text-sm text-zinc-600">Tìm kiếm</label>
-            <Input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Tỉnh hoặc ghi chú" />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-zinc-600">Tỉnh</label>
-            <Input value={province} onChange={(e) => setProvince(e.target.value)} placeholder="VD: Hồ Chí Minh" />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-zinc-600">Hạng bằng</label>
-            <Input value={licenseType} onChange={(e) => setLicenseType(e.target.value)} placeholder="VD: B, C1, D, E..." />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-zinc-600">Trạng thái</label>
-            <Select value={activeFilter} onChange={(e) => setActiveFilter(e.target.value as "" | "true" | "false")}>
-              <option value="">Tất cả</option>
-              <option value="true">Đang áp dụng</option>
-              <option value="false">Ngưng áp dụng</option>
-            </Select>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-zinc-600">Kích thước trang</label>
-            <Select value={String(pageSize)} onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)); }}>
-              <option value="20">20</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-            </Select>
+      <div className="hidden overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm md:block animate-fadeInUp" style={{ animationDelay: "80ms" }}>
+        <div className="h-1 bg-gradient-to-r from-rose-500 to-pink-500" />
+        <div className="p-4">
+          <h3 className="text-sm font-semibold text-zinc-800 mb-3">🔍 Bộ lọc</h3>
+          <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-5">
+            <div>
+              <label className="mb-1 block text-sm text-zinc-600">Tìm kiếm</label>
+              <Input value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Tỉnh hoặc ghi chú" />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-zinc-600">Tỉnh</label>
+              <Input value={province} onChange={(e) => setProvince(e.target.value)} placeholder="VD: Hồ Chí Minh" />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-zinc-600">Hạng bằng</label>
+              <Input value={licenseType} onChange={(e) => setLicenseType(e.target.value)} placeholder="VD: B, C1, D, E..." />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-zinc-600">Trạng thái</label>
+              <Select value={activeFilter} onChange={(e) => setActiveFilter(e.target.value as "" | "true" | "false")}>
+                <option value="">Tất cả</option>
+                <option value="true">Đang áp dụng</option>
+                <option value="false">Ngưng áp dụng</option>
+              </Select>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-zinc-600">Kích thước trang</label>
+              <Select value={String(pageSize)} onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)); }}>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </Select>
+            </div>
           </div>
         </div>
       </div>
@@ -417,8 +415,8 @@ export default function TuitionPlansAdminPage() {
           </AdminCardList>
           <div className="hidden md:block">
             <Table headers={["Tỉnh", "Hạng bằng", "Tổng học phí", "Mốc >= 50%", "Ghi chú", "Trạng thái", "Ngày tạo", "Hành động"]}>
-              {items.map((item) => (
-                <tr key={item.id} className="border-t border-zinc-100">
+              {items.map((item, idx) => (
+                <tr key={item.id} className="border-t border-zinc-100 transition-colors hover:bg-zinc-50 animate-fadeInUp" style={{ animationDelay: `${160 + Math.min(idx * 30, 200)}ms` }}>
                   <td className="px-3 py-2">{item.province}</td>
                   <td className="px-3 py-2">{item.licenseType}</td>
                   <td className="px-3 py-2">{formatCurrencyVnd(item.totalAmount || item.tuition)}</td>

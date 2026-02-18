@@ -6,13 +6,13 @@ import { fetchJson, type ApiClientError } from "@/lib/api-client";
 import { clearToken, fetchMe, getToken } from "@/lib/auth-client";
 import { isAdminRole } from "@/lib/admin-auth";
 import { Alert } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { Pagination } from "@/components/ui/pagination";
 import { Select } from "@/components/ui/select";
-import { Spinner } from "@/components/ui/spinner";
 import { Table } from "@/components/ui/table";
 import { MobileTopbar } from "@/components/admin/mobile-topbar";
 import { QuickSearchRow } from "@/components/admin/quick-search-row";
@@ -85,6 +85,7 @@ function formatError(err: ApiClientError) {
 
 export default function AutomationLogsPage() {
   const router = useRouter();
+  const toast = useToast();
   const searchParams = useSearchParams();
 
   const [scope, setScope] = useState("");
@@ -98,7 +99,6 @@ export default function AutomationLogsPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [canRun, setCanRun] = useState(false);
 
   const [detailOpen, setDetailOpen] = useState(false);
@@ -185,7 +185,6 @@ export default function AutomationLogsPage() {
     const token = getToken();
     if (!token) return;
     setError("");
-    setSuccess("");
     const payload = parsePayload(log.payload);
     const scopeValue = log.milestone === "daily" ? "daily" : "manual";
 
@@ -200,7 +199,7 @@ export default function AutomationLogsPage() {
           dryRun: false,
         },
       });
-      setSuccess("Đã chạy lại automation.");
+      toast.success("Đã chạy lại automation.");
       await loadLogs();
       router.replace(`/automation/logs?scope=${scopeValue}&hl=${result.log.id}`);
     } catch (e) {
@@ -223,21 +222,26 @@ export default function AutomationLogsPage() {
         }
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-zinc-900">Nhật ký Automation</h1>
-        <Button variant="secondary" onClick={loadLogs} disabled={loading}>
-          {loading ? (
-            <span className="flex items-center gap-2">
-              <Spinner /> Đang tải...
-            </span>
-          ) : (
-            "Làm mới"
-          )}
-        </Button>
+      {/* ── Premium Header ── */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-700 via-zinc-700 to-slate-800 p-4 text-white shadow-lg shadow-slate-300 animate-fadeInUp">
+        <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+        <div className="absolute -bottom-4 -left-4 h-20 w-20 rounded-full bg-white/10 blur-xl" />
+        <div className="relative flex flex-wrap items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 text-2xl backdrop-blur-sm">🤖</div>
+          <div className="flex-1">
+            <h2 className="text-lg font-bold">Nhật ký Automation</h2>
+            <p className="text-sm text-white/80">Theo dõi trạng thái chạy tác vụ tự động</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-3 py-1 text-sm font-bold backdrop-blur-sm">📊 {total}</span>
+            <Button variant="secondary" onClick={loadLogs} disabled={loading} className="!bg-white/20 !text-white !border-white/30 hover:!bg-white/30">
+              {loading ? "Đang tải..." : "Làm mới"}
+            </Button>
+          </div>
+        </div>
       </div>
 
       {error ? <Alert type="error" message={error} /> : null}
-      {success ? <Alert type="success" message={success} /> : null}
 
       <QuickSearchRow
         value={listState.q}
@@ -292,26 +296,29 @@ export default function AutomationLogsPage() {
         </div>
       </FiltersSheet>
 
-      <div className="grid gap-2 rounded-xl bg-white p-4 shadow-sm md:grid-cols-5">
-        <Select value={scope} onChange={(e) => { setScope(e.target.value); setPage(1); }}>
-          <option value="">Tất cả phạm vi</option>
-          <option value="daily">Hằng ngày</option>
-          <option value="manual">Thủ công</option>
-          <option value="outbound-worker">Worker gửi tin</option>
-        </Select>
-        <Select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}>
-          <option value="">Tất cả trạng thái</option>
-          <option value="sent">Đã gửi</option>
-          <option value="failed">Thất bại</option>
-          <option value="skipped">Bỏ qua</option>
-        </Select>
-        <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
-        <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
-        <Select value={String(pageSize)} onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)); }}>
-          <option value="20">20 / trang</option>
-          <option value="50">50 / trang</option>
-          <option value="100">100 / trang</option>
-        </Select>
+      <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm animate-fadeInUp" style={{ animationDelay: "80ms" }}>
+        <div className="h-1 bg-gradient-to-r from-slate-600 to-zinc-500" />
+        <div className="grid gap-2 p-4 md:grid-cols-5">
+          <Select value={scope} onChange={(e) => { setScope(e.target.value); setPage(1); }}>
+            <option value="">Tất cả phạm vi</option>
+            <option value="daily">Hằng ngày</option>
+            <option value="manual">Thủ công</option>
+            <option value="outbound-worker">Worker gửi tin</option>
+          </Select>
+          <Select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}>
+            <option value="">Tất cả trạng thái</option>
+            <option value="sent">Đã gửi</option>
+            <option value="failed">Thất bại</option>
+            <option value="skipped">Bỏ qua</option>
+          </Select>
+          <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
+          <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
+          <Select value={String(pageSize)} onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)); }}>
+            <option value="20">20 / trang</option>
+            <option value="50">50 / trang</option>
+            <option value="100">100 / trang</option>
+          </Select>
+        </div>
       </div>
 
       {loading ? (

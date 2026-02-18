@@ -7,6 +7,7 @@ import { fetchJson, type ApiClientError } from "@/lib/api-client";
 import { clearToken, fetchMe, getToken } from "@/lib/auth-client";
 import { isAdminRole } from "@/lib/admin-auth";
 import { Alert } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,6 +66,7 @@ function priorityLabel(priority: OutboundItem["priority"]) {
 
 export default function OutboundPage() {
   const router = useRouter();
+  const toast = useToast();
   const [isAdmin, setIsAdmin] = useState(false);
   const [items, setItems] = useState<OutboundItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -80,7 +82,6 @@ export default function OutboundPage() {
   const [dispatching, setDispatching] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
 
   const query = useMemo(() => {
     const params = new URLSearchParams();
@@ -143,7 +144,6 @@ export default function OutboundPage() {
     if (!token) return;
     setDispatching(true);
     setError("");
-    setSuccess("");
     try {
       const data = await fetchJson<{ total: number; accepted: number; failed: number; webhookEnabled: boolean }>("/api/outbound/dispatch", {
         method: "POST",
@@ -151,7 +151,7 @@ export default function OutboundPage() {
         body: { limit: 20 },
       });
       const modeText = data.webhookEnabled ? "đẩy webhook" : "mock local";
-      setSuccess(`Đã xử lý ${data.total} tin (${modeText}), nhận xử lý ${data.accepted}, lỗi ${data.failed}.`);
+      toast.success(`Đã xử lý ${data.total} tin (${modeText}), nhận xử lý ${data.accepted}, lỗi ${data.failed}.`);
       await loadItems();
     } catch (e) {
       const err = e as ApiClientError;
@@ -166,7 +166,6 @@ export default function OutboundPage() {
     if (!token) return;
     setRetrying(true);
     setError("");
-    setSuccess("");
     try {
       const data = await fetchJson<{ total: number; accepted: number; failed: number; webhookEnabled: boolean }>("/api/outbound/dispatch", {
         method: "POST",
@@ -174,7 +173,7 @@ export default function OutboundPage() {
         body: { limit: 20, retryFailedOnly: true },
       });
       const modeText = data.webhookEnabled ? "đẩy webhook" : "mock local";
-      setSuccess(`Đã thử gửi lại ${data.total} tin lỗi (${modeText}), nhận xử lý ${data.accepted}, lỗi ${data.failed}.`);
+      toast.success(`Đã thử gửi lại ${data.total} tin lỗi (${modeText}), nhận xử lý ${data.accepted}, lỗi ${data.failed}.`);
       await loadItems();
     } catch (e) {
       const err = e as ApiClientError;
@@ -209,7 +208,6 @@ export default function OutboundPage() {
       </p>
 
       {error ? <Alert type="error" message={error} /> : null}
-      {success ? <Alert type="success" message={success} /> : null}
 
       <div className="grid gap-2 rounded-xl bg-white p-4 shadow-sm md:grid-cols-3 lg:grid-cols-6">
         <Select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}>

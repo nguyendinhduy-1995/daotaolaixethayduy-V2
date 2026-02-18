@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { Pagination } from "@/components/ui/pagination";
 import { Select } from "@/components/ui/select";
-import { Spinner } from "@/components/ui/spinner";
 import { Table } from "@/components/ui/table";
 import { formatDateVi, formatTimeHm, todayInHoChiMinh } from "@/lib/date-utils";
 
@@ -64,16 +63,22 @@ function formatApiError(err: ApiClientError) {
 }
 
 function statusLabel(status: ScheduleRow["scheduleStatus"]) {
-  if (status === "upcoming") return "Sắp diễn ra";
-  if (status === "ongoing") return "Đang diễn ra";
-  if (status === "done") return "Đã kết thúc";
-  return "Tạm dừng";
+  if (status === "upcoming") return "🔵 Sắp diễn ra";
+  if (status === "ongoing") return "🟡 Đang diễn ra";
+  if (status === "done") return "✅ Đã kết thúc";
+  return "⏸️ Tạm dừng";
 }
+const SCHEDULE_STATUS_STYLE: Record<string, { bg: string; text: string; border: string }> = {
+  upcoming: { bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200" },
+  ongoing: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200" },
+  done: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200" },
+  inactive: { bg: "bg-zinc-100", text: "text-zinc-600", border: "border-zinc-200" },
+};
 
 function manualStatusLabel(status: string) {
-  if (status === "planned" || status === "PLANNED") return "Dự kiến";
-  if (status === "done" || status === "DONE") return "Đã học";
-  if (status === "cancelled" || status === "CANCELLED") return "Hủy";
+  if (status === "planned" || status === "PLANNED") return "📋 Dự kiến";
+  if (status === "done" || status === "DONE") return "✅ Đã học";
+  if (status === "cancelled" || status === "CANCELLED") return "❌ Hủy";
   return "-";
 }
 
@@ -276,72 +281,106 @@ export default function SchedulePage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-zinc-900">Vận hành lịch</h1>
-        <div className="flex items-center gap-2">
-          <Button onClick={() => setCreateOpen(true)}>Thêm lịch học</Button>
-          <Button variant="secondary" onClick={loadItems} disabled={loading}>
-            {loading ? "Đang tải..." : "Làm mới"}
-          </Button>
+      {/* ── Premium Header ── */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-teal-600 via-cyan-600 to-sky-600 p-4 text-white shadow-lg shadow-teal-200 animate-fadeInUp">
+        <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+        <div className="absolute -bottom-4 -left-4 h-20 w-20 rounded-full bg-white/10 blur-xl" />
+        <div className="relative flex flex-wrap items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 text-2xl backdrop-blur-sm">📅</div>
+          <div className="flex-1">
+            <h2 className="text-lg font-bold">Vận hành lịch</h2>
+            <p className="text-sm text-white/80">Quản lý lịch học & điểm danh</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-3 py-1 text-sm font-bold backdrop-blur-sm">📊 {total}</span>
+            <Button onClick={() => setCreateOpen(true)} className="!bg-white/20 !text-white !border-white/30 hover:!bg-white/30">➕ Thêm lịch</Button>
+            <Button variant="secondary" onClick={loadItems} disabled={loading} className="!bg-white/20 !text-white !border-white/30 hover:!bg-white/30">
+              {loading ? "Đang tải..." : "Làm mới"}
+            </Button>
+          </div>
         </div>
       </div>
 
       {error ? <Alert type="error" message={error} /> : null}
 
-      <div className="grid gap-2 rounded-xl bg-white p-4 shadow-sm md:grid-cols-3 lg:grid-cols-6">
-        <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
-        <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
-        <Select value={courseId} onChange={(e) => { setCourseId(e.target.value); setPage(1); }}>
-          <option value="">Tất cả khóa học</option>
-          {courses.map((course) => (
-            <option key={course.id} value={course.id}>
-              {course.code}
-            </option>
-          ))}
-        </Select>
-        <Select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}>
-          <option value="">Tất cả trạng thái</option>
-          <option value="upcoming">Sắp diễn ra</option>
-          <option value="ongoing">Đang diễn ra</option>
-          <option value="done">Đã kết thúc</option>
-          <option value="inactive">Tạm dừng</option>
-        </Select>
-        <Input placeholder="Tìm tên/SĐT học viên" value={qInput} onChange={(e) => setQInput(e.target.value)} />
-        <Input placeholder="Địa điểm" value={location} onChange={(e) => { setLocation(e.target.value); setPage(1); }} />
+      {/* ── Filters ── */}
+      <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm animate-fadeInUp" style={{ animationDelay: "80ms" }}>
+        <div className="h-1 bg-gradient-to-r from-teal-500 to-cyan-500" />
+        <div className="grid gap-2 p-4 md:grid-cols-3 lg:grid-cols-6">
+          <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
+          <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
+          <Select value={courseId} onChange={(e) => { setCourseId(e.target.value); setPage(1); }}>
+            <option value="">Tất cả khóa học</option>
+            {courses.map((course) => (
+              <option key={course.id} value={course.id}>{course.code}</option>
+            ))}
+          </Select>
+          <Select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}>
+            <option value="">Tất cả trạng thái</option>
+            <option value="upcoming">🔵 Sắp diễn ra</option>
+            <option value="ongoing">🟡 Đang diễn ra</option>
+            <option value="done">✅ Đã kết thúc</option>
+            <option value="inactive">⏸️ Tạm dừng</option>
+          </Select>
+          <Input placeholder="Tìm tên/SĐT học viên" value={qInput} onChange={(e) => setQInput(e.target.value)} />
+          <Input placeholder="Địa điểm" value={location} onChange={(e) => { setLocation(e.target.value); setPage(1); }} />
+        </div>
       </div>
 
       {loading ? (
-        <div className="flex items-center gap-2 text-zinc-700">
-          <Spinner /> Đang tải...
+        <div className="animate-pulse space-y-2">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="flex items-center gap-3 rounded-xl bg-white p-3 shadow-sm">
+              <div className="h-9 w-9 rounded-full bg-zinc-200" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-1/3 rounded bg-zinc-200" />
+                <div className="h-3 w-2/3 rounded bg-zinc-100" />
+              </div>
+              <div className="h-6 w-20 rounded-full bg-zinc-200" />
+            </div>
+          ))}
         </div>
       ) : items.length === 0 ? (
-        <div className="rounded-xl bg-white p-6 text-sm text-zinc-600 shadow-sm">Không có dữ liệu</div>
+        <div className="rounded-2xl border-2 border-dashed border-zinc-200 bg-white p-8 text-center animate-fadeInUp">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-zinc-100 text-2xl">📭</div>
+          <p className="font-medium text-zinc-700">Không có dữ liệu</p>
+          <p className="mt-1 text-sm text-zinc-500">Không có lịch học phù hợp với bộ lọc.</p>
+        </div>
       ) : (
         <div className="space-y-3">
-          <Table headers={["Ngày", "Giờ", "Khóa học", "Địa điểm", "Trạng thái học", "Số HV dự kiến", "Có mặt", "Vắng", "Trễ", "Trạng thái hệ thống", "Hành động"]}>
-            {items.map((item) => (
-              <tr key={item.id} className="border-t border-zinc-100">
-                <td className="px-3 py-2 text-sm text-zinc-700">{formatDateVi(item.startAt)}</td>
-                <td className="px-3 py-2 text-sm text-zinc-700">
-                  {formatTimeHm(item.startAt)}
-                  {item.endAt ? ` - ${formatTimeHm(item.endAt)}` : ""}
-                </td>
-                <td className="px-3 py-2 text-sm text-zinc-700">{item.course.code}</td>
-                <td className="px-3 py-2 text-sm text-zinc-700">{item.meta.location || "-"}</td>
-                <td className="px-3 py-2 text-sm text-zinc-700">{manualStatusLabel(item.meta.status)}</td>
-                <td className="px-3 py-2 text-sm text-zinc-700">{item.attendance.expected}</td>
-                <td className="px-3 py-2 text-sm text-zinc-700">{item.attendance.present}</td>
-                <td className="px-3 py-2 text-sm text-zinc-700">{item.attendance.absent}</td>
-                <td className="px-3 py-2 text-sm text-zinc-700">{item.attendance.late}</td>
-                <td className="px-3 py-2 text-sm text-zinc-700">{statusLabel(item.scheduleStatus)}</td>
-                <td className="px-3 py-2">
-                  <Link href={`/schedule/${item.id}`} className="rounded-lg border border-zinc-300 px-2 py-1 text-xs text-zinc-700">
-                    Chi tiết buổi học
-                  </Link>
-                </td>
-              </tr>
-            ))}
-          </Table>
+          <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm animate-fadeInUp" style={{ animationDelay: "160ms" }}>
+            <Table headers={["Ngày", "Giờ", "Khóa học", "Địa điểm", "TT học", "Dự kiến", "Có mặt", "Vắng", "Trễ", "Hệ thống", ""]}>
+              {items.map((item, idx) => {
+                const ss = SCHEDULE_STATUS_STYLE[item.scheduleStatus] || SCHEDULE_STATUS_STYLE.inactive;
+                return (
+                  <tr key={item.id} className="border-t border-zinc-100 transition-colors hover:bg-zinc-50 animate-fadeInUp" style={{ animationDelay: `${160 + Math.min(idx * 40, 300)}ms` }}>
+                    <td className="px-3 py-2 text-sm font-medium text-zinc-900">{formatDateVi(item.startAt)}</td>
+                    <td className="px-3 py-2 text-sm text-zinc-700">
+                      {formatTimeHm(item.startAt)}
+                      {item.endAt ? ` - ${formatTimeHm(item.endAt)}` : ""}
+                    </td>
+                    <td className="px-3 py-2"><span className="rounded-full bg-violet-50 border border-violet-200 px-2 py-0.5 text-xs font-bold text-violet-700">{item.course.code}</span></td>
+                    <td className="px-3 py-2 text-sm text-zinc-700">{item.meta.location || "-"}</td>
+                    <td className="px-3 py-2 text-sm text-zinc-700">{manualStatusLabel(item.meta.status)}</td>
+                    <td className="px-3 py-2 text-sm font-medium text-zinc-900">{item.attendance.expected}</td>
+                    <td className="px-3 py-2 text-sm font-medium text-emerald-700">{item.attendance.present}</td>
+                    <td className="px-3 py-2 text-sm font-medium text-red-600">{item.attendance.absent}</td>
+                    <td className="px-3 py-2 text-sm font-medium text-amber-600">{item.attendance.late}</td>
+                    <td className="px-3 py-2">
+                      <span className={`inline-flex items-center rounded-full ${ss.bg} ${ss.text} border ${ss.border} px-2 py-0.5 text-xs font-bold`}>
+                        {statusLabel(item.scheduleStatus)}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2">
+                      <Link href={`/schedule/${item.id}`} className="rounded-lg bg-gradient-to-r from-teal-500 to-cyan-500 px-3 py-1 text-xs font-medium text-white shadow-sm hover:shadow-md transition">
+                        Chi tiết
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
+            </Table>
+          </div>
           <div className="flex items-center justify-between gap-3">
             <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
             <Select value={String(pageSize)} onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)); }}>

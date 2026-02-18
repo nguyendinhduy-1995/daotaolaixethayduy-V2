@@ -28,6 +28,10 @@ type KpiDailyResult = {
     };
   };
   tuVan: {
+    calledRate: {
+      daily: RatioValue;
+      monthly: RatioValue;
+    };
     appointedRate: {
       daily: RatioValue;
       monthly: RatioValue;
@@ -132,7 +136,7 @@ async function getScopedLeads(auth: AuthPayload) {
 
 async function countDistinctEventByLead(
   leadIds: string[],
-  type: "HAS_PHONE" | "APPOINTED" | "ARRIVED" | "SIGNED",
+  type: "HAS_PHONE" | "CALLED" | "APPOINTED" | "ARRIVED" | "SIGNED",
   start: Date,
   end: Date
 ) {
@@ -289,13 +293,15 @@ export async function getKpiDaily(date: string, auth: AuthPayload): Promise<KpiD
     countHasPhoneConversions(consideredLeadIds, assignedAtByLead, monthStart, monthEndApplied),
   ]);
 
-  const [hasPhoneDaily, appointedDaily, arrivedDaily, signedDaily, hasPhoneMonthly, appointedMonthly, arrivedMonthly, signedMonthly] =
+  const [hasPhoneDaily, calledDaily, appointedDaily, arrivedDaily, signedDaily, hasPhoneMonthly, calledMonthly, appointedMonthly, arrivedMonthly, signedMonthly] =
     await Promise.all([
       countDistinctEventByLead(allLeadIds, "HAS_PHONE", dayStart, dayEnd),
+      countDistinctEventByLead(allLeadIds, "CALLED", dayStart, dayEnd),
       countDistinctEventByLead(allLeadIds, "APPOINTED", dayStart, dayEnd),
       countDistinctEventByLead(allLeadIds, "ARRIVED", dayStart, dayEnd),
       countDistinctEventByLead(allLeadIds, "SIGNED", dayStart, dayEnd),
       countDistinctEventByLead(allLeadIds, "HAS_PHONE", monthStart, monthEndApplied),
+      countDistinctEventByLead(allLeadIds, "CALLED", monthStart, monthEndApplied),
       countDistinctEventByLead(allLeadIds, "APPOINTED", monthStart, monthEndApplied),
       countDistinctEventByLead(allLeadIds, "ARRIVED", monthStart, monthEndApplied),
       countDistinctEventByLead(allLeadIds, "SIGNED", monthStart, monthEndApplied),
@@ -313,9 +319,13 @@ export async function getKpiDaily(date: string, auth: AuthPayload): Promise<KpiD
       },
     },
     tuVan: {
+      calledRate: {
+        daily: toPercent(calledDaily, hasPhoneDaily),
+        monthly: toPercent(calledMonthly, hasPhoneMonthly),
+      },
       appointedRate: {
-        daily: toPercent(appointedDaily, hasPhoneDaily),
-        monthly: toPercent(appointedMonthly, hasPhoneMonthly),
+        daily: toPercent(appointedDaily, calledDaily),
+        monthly: toPercent(appointedMonthly, calledMonthly),
       },
       arrivedRate: {
         daily: toPercent(arrivedDaily, appointedDaily),

@@ -28,7 +28,7 @@ function parseDateYmd(value: string, endOfDay = false) {
   if (utc.getUTCFullYear() !== y || utc.getUTCMonth() !== m - 1 || utc.getUTCDate() !== d) {
     throw new Error("INVALID_DATE");
   }
-  return new Date(`${value}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}Z`);
+  return new Date(`${value}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}+07:00`);
 }
 
 function validateTags(tags: unknown) {
@@ -82,11 +82,11 @@ export async function GET(req: Request) {
       ...(createdFrom || createdTo ? { createdAt: createdAtFilter } : {}),
       ...(q
         ? {
-            OR: [
-              { fullName: { contains: q, mode: "insensitive" } },
-              { phone: { contains: q, mode: "insensitive" } },
-            ],
-          }
+          OR: [
+            { fullName: { contains: q, mode: "insensitive" } },
+            { phone: { contains: q, mode: "insensitive" } },
+          ],
+        }
         : {}),
     };
     const where = applyScopeToWhere(whereBase, scope, "lead");
