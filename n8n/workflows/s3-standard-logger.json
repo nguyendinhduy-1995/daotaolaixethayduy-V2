@@ -1,0 +1,53 @@
+{
+    "name": "[CRM] S3 Standard Logger",
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "s3-trigger",
+            "name": "TRG_WorkflowCall",
+            "type": "n8n-nodes-base.executeWorkflowTrigger",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const input = $input.all()[0].json;\nconst logEntry = {\n  correlationId: `${input.workflowName || 'unknown'}-${$execution.id}-${input.dateKey || new Date().toISOString().slice(0,10)}`,\n  timestamp: new Date().toISOString(),\n  workflowName: input.workflowName || 'unknown',\n  executionId: $execution.id,\n  dateKey: input.dateKey || new Date().toISOString().slice(0,10),\n  branchCode: input.branchCode || null,\n  endpoint: input.endpoint || null,\n  statusCode: input.statusCode || null,\n  status: input.status || 'SUCCESS',\n  durationMs: input.durationMs || null,\n  payload: input.payload || null\n};\nconsole.log(JSON.stringify(logEntry));\nreturn [{ json: logEntry }];"
+            },
+            "id": "s3-format",
+            "name": "MAP_FormatLog",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                480,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "TRG_WorkflowCall": {
+            "main": [
+                [
+                    {
+                        "node": "MAP_FormatLog",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "tags": [
+        {
+            "name": "CRM"
+        },
+        {
+            "name": "sub-workflow"
+        }
+    ]
+}

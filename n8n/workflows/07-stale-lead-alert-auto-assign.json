@@ -1,0 +1,384 @@
+{
+    "name": "[CRM] 07 Stale Lead Alert & Auto-Assign",
+    "nodes": [
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "cronExpression",
+                            "expression": "0 8 * * 1-6"
+                        }
+                    ]
+                },
+                "options": {
+                    "timezone": "Asia/Ho_Chi_Minh"
+                }
+            },
+            "id": "w07-trigger",
+            "name": "TRG_Schedule",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "workflowId": "={{ /* S1 Get Bearer Token */ }}"
+            },
+            "id": "w07-auth",
+            "name": "AUTH_GetToken",
+            "type": "n8n-nodes-base.executeWorkflow",
+            "typeVersion": 1,
+            "position": [
+                480,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "={{ $env.CRM_BASE_URL }}/api/leads/stale?pageSize=100",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "=Bearer {{ $json.bearerToken }}"
+                        }
+                    ]
+                },
+                "options": {
+                    "timeout": 15000
+                }
+            },
+            "id": "w07-stale",
+            "name": "HTTP_GetStale",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                710,
+                300
+            ],
+            "retryOnFail": true,
+            "maxTries": 2
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "number": [
+                        {
+                            "value1": "={{ $json.total || 0 }}",
+                            "operation": "larger",
+                            "value2": 0
+                        }
+                    ]
+                }
+            },
+            "id": "w07-check",
+            "name": "IF_HasStale",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                940,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "values": {
+                    "string": [
+                        {
+                            "name": "status",
+                            "value": "CLEAN"
+                        }
+                    ]
+                }
+            },
+            "id": "w07-clean",
+            "name": "LOG_Clean",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 2,
+            "position": [
+                1170,
+                450
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const items = $input.all()[0].json.items || [];\nconst grouped = {};\nfor (const item of items) {\n  const ownerId = item.owner?.id || 'unassigned';\n  if (!grouped[ownerId]) grouped[ownerId] = { ownerId, ownerName: item.owner?.name || 'Chưa gán', count: 0, highCount: 0, leads: [] };\n  grouped[ownerId].count++;\n  if (item.warningLevel === 'HIGH') grouped[ownerId].highCount++;\n  grouped[ownerId].leads.push({ id: item.id, fullName: item.fullName, phone: item.phone, daysSinceUpdate: item.daysSinceUpdate, warningLevel: item.warningLevel });\n}\nreturn Object.values(grouped).map(g => ({ json: g }));"
+            },
+            "id": "w07-group",
+            "name": "MAP_GroupByOwner",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1170,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "amount": 4,
+                "unit": "hours"
+            },
+            "id": "w07-wait",
+            "name": "WAIT_4h",
+            "type": "n8n-nodes-base.wait",
+            "typeVersion": 1,
+            "position": [
+                1400,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "={{ $env.CRM_BASE_URL }}/api/leads/stale?pageSize=100",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "=Bearer {{ $node.AUTH_GetToken.json.bearerToken }}"
+                        }
+                    ]
+                },
+                "options": {
+                    "timeout": 15000
+                }
+            },
+            "id": "w07-recheck",
+            "name": "HTTP_ReCheckStale",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                1630,
+                200
+            ],
+            "retryOnFail": true,
+            "maxTries": 2
+        },
+        {
+            "parameters": {
+                "jsCode": "const items = $input.all()[0].json.items || [];\nconst highLeads = items.filter(i => i.warningLevel === 'HIGH');\nreturn [{ json: { highLeadIds: highLeads.map(l => l.id), highCount: highLeads.length } }];"
+            },
+            "id": "w07-filter",
+            "name": "MAP_FilterHigh",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1860,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "number": [
+                        {
+                            "value1": "={{ $json.highCount || 0 }}",
+                            "operation": "larger",
+                            "value2": 0
+                        }
+                    ]
+                }
+            },
+            "id": "w07-still",
+            "name": "IF_StillHigh",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                2090,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $env.CRM_BASE_URL }}/api/leads/auto-assign",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        },
+                        {
+                            "name": "Authorization",
+                            "value": "=Bearer {{ $node.AUTH_GetToken.json.bearerToken }}"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ strategy: 'round_robin', leadIds: $json.highLeadIds }) }}",
+                "options": {
+                    "timeout": 15000
+                }
+            },
+            "id": "w07-assign",
+            "name": "HTTP_AutoAssign",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                2320,
+                100
+            ],
+            "retryOnFail": true,
+            "maxTries": 2,
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "values": {
+                    "string": [
+                        {
+                            "name": "status",
+                            "value": "RESOLVED"
+                        }
+                    ]
+                }
+            },
+            "id": "w07-resolved",
+            "name": "LOG_Resolved",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 2,
+            "position": [
+                2320,
+                350
+            ]
+        }
+    ],
+    "connections": {
+        "TRG_Schedule": {
+            "main": [
+                [
+                    {
+                        "node": "AUTH_GetToken",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AUTH_GetToken": {
+            "main": [
+                [
+                    {
+                        "node": "HTTP_GetStale",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "HTTP_GetStale": {
+            "main": [
+                [
+                    {
+                        "node": "IF_HasStale",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "IF_HasStale": {
+            "main": [
+                [
+                    {
+                        "node": "MAP_GroupByOwner",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "LOG_Clean",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "MAP_GroupByOwner": {
+            "main": [
+                [
+                    {
+                        "node": "WAIT_4h",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "WAIT_4h": {
+            "main": [
+                [
+                    {
+                        "node": "HTTP_ReCheckStale",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "HTTP_ReCheckStale": {
+            "main": [
+                [
+                    {
+                        "node": "MAP_FilterHigh",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "MAP_FilterHigh": {
+            "main": [
+                [
+                    {
+                        "node": "IF_StillHigh",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "IF_StillHigh": {
+            "main": [
+                [
+                    {
+                        "node": "HTTP_AutoAssign",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "LOG_Resolved",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "tags": [
+        {
+            "name": "CRM"
+        },
+        {
+            "name": "stale"
+        },
+        {
+            "name": "auto-assign"
+        }
+    ]
+}

@@ -1,0 +1,141 @@
+{
+    "name": "[CRM] S2 Alert Admin",
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "s2-trigger",
+            "name": "TRG_WorkflowCall",
+            "type": "n8n-nodes-base.executeWorkflowTrigger",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "values": {
+                    "string": [
+                        {
+                            "name": "alertMessage",
+                            "value": "=🚨 [CRM N8N] Workflow FAIL\n━━━━━━━━━━━━━━━━━━━━\nWorkflow: {{ $json.workflowName || 'Unknown' }}\nEndpoint: {{ $json.endpoint || 'N/A' }}\nStatus: {{ $json.statusCode || 'N/A' }}\nError: {{ $json.error || 'Unknown error' }}\nTime: {{ $now.format('HH:mm dd/MM/yyyy') }}\n━━━━━━━━━━━━━━━━━━━━"
+                        }
+                    ]
+                }
+            },
+            "id": "s2-format",
+            "name": "MAP_FormatAlert",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 2,
+            "position": [
+                480,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "chat_id",
+                            "value": "={{ $env.TELEGRAM_CHAT_ID }}"
+                        },
+                        {
+                            "name": "text",
+                            "value": "={{ $json.alertMessage }}"
+                        },
+                        {
+                            "name": "parse_mode",
+                            "value": "HTML"
+                        }
+                    ]
+                },
+                "options": {
+                    "timeout": 10000,
+                    "retry": {
+                        "maxTries": 2,
+                        "waitBetween": 3000
+                    }
+                }
+            },
+            "id": "s2-telegram",
+            "name": "HTTP_SendTelegram",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                710,
+                300
+            ],
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "values": {
+                    "boolean": [
+                        {
+                            "name": "sent",
+                            "value": "={{ $json.ok || false }}"
+                        }
+                    ]
+                }
+            },
+            "id": "s2-result",
+            "name": "MAP_Result",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 2,
+            "position": [
+                940,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "TRG_WorkflowCall": {
+            "main": [
+                [
+                    {
+                        "node": "MAP_FormatAlert",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "MAP_FormatAlert": {
+            "main": [
+                [
+                    {
+                        "node": "HTTP_SendTelegram",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "HTTP_SendTelegram": {
+            "main": [
+                [
+                    {
+                        "node": "MAP_Result",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "tags": [
+        {
+            "name": "CRM"
+        },
+        {
+            "name": "sub-workflow"
+        }
+    ]
+}

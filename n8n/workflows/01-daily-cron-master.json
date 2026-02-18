@@ -1,0 +1,265 @@
+{
+    "name": "[CRM] 01 Daily Cron Master",
+    "nodes": [
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "cronExpression",
+                            "expression": "0 6 * * *"
+                        }
+                    ]
+                },
+                "options": {
+                    "timezone": "Asia/Ho_Chi_Minh"
+                }
+            },
+            "id": "w01-trigger",
+            "name": "TRG_Schedule",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "values": {
+                    "boolean": [
+                        {
+                            "name": "force",
+                            "value": false
+                        },
+                        {
+                            "name": "dryRun",
+                            "value": false
+                        }
+                    ]
+                }
+            },
+            "id": "w01-body",
+            "name": "MAP_BuildBody",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 2,
+            "position": [
+                480,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $env.CRM_BASE_URL }}/api/cron/daily",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        },
+                        {
+                            "name": "x-cron-secret",
+                            "value": "={{ $env.CRON_SECRET }}"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ force: $json.force, dryRun: $json.dryRun }) }}",
+                "options": {
+                    "timeout": 30000
+                }
+            },
+            "id": "w01-http",
+            "name": "HTTP_CronDaily",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                710,
+                300
+            ],
+            "retryOnFail": true,
+            "maxTries": 3,
+            "waitBetweenTries": 5000,
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{ $json.ok }}",
+                            "value2": true
+                        }
+                    ]
+                }
+            },
+            "id": "w01-if",
+            "name": "IF_StatusOk",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                940,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "values": {
+                    "string": [
+                        {
+                            "name": "workflowName",
+                            "value": "01-daily-cron-master"
+                        },
+                        {
+                            "name": "endpoint",
+                            "value": "/api/cron/daily"
+                        },
+                        {
+                            "name": "status",
+                            "value": "SUCCESS"
+                        }
+                    ],
+                    "number": [
+                        {
+                            "name": "statusCode",
+                            "value": 200
+                        }
+                    ]
+                }
+            },
+            "id": "w01-log-ok",
+            "name": "LOG_Success",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 2,
+            "position": [
+                1170,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "values": {
+                    "string": [
+                        {
+                            "name": "workflowName",
+                            "value": "01 Daily Cron Master"
+                        },
+                        {
+                            "name": "endpoint",
+                            "value": "/api/cron/daily"
+                        },
+                        {
+                            "name": "error",
+                            "value": "={{ $json.error || $json.message || 'Cron daily failed' }}"
+                        }
+                    ],
+                    "number": [
+                        {
+                            "name": "statusCode",
+                            "value": "={{ $json.statusCode || 500 }}"
+                        }
+                    ]
+                }
+            },
+            "id": "w01-error",
+            "name": "MAP_ErrorContext",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 2,
+            "position": [
+                1170,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "workflowId": "={{ /* S2 Alert Admin workflow ID */ }}"
+            },
+            "id": "w01-alert",
+            "name": "ALERT_Admin",
+            "type": "n8n-nodes-base.executeWorkflow",
+            "typeVersion": 1,
+            "position": [
+                1400,
+                400
+            ]
+        }
+    ],
+    "connections": {
+        "TRG_Schedule": {
+            "main": [
+                [
+                    {
+                        "node": "MAP_BuildBody",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "MAP_BuildBody": {
+            "main": [
+                [
+                    {
+                        "node": "HTTP_CronDaily",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "HTTP_CronDaily": {
+            "main": [
+                [
+                    {
+                        "node": "IF_StatusOk",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "IF_StatusOk": {
+            "main": [
+                [
+                    {
+                        "node": "LOG_Success",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "MAP_ErrorContext",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "MAP_ErrorContext": {
+            "main": [
+                [
+                    {
+                        "node": "ALERT_Admin",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "tags": [
+        {
+            "name": "CRM"
+        },
+        {
+            "name": "cron"
+        }
+    ]
+}

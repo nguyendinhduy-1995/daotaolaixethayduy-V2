@@ -1,0 +1,184 @@
+{
+    "name": "[CRM] S1 Get Bearer Token",
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "s1-trigger",
+            "name": "TRG_WorkflowCall",
+            "type": "n8n-nodes-base.executeWorkflowTrigger",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $env.CRM_BASE_URL }}/api/auth/login",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "account",
+                            "value": "={{ $env.CRM_EMAIL }}"
+                        },
+                        {
+                            "name": "password",
+                            "value": "={{ $env.CRM_PASSWORD }}"
+                        }
+                    ]
+                },
+                "options": {
+                    "timeout": 15000,
+                    "retry": {
+                        "maxTries": 3,
+                        "waitBetween": 3000
+                    }
+                }
+            },
+            "id": "s1-login",
+            "name": "HTTP_Login",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                480,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "string": [
+                        {
+                            "value1": "={{ $json.token }}",
+                            "operation": "isNotEmpty"
+                        }
+                    ]
+                }
+            },
+            "id": "s1-check",
+            "name": "IF_TokenValid",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                710,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "values": {
+                    "string": [
+                        {
+                            "name": "bearerToken",
+                            "value": "={{ $json.token }}"
+                        },
+                        {
+                            "name": "userId",
+                            "value": "={{ $json.user.id }}"
+                        }
+                    ]
+                }
+            },
+            "id": "s1-set-token",
+            "name": "MAP_SetToken",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 2,
+            "position": [
+                940,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "values": {
+                    "string": [
+                        {
+                            "name": "error",
+                            "value": "Login failed — no token received"
+                        },
+                        {
+                            "name": "bearerToken",
+                            "value": ""
+                        },
+                        {
+                            "name": "userId",
+                            "value": ""
+                        }
+                    ]
+                }
+            },
+            "id": "s1-error",
+            "name": "MAP_LoginError",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 2,
+            "position": [
+                940,
+                400
+            ]
+        }
+    ],
+    "connections": {
+        "TRG_WorkflowCall": {
+            "main": [
+                [
+                    {
+                        "node": "HTTP_Login",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "HTTP_Login": {
+            "main": [
+                [
+                    {
+                        "node": "IF_TokenValid",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "IF_TokenValid": {
+            "main": [
+                [
+                    {
+                        "node": "MAP_SetToken",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "MAP_LoginError",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "tags": [
+        {
+            "name": "CRM"
+        },
+        {
+            "name": "sub-workflow"
+        }
+    ]
+}

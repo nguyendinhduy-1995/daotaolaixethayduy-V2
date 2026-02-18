@@ -1,0 +1,195 @@
+{
+    "name": "[CRM] 06 Ops Pulse Report",
+    "nodes": [
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "cronExpression",
+                            "expression": "0 21 * * 1-6"
+                        }
+                    ]
+                },
+                "options": {
+                    "timezone": "Asia/Ho_Chi_Minh"
+                }
+            },
+            "id": "w06-trigger",
+            "name": "TRG_Schedule",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const dateKey = new Date().toISOString().slice(0,10);\nconst payloads = [\n  { role: 'PAGE', branchCode: 'Q1', dateKey, metrics: { messagesToday: 0, dataToday: 0 } },\n  { role: 'TELESALES', branchCode: 'Q1', dateKey, metrics: { dataToday: 0, calledToday: 0, appointedToday: 0, arrivedToday: 0, signedToday: 0 } }\n];\nreturn payloads.map(p => ({ json: p }));"
+            },
+            "id": "w06-build",
+            "name": "MAP_BuildPayloads",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                480,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $env.CRM_BASE_URL }}/api/ops/pulse",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        },
+                        {
+                            "name": "x-ops-secret",
+                            "value": "={{ $env.OPS_SECRET }}"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify($json) }}",
+                "options": {
+                    "timeout": 15000
+                }
+            },
+            "id": "w06-http",
+            "name": "HTTP_OpsPulse",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                710,
+                300
+            ],
+            "retryOnFail": true,
+            "maxTries": 3,
+            "waitBetweenTries": 5000,
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{ $json.ok }}",
+                            "value2": true
+                        }
+                    ]
+                }
+            },
+            "id": "w06-check",
+            "name": "IF_PulseOk",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                940,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "values": {
+                    "string": [
+                        {
+                            "name": "status",
+                            "value": "SUCCESS"
+                        }
+                    ]
+                }
+            },
+            "id": "w06-log",
+            "name": "LOG_Success",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 2,
+            "position": [
+                1170,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "workflowId": "={{ /* S2 Alert Admin */ }}"
+            },
+            "id": "w06-alert",
+            "name": "ALERT_Admin",
+            "type": "n8n-nodes-base.executeWorkflow",
+            "typeVersion": 1,
+            "position": [
+                1170,
+                400
+            ]
+        }
+    ],
+    "connections": {
+        "TRG_Schedule": {
+            "main": [
+                [
+                    {
+                        "node": "MAP_BuildPayloads",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "MAP_BuildPayloads": {
+            "main": [
+                [
+                    {
+                        "node": "HTTP_OpsPulse",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "HTTP_OpsPulse": {
+            "main": [
+                [
+                    {
+                        "node": "IF_PulseOk",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "IF_PulseOk": {
+            "main": [
+                [
+                    {
+                        "node": "LOG_Success",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "ALERT_Admin",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "tags": [
+        {
+            "name": "CRM"
+        },
+        {
+            "name": "ops"
+        }
+    ]
+}

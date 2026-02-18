@@ -1,0 +1,315 @@
+{
+    "name": "[CRM] 04 AI KPI Coach",
+    "nodes": [
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "cronExpression",
+                            "expression": "0 7 * * 1-6"
+                        }
+                    ]
+                },
+                "options": {
+                    "timezone": "Asia/Ho_Chi_Minh"
+                }
+            },
+            "id": "w04-trigger",
+            "name": "TRG_Schedule",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "workflowId": "={{ /* S1 Get Bearer Token */ }}"
+            },
+            "id": "w04-auth",
+            "name": "AUTH_GetToken",
+            "type": "n8n-nodes-base.executeWorkflow",
+            "typeVersion": 1,
+            "position": [
+                480,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "={{ $env.CRM_BASE_URL }}/api/kpi/targets",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "=Bearer {{ $json.bearerToken }}"
+                        }
+                    ]
+                },
+                "options": {
+                    "timeout": 15000
+                }
+            },
+            "id": "w04-kpi",
+            "name": "HTTP_GetKPI",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                710,
+                200
+            ],
+            "retryOnFail": true,
+            "maxTries": 2
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "={{ $env.CRM_BASE_URL }}/api/leads/stale?pageSize=100",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "=Bearer {{ $json.bearerToken }}"
+                        }
+                    ]
+                },
+                "options": {
+                    "timeout": 15000
+                }
+            },
+            "id": "w04-stale",
+            "name": "HTTP_GetStale",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                710,
+                400
+            ],
+            "retryOnFail": true,
+            "maxTries": 2
+        },
+        {
+            "parameters": {
+                "mode": "combine",
+                "combinationMode": "mergeByPosition"
+            },
+            "id": "w04-merge",
+            "name": "MAP_MergeData",
+            "type": "n8n-nodes-base.merge",
+            "typeVersion": 2.1,
+            "position": [
+                940,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const kpi = $input.all()[0].json;\nconst stale = $input.all()[1]?.json || {};\nconst prompt = `Bạn là AI Coach cho CRM đào tạo lái xe Thầy Duy.\nDữ liệu KPI: ${JSON.stringify(kpi)}\nLead cần follow-up: ${stale.total || 0} khách\nTạo 1-3 gợi ý ngắn gọn, tiếng Việt, mỗi gợi ý gồm: title, content, scoreColor (RED/YELLOW/GREEN).\nTrả về JSON array.`;\nreturn [{ json: { prompt, dateKey: new Date().toISOString().slice(0,10) } }];"
+            },
+            "id": "w04-prompt",
+            "name": "MAP_BuildPrompt",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1170,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.openai.com/v1/chat/completions",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "=Bearer {{ $env.OPENAI_API_KEY }}"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: 'Trả lời bằng JSON array.' }, { role: 'user', content: $json.prompt }], temperature: 0.7 }) }}",
+                "options": {
+                    "timeout": 60000
+                }
+            },
+            "id": "w04-ai",
+            "name": "HTTP_AI",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                1400,
+                300
+            ],
+            "retryOnFail": true,
+            "maxTries": 2,
+            "waitBetweenTries": 10000
+        },
+        {
+            "parameters": {
+                "jsCode": "const resp = $input.all()[0].json;\nconst text = resp.choices?.[0]?.message?.content || '[]';\nlet suggestions;\ntry { suggestions = JSON.parse(text.replace(/```json\\n?/g,'').replace(/```/g,'').trim()); } catch(e) { suggestions = []; }\nif (!Array.isArray(suggestions)) suggestions = [suggestions];\nconst valid = ['RED','YELLOW','GREEN'];\nreturn suggestions.map(s => ({ json: { ...s, scoreColor: valid.includes(s.scoreColor) ? s.scoreColor : 'YELLOW' } }));"
+            },
+            "id": "w04-parse",
+            "name": "MAP_ParseSuggestions",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1630,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $env.CRM_BASE_URL }}/api/ai/suggestions",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        },
+                        {
+                            "name": "Authorization",
+                            "value": "=Bearer {{ $node.AUTH_GetToken.json.bearerToken }}"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ dateKey: $node.MAP_BuildPrompt.json.dateKey, role: 'telesales', title: $json.title, content: $json.content, scoreColor: $json.scoreColor, actionsJson: $json.actionsJson || [], metricsJson: $json.metricsJson || {} }) }}",
+                "options": {
+                    "timeout": 15000
+                }
+            },
+            "id": "w04-save",
+            "name": "HTTP_SaveSuggestion",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                1860,
+                300
+            ],
+            "retryOnFail": true,
+            "maxTries": 2,
+            "onError": "continueRegularOutput"
+        }
+    ],
+    "connections": {
+        "TRG_Schedule": {
+            "main": [
+                [
+                    {
+                        "node": "AUTH_GetToken",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AUTH_GetToken": {
+            "main": [
+                [
+                    {
+                        "node": "HTTP_GetKPI",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "HTTP_GetStale",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "HTTP_GetKPI": {
+            "main": [
+                [
+                    {
+                        "node": "MAP_MergeData",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "HTTP_GetStale": {
+            "main": [
+                [
+                    {
+                        "node": "MAP_MergeData",
+                        "type": "main",
+                        "index": 1
+                    }
+                ]
+            ]
+        },
+        "MAP_MergeData": {
+            "main": [
+                [
+                    {
+                        "node": "MAP_BuildPrompt",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "MAP_BuildPrompt": {
+            "main": [
+                [
+                    {
+                        "node": "HTTP_AI",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "HTTP_AI": {
+            "main": [
+                [
+                    {
+                        "node": "MAP_ParseSuggestions",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "MAP_ParseSuggestions": {
+            "main": [
+                [
+                    {
+                        "node": "HTTP_SaveSuggestion",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "tags": [
+        {
+            "name": "CRM"
+        },
+        {
+            "name": "ai"
+        }
+    ]
+}

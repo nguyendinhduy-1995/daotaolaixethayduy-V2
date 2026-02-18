@@ -1,0 +1,292 @@
+{
+    "name": "[CRM] 08 Landing CRM Zalo Notify",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "landing-lead",
+                "responseMode": "lastNode"
+            },
+            "id": "w08-trigger",
+            "name": "TRG_Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1.1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const body = $input.all()[0].json.body || $input.all()[0].json;\nconst fullName = (body.fullName || '').trim();\nconst phone = (body.phone || '').replace(/\\s+/g, '').trim();\nconst province = (body.province || '').trim();\nconst licenseType = (body.licenseType || 'B2').trim();\nconst isValid = !!fullName && /^0\\d{8,10}$/.test(phone);\nreturn [{ json: { fullName, phone, province, licenseType, isValid } }];"
+            },
+            "id": "w08-validate",
+            "name": "MAP_Validate",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                480,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{ $json.isValid }}",
+                            "value2": true
+                        }
+                    ]
+                }
+            },
+            "id": "w08-valid",
+            "name": "IF_Valid",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                710,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "values": {
+                    "boolean": [
+                        {
+                            "name": "ok",
+                            "value": false
+                        }
+                    ],
+                    "string": [
+                        {
+                            "name": "message",
+                            "value": "Dữ liệu không hợp lệ. Vui lòng kiểm tra lại."
+                        }
+                    ]
+                }
+            },
+            "id": "w08-error",
+            "name": "MAP_Error",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 2,
+            "position": [
+                940,
+                450
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $env.CRM_BASE_URL }}/api/public/lead",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ fullName: $json.fullName, phone: $json.phone, province: $json.province, licenseType: $json.licenseType }) }}",
+                "options": {
+                    "timeout": 10000
+                }
+            },
+            "id": "w08-create",
+            "name": "HTTP_CreateLead",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                940,
+                200
+            ],
+            "retryOnFail": true,
+            "maxTries": 3,
+            "waitBetweenTries": 2000,
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{ $json.ok }}",
+                            "value2": true
+                        }
+                    ]
+                }
+            },
+            "id": "w08-ok",
+            "name": "IF_LeadOk",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                1170,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "chat_id",
+                            "value": "={{ $env.TELEGRAM_CHAT_ID }}"
+                        },
+                        {
+                            "name": "text",
+                            "value": "=🆕 Lead mới từ Landing:\n📌 {{ $node.MAP_Validate.json.fullName }}\n📞 {{ $node.MAP_Validate.json.phone }}\n📍 {{ $node.MAP_Validate.json.province || 'N/A' }}\n🪪 {{ $node.MAP_Validate.json.licenseType }}"
+                        }
+                    ]
+                },
+                "options": {
+                    "timeout": 10000
+                }
+            },
+            "id": "w08-notify",
+            "name": "HTTP_NotifyAdmin",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                1400,
+                100
+            ],
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "values": {
+                    "boolean": [
+                        {
+                            "name": "ok",
+                            "value": true
+                        }
+                    ],
+                    "string": [
+                        {
+                            "name": "message",
+                            "value": "Đã ghi nhận thông tin. Chúng tôi sẽ liên hệ bạn sớm!"
+                        }
+                    ]
+                }
+            },
+            "id": "w08-success",
+            "name": "MAP_SuccessResponse",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 2,
+            "position": [
+                1400,
+                250
+            ]
+        },
+        {
+            "parameters": {
+                "workflowId": "={{ /* S2 Alert Admin */ }}"
+            },
+            "id": "w08-alert",
+            "name": "ALERT_Admin",
+            "type": "n8n-nodes-base.executeWorkflow",
+            "typeVersion": 1,
+            "position": [
+                1400,
+                400
+            ]
+        }
+    ],
+    "connections": {
+        "TRG_Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "MAP_Validate",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "MAP_Validate": {
+            "main": [
+                [
+                    {
+                        "node": "IF_Valid",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "IF_Valid": {
+            "main": [
+                [
+                    {
+                        "node": "HTTP_CreateLead",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "MAP_Error",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "HTTP_CreateLead": {
+            "main": [
+                [
+                    {
+                        "node": "IF_LeadOk",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "IF_LeadOk": {
+            "main": [
+                [
+                    {
+                        "node": "HTTP_NotifyAdmin",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "MAP_SuccessResponse",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "ALERT_Admin",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "tags": [
+        {
+            "name": "CRM"
+        },
+        {
+            "name": "webhook"
+        },
+        {
+            "name": "landing"
+        }
+    ]
+}

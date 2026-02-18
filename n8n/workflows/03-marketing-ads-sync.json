@@ -1,0 +1,289 @@
+{
+    "name": "[CRM] 03 Marketing Ads Sync",
+    "nodes": [
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "cronExpression",
+                            "expression": "0 23 * * *"
+                        }
+                    ]
+                },
+                "options": {
+                    "timezone": "Asia/Ho_Chi_Minh"
+                }
+            },
+            "id": "w03-trigger",
+            "name": "TRG_Schedule",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "values": {
+                    "string": [
+                        {
+                            "name": "dateKey",
+                            "value": "={{ $now.format('yyyy-MM-dd') }}"
+                        }
+                    ]
+                }
+            },
+            "id": "w03-date",
+            "name": "MAP_DateRange",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 2,
+            "position": [
+                480,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "=https://graph.facebook.com/v21.0/act_{{ $env.FB_AD_ACCOUNT_ID }}/insights?date_preset=today&fields=spend,actions,impressions,clicks&access_token={{ $env.FB_ACCESS_TOKEN }}",
+                "options": {
+                    "timeout": 30000
+                }
+            },
+            "id": "w03-fb",
+            "name": "HTTP_FBInsights",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                710,
+                300
+            ],
+            "retryOnFail": true,
+            "maxTries": 3,
+            "waitBetweenTries": 10000
+        },
+        {
+            "parameters": {
+                "jsCode": "const data = $input.all()[0].json;\nconst insights = data.data || [];\nif (!insights.length) return [{ json: { hasData: false } }];\nconst row = insights[0];\nconst spend = parseFloat(row.spend || '0');\nconst spendVnd = Math.round(spend * 25400);\nlet messages = 0;\nif (row.actions) {\n  const msgAction = row.actions.find(a => a.action_type?.includes('messaging'));\n  if (msgAction) messages = parseInt(msgAction.value || '0');\n}\nreturn [{ json: {\n  hasData: true,\n  date: $input.all()[0].json.dateKey || new Date().toISOString().slice(0,10),\n  source: 'meta',\n  spendVnd,\n  messages,\n  branchCode: 'Q1',\n  meta: { impressions: row.impressions, clicks: row.clicks, spend: row.spend }\n}}];"
+            },
+            "id": "w03-transform",
+            "name": "MAP_Transform",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                940,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{ $json.hasData }}",
+                            "value2": true
+                        }
+                    ]
+                }
+            },
+            "id": "w03-check",
+            "name": "IF_HasData",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                1170,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $env.CRM_BASE_URL }}/api/marketing/report",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        },
+                        {
+                            "name": "x-marketing-secret",
+                            "value": "={{ $env.MARKETING_SECRET }}"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ date: $json.date, source: $json.source, spendVnd: $json.spendVnd, messages: $json.messages, branchCode: $json.branchCode, meta: $json.meta }) }}",
+                "options": {
+                    "timeout": 15000
+                }
+            },
+            "id": "w03-report",
+            "name": "HTTP_MarketingReport",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                1400,
+                200
+            ],
+            "retryOnFail": true,
+            "maxTries": 3,
+            "waitBetweenTries": 5000,
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{ $json.ok }}",
+                            "value2": true
+                        }
+                    ]
+                }
+            },
+            "id": "w03-ok",
+            "name": "IF_ReportOk",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                1630,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "values": {
+                    "string": [
+                        {
+                            "name": "status",
+                            "value": "SUCCESS"
+                        }
+                    ]
+                }
+            },
+            "id": "w03-log",
+            "name": "LOG_Success",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 2,
+            "position": [
+                1860,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "workflowId": "={{ /* S2 Alert Admin */ }}"
+            },
+            "id": "w03-alert",
+            "name": "ALERT_Admin",
+            "type": "n8n-nodes-base.executeWorkflow",
+            "typeVersion": 1,
+            "position": [
+                1860,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "TRG_Schedule": {
+            "main": [
+                [
+                    {
+                        "node": "MAP_DateRange",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "MAP_DateRange": {
+            "main": [
+                [
+                    {
+                        "node": "HTTP_FBInsights",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "HTTP_FBInsights": {
+            "main": [
+                [
+                    {
+                        "node": "MAP_Transform",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "MAP_Transform": {
+            "main": [
+                [
+                    {
+                        "node": "IF_HasData",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "IF_HasData": {
+            "main": [
+                [
+                    {
+                        "node": "HTTP_MarketingReport",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                []
+            ]
+        },
+        "HTTP_MarketingReport": {
+            "main": [
+                [
+                    {
+                        "node": "IF_ReportOk",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "IF_ReportOk": {
+            "main": [
+                [
+                    {
+                        "node": "LOG_Success",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "ALERT_Admin",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "tags": [
+        {
+            "name": "CRM"
+        },
+        {
+            "name": "marketing"
+        }
+    ]
+}

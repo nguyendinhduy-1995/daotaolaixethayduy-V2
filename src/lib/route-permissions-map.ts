@@ -145,6 +145,7 @@ export const ROUTE_PERMISSION_RULES: RoutePermissionRule[] = [
   { method: "GET", pattern: /^\/api\/admin\/ops\/pulse$/, module: "ops_ai_hr", action: "VIEW" },
   { method: "POST", pattern: /^\/api\/admin\/ops\/pulse$/, module: "ops_ai_hr", action: "RUN" },
   { method: "GET", pattern: /^\/api\/admin\/n8n\/workflows$/, module: "ops_n8n", action: "VIEW" },
+  { method: "GET", pattern: /^\/api\/admin\/n8n\/workflows\/[^/]+$/, module: "ops_n8n", action: "VIEW" },
   { method: "GET", pattern: /^\/api\/admin\/automation\/overview$/, module: "ops_n8n", action: "VIEW" },
   { method: "GET", pattern: /^\/api\/admin\/automation\/jobs$/, module: "ops_n8n", action: "VIEW" },
   { method: "GET", pattern: /^\/api\/admin\/automation\/logs$/, module: "ops_n8n", action: "VIEW" },

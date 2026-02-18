@@ -1,0 +1,276 @@
+{
+    "name": "[CRM] 05 Outbound Message Worker",
+    "nodes": [
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "minutes",
+                            "minutesInterval": 5
+                        }
+                    ]
+                },
+                "options": {
+                    "timezone": "Asia/Ho_Chi_Minh"
+                }
+            },
+            "id": "w05-trigger",
+            "name": "TRG_Interval",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $env.CRM_BASE_URL }}/api/worker/outbound",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        },
+                        {
+                            "name": "x-worker-secret",
+                            "value": "={{ $env.WORKER_SECRET }}"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "{\"batchSize\":20,\"concurrency\":5,\"dryRun\":false,\"retryFailedOnly\":false}",
+                "options": {
+                    "timeout": 30000
+                }
+            },
+            "id": "w05-http",
+            "name": "HTTP_Worker",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                480,
+                300
+            ],
+            "retryOnFail": true,
+            "maxTries": 3,
+            "waitBetweenTries": 5000,
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "number": [
+                        {
+                            "value1": "={{ $json.processed || 0 }}",
+                            "operation": "larger",
+                            "value2": 0
+                        }
+                    ]
+                }
+            },
+            "id": "w05-check",
+            "name": "IF_HasProcessed",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                710,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "number": [
+                        {
+                            "value1": "={{ $json.failed || 0 }}",
+                            "operation": "larger",
+                            "value2": 0
+                        }
+                    ]
+                }
+            },
+            "id": "w05-fail-check",
+            "name": "IF_HasFailed",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                940,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "values": {
+                    "string": [
+                        {
+                            "name": "workflowName",
+                            "value": "05 Outbound Worker"
+                        },
+                        {
+                            "name": "endpoint",
+                            "value": "/api/worker/outbound"
+                        },
+                        {
+                            "name": "error",
+                            "value": "={{ $json.failed }} tin nhắn gửi lỗi"
+                        }
+                    ],
+                    "number": [
+                        {
+                            "name": "statusCode",
+                            "value": 200
+                        }
+                    ]
+                }
+            },
+            "id": "w05-alert-ctx",
+            "name": "MAP_AlertContext",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 2,
+            "position": [
+                1170,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "workflowId": "={{ /* S2 Alert Admin */ }}"
+            },
+            "id": "w05-alert",
+            "name": "ALERT_Admin",
+            "type": "n8n-nodes-base.executeWorkflow",
+            "typeVersion": 1,
+            "position": [
+                1400,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "values": {
+                    "string": [
+                        {
+                            "name": "status",
+                            "value": "SUCCESS"
+                        }
+                    ]
+                }
+            },
+            "id": "w05-log",
+            "name": "LOG_Success",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 2,
+            "position": [
+                1170,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "values": {
+                    "string": [
+                        {
+                            "name": "status",
+                            "value": "IDLE"
+                        }
+                    ]
+                }
+            },
+            "id": "w05-idle",
+            "name": "LOG_Idle",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 2,
+            "position": [
+                940,
+                450
+            ]
+        }
+    ],
+    "connections": {
+        "TRG_Interval": {
+            "main": [
+                [
+                    {
+                        "node": "HTTP_Worker",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "HTTP_Worker": {
+            "main": [
+                [
+                    {
+                        "node": "IF_HasProcessed",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "IF_HasProcessed": {
+            "main": [
+                [
+                    {
+                        "node": "IF_HasFailed",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "LOG_Idle",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "IF_HasFailed": {
+            "main": [
+                [
+                    {
+                        "node": "MAP_AlertContext",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "LOG_Success",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "MAP_AlertContext": {
+            "main": [
+                [
+                    {
+                        "node": "ALERT_Admin",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "tags": [
+        {
+            "name": "CRM"
+        },
+        {
+            "name": "worker"
+        }
+    ]
+}

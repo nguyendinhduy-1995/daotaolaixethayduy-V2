@@ -26,6 +26,7 @@
     "prisma:generate": "prisma generate",
     "prisma:validate": "prisma validate",
     "verify": "node scripts/verify-gate.mjs",
+    "n8n:verify": "bash scripts/simulate-n8n.sh",
     "worker:outbound:dry": "bash scripts/worker-outbound.sh dry",
     "worker:outbound": "bash scripts/worker-outbound.sh run",
     "log:session": "node scripts/log-session.mjs",
@@ -43,7 +44,9 @@
     "pg": "^8.18.0",
     "prisma": "^7.4.0",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",

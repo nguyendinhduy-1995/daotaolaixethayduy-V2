@@ -1,0 +1,369 @@
+{
+    "name": "[CRM] 02 Facebook Lead Capture",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "facebook-lead",
+                "responseMode": "lastNode"
+            },
+            "id": "w02-trigger",
+            "name": "TRG_Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1.1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "string": [
+                        {
+                            "value1": "={{ $json.query?.['hub.mode'] }}",
+                            "operation": "equals",
+                            "value2": "subscribe"
+                        }
+                    ]
+                }
+            },
+            "id": "w02-verify",
+            "name": "IF_VerifyOrEvent",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                480,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "values": {
+                    "string": [
+                        {
+                            "name": "challenge",
+                            "value": "={{ $json.query?.['hub.challenge'] }}"
+                        }
+                    ]
+                }
+            },
+            "id": "w02-challenge",
+            "name": "MAP_Challenge",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 2,
+            "position": [
+                710,
+                150
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const entry = $input.all()[0].json.body?.entry?.[0];\nconst change = entry?.changes?.[0]?.value;\nreturn [{ json: { leadgenId: change?.leadgen_id || '', pageId: change?.page_id || '' } }];"
+            },
+            "id": "w02-extract",
+            "name": "MAP_ExtractLeadgenId",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                710,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "=https://graph.facebook.com/v21.0/{{ $json.leadgenId }}?access_token={{ $env.FB_PAGE_TOKEN }}",
+                "options": {
+                    "timeout": 15000
+                }
+            },
+            "id": "w02-fb-get",
+            "name": "HTTP_GetLeadData",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                940,
+                400
+            ],
+            "retryOnFail": true,
+            "maxTries": 2,
+            "waitBetweenTries": 3000
+        },
+        {
+            "parameters": {
+                "jsCode": "const data = $input.all()[0].json;\nconst fields = {};\nif (data.field_data) {\n  for (const f of data.field_data) {\n    if (f.name === 'full_name') fields.fullName = (f.values?.[0] || '').trim();\n    if (f.name === 'phone_number') fields.phone = (f.values?.[0] || '').replace(/\\s+/g, '').replace(/^\\+84/, '0');\n    if (f.name === 'city') fields.province = (f.values?.[0] || '').trim();\n  }\n}\nfields.licenseType = fields.licenseType || 'B2';\nfields.isValid = /^0\\d{8,10}$/.test(fields.phone || '');\nreturn [{ json: fields }];"
+            },
+            "id": "w02-transform",
+            "name": "MAP_TransformFields",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1170,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{ $json.isValid }}",
+                            "value2": true
+                        }
+                    ]
+                }
+            },
+            "id": "w02-valid",
+            "name": "IF_HasPhone",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                1400,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $env.CRM_BASE_URL }}/api/public/lead",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ fullName: $json.fullName, phone: $json.phone, province: $json.province, licenseType: $json.licenseType }) }}",
+                "options": {
+                    "timeout": 15000
+                }
+            },
+            "id": "w02-create",
+            "name": "HTTP_CreateLead",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                1630,
+                300
+            ],
+            "retryOnFail": true,
+            "maxTries": 3,
+            "waitBetweenTries": 2000
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{ $json.ok }}",
+                            "value2": true
+                        }
+                    ]
+                }
+            },
+            "id": "w02-lead-ok",
+            "name": "IF_LeadOk",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                1860,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "workflowId": "={{ /* S1 Get Bearer Token */ }}"
+            },
+            "id": "w02-auth",
+            "name": "AUTH_GetToken",
+            "type": "n8n-nodes-base.executeWorkflow",
+            "typeVersion": 1,
+            "position": [
+                2090,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $env.CRM_BASE_URL }}/api/leads/auto-assign",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        },
+                        {
+                            "name": "Authorization",
+                            "value": "=Bearer {{ $json.bearerToken }}"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "{\"strategy\":\"round_robin\",\"filters\":{\"status\":\"HAS_PHONE\"}}",
+                "options": {
+                    "timeout": 15000
+                }
+            },
+            "id": "w02-assign",
+            "name": "HTTP_AutoAssign",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                2320,
+                200
+            ],
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "workflowId": "={{ /* S2 Alert Admin */ }}"
+            },
+            "id": "w02-alert",
+            "name": "ALERT_Admin",
+            "type": "n8n-nodes-base.executeWorkflow",
+            "typeVersion": 1,
+            "position": [
+                2090,
+                450
+            ]
+        }
+    ],
+    "connections": {
+        "TRG_Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "IF_VerifyOrEvent",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "IF_VerifyOrEvent": {
+            "main": [
+                [
+                    {
+                        "node": "MAP_Challenge",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "MAP_ExtractLeadgenId",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "MAP_ExtractLeadgenId": {
+            "main": [
+                [
+                    {
+                        "node": "HTTP_GetLeadData",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "HTTP_GetLeadData": {
+            "main": [
+                [
+                    {
+                        "node": "MAP_TransformFields",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "MAP_TransformFields": {
+            "main": [
+                [
+                    {
+                        "node": "IF_HasPhone",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "IF_HasPhone": {
+            "main": [
+                [
+                    {
+                        "node": "HTTP_CreateLead",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                []
+            ]
+        },
+        "HTTP_CreateLead": {
+            "main": [
+                [
+                    {
+                        "node": "IF_LeadOk",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "IF_LeadOk": {
+            "main": [
+                [
+                    {
+                        "node": "AUTH_GetToken",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "ALERT_Admin",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AUTH_GetToken": {
+            "main": [
+                [
+                    {
+                        "node": "HTTP_AutoAssign",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "tags": [
+        {
+            "name": "CRM"
+        },
+        {
+            "name": "webhook"
+        },
+        {
+            "name": "facebook"
+        }
+    ]
+}
