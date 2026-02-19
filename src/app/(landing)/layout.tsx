@@ -51,6 +51,18 @@ export default function LandingLayout({
                     alt="" />
             </noscript>
 
+            {/* Google Analytics (gtag.js) */}
+            <Script
+                src="https://www.googletagmanager.com/gtag/js?id=G-Y66W00G0HS"
+                strategy="afterInteractive"
+            />
+            <Script id="google-analytics" strategy="afterInteractive">{`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', 'G-Y66W00G0HS');
+            `}</Script>
+
             <TrackingScripts site="LANDING" />
             {children}
             <TrackingScriptsBottom site="LANDING" />
