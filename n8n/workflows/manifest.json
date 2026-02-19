@@ -1,16 +1,16 @@
 {
-    "version": "1.0.0",
-    "lastUpdatedAt": "2026-02-19T10:40:00+07:00",
+    "generatedAt": "2026-02-19T11:00:00+07:00",
+    "timezone": "Asia/Ho_Chi_Minh",
     "n8nDomain": "https://n8n.thayduydaotaolaixe.com",
     "crmDomain": "https://thayduydaotaolaixe.com",
     "workflows": [
         {
             "id": "rM8NCtXchLsIhLxG",
-            "name": "[CRM] S1 Get Bearer Token",
-            "file": "s1-get-bearer-token.json",
-            "version": "v1.0.0",
-            "lastUpdatedAt": "2026-02-19",
-            "trigger": "sub-workflow",
+            "name": "S1 Get Bearer Token",
+            "file": "n8n/workflows/s1-get-bearer-token.json",
+            "version": "1.0.0",
+            "type": "subflow",
+            "trigger": "none",
             "schedule": null,
             "endpoints": [
                 "POST /api/auth/login"
@@ -23,11 +23,11 @@
         },
         {
             "id": "naX5gYVTYw9cz3dA",
-            "name": "[CRM] S2 Alert Admin",
-            "file": "s2-alert-admin.json",
-            "version": "v1.0.0",
-            "lastUpdatedAt": "2026-02-19",
-            "trigger": "sub-workflow",
+            "name": "S2 Alert Admin",
+            "file": "n8n/workflows/s2-alert-admin.json",
+            "version": "1.0.0",
+            "type": "subflow",
+            "trigger": "none",
             "schedule": null,
             "endpoints": [
                 "Telegram Bot API"
@@ -39,23 +39,23 @@
         },
         {
             "id": "e1WhICIEbwErc0ej",
-            "name": "[CRM] S3 Standard Logger",
-            "file": "s3-standard-logger.json",
-            "version": "v1.0.0",
-            "lastUpdatedAt": "2026-02-19",
-            "trigger": "sub-workflow",
+            "name": "S3 Standard Logger",
+            "file": "n8n/workflows/s3-standard-logger.json",
+            "version": "1.0.0",
+            "type": "subflow",
+            "trigger": "none",
             "schedule": null,
             "endpoints": [],
             "requiredEnvKeys": []
         },
         {
             "id": "3dvziGY3AdYINrob",
-            "name": "[CRM] 01 Daily Cron Master",
-            "file": "01-daily-cron-master.json",
-            "version": "v1.0.0",
-            "lastUpdatedAt": "2026-02-19",
+            "name": "01 Daily Cron Master",
+            "file": "n8n/workflows/01-daily-cron-master.json",
+            "version": "1.0.0",
+            "type": "cron",
             "trigger": "cron",
-            "schedule": "0 6 * * * (06:00 AM VN)",
+            "schedule": "06:00",
             "endpoints": [
                 "POST /api/cron/daily"
             ],
@@ -66,16 +66,16 @@
         },
         {
             "id": "d4VbLHU3Li2ORnD7",
-            "name": "[CRM] 02 Facebook Lead Capture",
-            "file": "02-facebook-lead-capture.json",
-            "version": "v1.0.0",
-            "lastUpdatedAt": "2026-02-19",
+            "name": "02 Facebook Lead Capture",
+            "file": "n8n/workflows/02-facebook-lead-capture.json",
+            "version": "1.0.0",
+            "type": "webhook",
             "trigger": "webhook",
             "schedule": null,
             "endpoints": [
                 "POST /api/public/lead",
                 "POST /api/leads/auto-assign",
-                "GET Graph API"
+                "GET graph.facebook.com/v18.0/{leadgen_id}"
             ],
             "requiredEnvKeys": [
                 "CRM_BASE_URL",
@@ -86,12 +86,12 @@
         },
         {
             "id": "aT7zN4h6T0ziCOHa",
-            "name": "[CRM] 03 Marketing Ads Sync",
-            "file": "03-marketing-ads-sync.json",
-            "version": "v1.0.0",
-            "lastUpdatedAt": "2026-02-19",
+            "name": "03 Marketing Ads Sync",
+            "file": "n8n/workflows/03-marketing-ads-sync.json",
+            "version": "1.0.0",
+            "type": "cron",
             "trigger": "cron",
-            "schedule": "0 23 * * * (23:00 VN)",
+            "schedule": "23:00",
             "endpoints": [
                 "POST /api/marketing/report"
             ],
@@ -102,12 +102,12 @@
         },
         {
             "id": "mA40Z49COZ01Pm0d",
-            "name": "[CRM] 04 AI KPI Coach",
-            "file": "04-ai-kpi-coach.json",
-            "version": "v1.0.0",
-            "lastUpdatedAt": "2026-02-19",
+            "name": "04 AI KPI Coach",
+            "file": "n8n/workflows/04-ai-kpi-coach.json",
+            "version": "1.0.0",
+            "type": "cron",
             "trigger": "cron",
-            "schedule": "0 7 * * * (07:00 AM VN)",
+            "schedule": "07:00",
             "endpoints": [
                 "POST /api/ai/suggestions",
                 "GET /api/kpi/targets"
@@ -120,12 +120,12 @@
         },
         {
             "id": "49Aw1IvGmLG611PI",
-            "name": "[CRM] 05 Outbound Message Worker",
-            "file": "05-outbound-message-worker.json",
-            "version": "v1.0.0",
-            "lastUpdatedAt": "2026-02-19",
+            "name": "05 Outbound Message Worker",
+            "file": "n8n/workflows/05-outbound-message-worker.json",
+            "version": "1.0.0",
+            "type": "cron",
             "trigger": "cron",
-            "schedule": "*/5 * * * * (mỗi 5 phút)",
+            "schedule": "*/5 * * * *",
             "endpoints": [
                 "POST /api/worker/outbound"
             ],
@@ -136,12 +136,12 @@
         },
         {
             "id": "ywxhG2irMLrxZf7V",
-            "name": "[CRM] 06 Ops Pulse Report",
-            "file": "06-ops-pulse-report.json",
-            "version": "v1.0.0",
-            "lastUpdatedAt": "2026-02-19",
+            "name": "06 Ops Pulse Report",
+            "file": "n8n/workflows/06-ops-pulse-report.json",
+            "version": "1.0.0",
+            "type": "cron",
             "trigger": "cron",
-            "schedule": "0 21 * * * (21:00 VN)",
+            "schedule": "21:00",
             "endpoints": [
                 "POST /api/ops/pulse"
             ],
@@ -152,12 +152,12 @@
         },
         {
             "id": "s5QxHfy1AayJngqp",
-            "name": "[CRM] 07 Stale Lead Alert & Auto-Assign",
-            "file": "07-stale-lead-alert-auto-assign.json",
-            "version": "v1.0.0",
-            "lastUpdatedAt": "2026-02-19",
+            "name": "07 Stale Lead Alert & Auto-Assign",
+            "file": "n8n/workflows/07-stale-lead-alert-auto-assign.json",
+            "version": "1.0.0",
+            "type": "cron",
             "trigger": "cron",
-            "schedule": "0 8 * * * (08:00 AM VN)",
+            "schedule": "08:00",
             "endpoints": [
                 "GET /api/leads/stale",
                 "POST /api/leads/auto-assign"
@@ -170,10 +170,10 @@
         },
         {
             "id": "Bd7LpHje2XQPPLuc",
-            "name": "[CRM] 08 Landing CRM Zalo Notify",
-            "file": "08-landing-crm-zalo-notify.json",
-            "version": "v1.0.0",
-            "lastUpdatedAt": "2026-02-19",
+            "name": "08 Landing CRM Zalo Notify",
+            "file": "n8n/workflows/08-landing-crm-zalo-notify.json",
+            "version": "1.0.0",
+            "type": "webhook",
             "trigger": "webhook",
             "schedule": null,
             "endpoints": [

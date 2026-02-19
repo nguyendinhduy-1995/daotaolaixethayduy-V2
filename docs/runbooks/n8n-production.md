@@ -1,890 +1,575 @@
-# N8N Production Runbook — CRM Thầy Duy
+# N8N Production Runbook — thayduydaotaolaixe
 
-> **As-built documentation** — Tài liệu vận hành production cho hệ thống N8N automation.
-> Cập nhật: 2026-02-19 | Version: v1.0.0
+## 0. Thông tin hệ thống
 
----
-
-## B1. Tổng quan hệ thống
-
-| Thuộc tính | Giá trị |
-|------------|---------|
-| Domain N8N | `https://n8n.thayduydaotaolaixe.com` |
-| N8N Image | `n8nio/n8n:latest` |
+| Key | Value |
+|-----|-------|
+| Domain | `https://n8n.thayduydaotaolaixe.com/` |
 | Timezone | `Asia/Ho_Chi_Minh` |
-| Webhook Base URL | `https://n8n.thayduydaotaolaixe.com/` |
+| n8n image tag | `n8nio/n8n:latest` |
+| Deploy path | `/opt/n8n` |
+| WEBHOOK_URL | `https://n8n.thayduydaotaolaixe.com/` |
 | CRM Domain | `https://thayduydaotaolaixe.com` |
-| Database | PostgreSQL 16 (container `n8n-postgres`) |
 | Docker Compose | `/opt/n8n/docker-compose.yml` |
 | Docker Network | `thayduy_default` (shared with CRM) |
+| n8n Database | PostgreSQL 16 (container `n8n-postgres`) |
+| CRM Database | PostgreSQL 16 (container `thayduy-postgres`) |
 
-### Environment Variables (keys only)
+## 1. Environment Variables (chỉ KEY, không ghi VALUE)
 
-| Variable | Mô tả |
-|----------|--------|
-| `CRM_BASE_URL` | URL CRM server |
-| `CRM_EMAIL` | Email admin để lấy Bearer token |
-| `CRM_PASSWORD` | Password admin |
-| `CRON_SECRET` | Secret cho `/api/cron/daily` |
-| `WORKER_SECRET` | Secret cho `/api/worker/outbound` |
-| `OPS_SECRET` | Secret cho `/api/ops/pulse` |
-| `MARKETING_SECRET` | Secret cho `/api/marketing/report` |
-| `SERVICE_TOKEN` | Token cho service-to-service calls |
-| `TELEGRAM_BOT_TOKEN` | Token Telegram Bot (alert) |
-| `TELEGRAM_CHAT_ID` | Chat ID group admin |
-| `FB_PAGE_TOKEN` | Facebook Page access token |
-| `ZALO_OA_ACCESS_TOKEN` | Zalo OA access token |
-| `N8N_ENCRYPTION_KEY` | N8N encryption key |
-| `POSTGRES_PASSWORD` | N8N database password |
+| Key | Mô tả | Bắt buộc |
+|-----|--------|----------|
+| `CRM_BASE_URL` | URL CRM server | ✅ |
+| `CRM_EMAIL` | Email admin để lấy Bearer token | ✅ |
+| `CRM_PASSWORD` | Password admin | ✅ |
+| `CRON_SECRET` | Secret cho `POST /api/cron/daily` | ✅ |
+| `WORKER_SECRET` | Secret cho `POST /api/worker/outbound` | ✅ |
+| `OPS_SECRET` | Secret cho `POST /api/ops/pulse` | ✅ |
+| `MARKETING_SECRET` | Secret cho `POST /api/marketing/report` | ✅ |
+| `SERVICE_TOKEN` | Token service-to-service | Optional |
+| `TELEGRAM_BOT_TOKEN` | Token Telegram Bot (alert S2) | Optional |
+| `TELEGRAM_CHAT_ID` | Chat ID group admin | Optional |
+| `FB_PAGE_TOKEN` | Facebook Page access token | Optional (W02) |
+| `ZALO_OA_ACCESS_TOKEN` | Zalo OA access token | Optional (W05/W08) |
 
 > [!CAUTION]
-> **Tuyệt đối KHÔNG hardcode giá trị secret trong workflow JSON.** Luôn dùng `{{ $env.VAR_NAME }}`.
+> Tuyệt đối **KHÔNG hardcode** value trong workflow JSON. Luôn dùng `{{ $env.VAR_NAME }}`.
+> File `.env` trên server: **không dùng dấu ngoặc kép** bao quanh giá trị (Docker `--env-file` sẽ truyền literal quotes).
 
-### Danh sách workflows đang chạy
+## 2. Workflow Catalog (1 dòng / 1 workflow)
 
-| # | Workflow | ID | Trigger | Schedule (VN) | Status |
-|---|---------|-----|---------|---------------|--------|
-| S1 | Get Bearer Token | `rM8NCtXchLsIhLxG` | Sub-workflow | — | 🟢 Active |
-| S2 | Alert Admin | `naX5gYVTYw9cz3dA` | Sub-workflow | — | 🟢 Active |
-| S3 | Standard Logger | `e1WhICIEbwErc0ej` | Sub-workflow | — | 🟢 Active |
-| 01 | Daily Cron Master | `3dvziGY3AdYINrob` | Cron | 06:00 hàng ngày | 🟢 Active |
-| 02 | Facebook Lead Capture | `d4VbLHU3Li2ORnD7` | Webhook | Realtime | 🟢 Active |
-| 03 | Marketing Ads Sync | `aT7zN4h6T0ziCOHa` | Cron | 23:00 hàng ngày | 🟢 Active |
-| 04 | AI KPI Coach | `mA40Z49COZ01Pm0d` | Cron | 07:00 hàng ngày | 🟢 Active |
-| 05 | Outbound Message Worker | `49Aw1IvGmLG611PI` | Cron | Mỗi 5 phút | 🟢 Active |
-| 06 | Ops Pulse Report | `ywxhG2irMLrxZf7V` | Cron | 21:00 hàng ngày | 🟢 Active |
-| 07 | Stale Lead Alert | `s5QxHfy1AayJngqp` | Cron | 08:00 hàng ngày | 🟢 Active |
-| 08 | Landing CRM Zalo | `Bd7LpHje2XQPPLuc` | Webhook | Realtime | 🟢 Active |
+| Name | Type | Schedule | Calls (CRM endpoints) | Required Env Keys | Idempotency | Retry/Backoff | Alerts |
+|------|------|----------|----------------------|-------------------|-------------|---------------|--------|
+| S1 Get Bearer Token | subflow | n/a | `POST /api/auth/login` | CRM_BASE_URL, CRM_EMAIL, CRM_PASSWORD | n/a | 3× 3s exp | — |
+| S2 Alert Admin | subflow | n/a | Telegram Bot API | TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID | n/a | 2× 3s | — |
+| S3 Standard Logger | subflow | n/a | Console log (structured) | — | correlationId | n/a | — |
+| 01 Daily Cron Master | cron | 06:00 | `POST /api/cron/daily` | CRM_BASE_URL, CRON_SECRET | dateKey + correlationId | 3× 5s exp | S2 |
+| 02 Facebook Lead Capture | webhook | realtime | `POST /api/public/lead`, `POST /api/leads/auto-assign`, FB Graph API | CRM_BASE_URL, CRM_EMAIL, CRM_PASSWORD, FB_PAGE_TOKEN | phone (upsert) | 3× 2s exp | S2 |
+| 03 Marketing Ads Sync | cron | 23:00 | `POST /api/marketing/report` | CRM_BASE_URL, MARKETING_SECRET | date + source | 3× 5s exp | S2 |
+| 04 AI KPI Coach | cron | 07:00 | `POST /api/ai/suggestions`, `GET /api/kpi/targets` | CRM_BASE_URL, CRM_EMAIL, CRM_PASSWORD | dateKey | 3× 5s exp | S2 |
+| 05 Outbound Message Worker | cron | */5 min | `POST /api/worker/outbound` | CRM_BASE_URL, WORKER_SECRET | — | 3× backoff | S2 |
+| 06 Ops Pulse Report | cron | 21:00 | `POST /api/ops/pulse` | CRM_BASE_URL, OPS_SECRET | dateKey + role | 3× 5s exp | S2 |
+| 07 Stale Lead Alert & Auto-Assign | cron | 08:00 | `GET /api/leads/stale`, `POST /api/leads/auto-assign` | CRM_BASE_URL, CRM_EMAIL, CRM_PASSWORD | — | 3× 5s exp | S2 |
+| 08 Landing CRM Zalo Notify | webhook | realtime | `POST /api/public/lead` | CRM_BASE_URL, ZALO_OA_ACCESS_TOKEN | phone (upsert) | 3× 2s exp | S2 |
 
-### Sơ đồ luồng tổng
+### Production IDs (n8n)
+
+| Workflow | n8n ID | Status |
+|----------|--------|--------|
+| S1 Get Bearer Token | `rM8NCtXchLsIhLxG` | 🟢 Published |
+| S2 Alert Admin | `naX5gYVTYw9cz3dA` | 🟢 Published |
+| S3 Standard Logger | `e1WhICIEbwErc0ej` | 🟢 Published |
+| 01 Daily Cron Master | `3dvziGY3AdYINrob` | 🟢 Published |
+| 02 Facebook Lead Capture | `d4VbLHU3Li2ORnD7` | 🟢 Published |
+| 03 Marketing Ads Sync | `aT7zN4h6T0ziCOHa` | 🟢 Published |
+| 04 AI KPI Coach | `mA40Z49COZ01Pm0d` | 🟢 Published |
+| 05 Outbound Message Worker | `49Aw1IvGmLG611PI` | 🟢 Published |
+| 06 Ops Pulse Report | `ywxhG2irMLrxZf7V` | 🟢 Published |
+| 07 Stale Lead Alert | `s5QxHfy1AayJngqp` | 🟢 Published |
+| 08 Landing CRM Zalo Notify | `Bd7LpHje2XQPPLuc` | 🟢 Published |
+
+## 3. Tổng sơ đồ luồng (Mermaid)
 
 ```mermaid
-graph TB
-    subgraph "N8N Server"
-        direction TB
-        S1["S1: Get Bearer Token"]
-        S2["S2: Alert Admin"]
-        S3["S3: Standard Logger"]
-        W1["01 Daily Cron 06:00"]
-        W2["02 FB Lead Webhook"]
-        W3["03 Marketing 23:00"]
-        W4["04 AI KPI 07:00"]
-        W5["05 Worker 5min"]
-        W6["06 Ops Pulse 21:00"]
-        W7["07 Stale Lead 08:00"]
-        W8["08 Landing Webhook"]
+flowchart LR
+    subgraph N8N["N8N Server"]
+        S1["S1 Get Bearer Token"]
+        S2["S2 Alert Admin"]
+        S3["S3 Standard Logger"]
+        W01["01 Cron 06:00"]
+        W02["02 FB Webhook"]
+        W03["03 Marketing 23:00"]
+        W04["04 AI KPI 07:00"]
+        W05["05 Worker */5min"]
+        W06["06 Ops Pulse 21:00"]
+        W07["07 Stale Lead 08:00"]
+        W08["08 Landing Webhook"]
     end
 
-    subgraph "CRM Server"
-        API["API Layer"]
+    subgraph CRM["CRM Server"]
+        API["REST API"]
         DB[("PostgreSQL")]
     end
 
-    subgraph "External"
+    subgraph EXT["External"]
         FB["Facebook Ads"]
         ZALO["Zalo OA"]
         AI["OpenAI"]
-        TG["Telegram Bot"]
+        TG["Telegram"]
     end
 
-    W1 -->|x-cron-secret| API
-    W2 -->|public| API
-    W3 -->|x-marketing-secret| API
-    W4 -->|Bearer token| API
-    W5 -->|x-worker-secret| API
-    W6 -->|x-ops-secret| API
-    W7 -->|Bearer token| API
-    W8 -->|public| API
+    W01 -->|x-cron-secret| API
+    W02 -->|public + Bearer| API
+    W03 -->|x-marketing-secret| API
+    W04 -->|Bearer| API
+    W05 -->|x-worker-secret| API
+    W06 -->|x-ops-secret| API
+    W07 -->|Bearer| API
+    W08 -->|public| API
     API --> DB
 
-    FB --> W2
-    FB --> W3
-    W4 --> AI
-    W5 --> ZALO
-    W7 --> ZALO
-    W8 --> ZALO
+    FB -->|webhook| W02
+    FB -->|ads API| W03
+    W04 --> AI
+    W05 --> ZALO
+    W08 --> ZALO
 
-    W1 -.-> S2
-    W3 -.-> S2
-    W4 -.-> S1
-    W7 -.-> S1
+    W01 -.->|on fail| S2
+    W03 -.->|on fail| S2
+    W04 -.-> S1
+    W07 -.-> S1
     S2 -.-> TG
+    W01 -.-> S3
 ```
 
 ---
 
-## B2. Workflow Catalog
-
-| Workflow Name | Trigger | Schedule (VN) | Endpoints CRM | Secrets Required | Idempotency Key | Retry Policy | Alert Channel | Owner |
-|--------------|---------|---------------|---------------|-----------------|-----------------|-------------|---------------|-------|
-| S1 Get Bearer Token | sub-workflow | — | `POST /api/auth/login` | CRM_EMAIL, CRM_PASSWORD | — | 3 retries, 3s backoff | — | DevOps |
-| S2 Alert Admin | sub-workflow | — | Telegram Bot API | TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID | — | 2 retries, 3s backoff | — | DevOps |
-| S3 Standard Logger | sub-workflow | — | Console log | — | correlationId | — | — | DevOps |
-| 01 Daily Cron Master | cron | 06:00 | `POST /api/cron/daily` | CRON_SECRET | dateKey | 3 retries, 5s backoff | Telegram | Admin |
-| 02 Facebook Lead Capture | webhook | realtime | `POST /api/public/lead`, `POST /api/leads/auto-assign` | FB_PAGE_TOKEN, CRM_EMAIL, CRM_PASSWORD | leadgenId / phone | 3 retries, 2s backoff | Telegram | Admin |
-| 03 Marketing Ads Sync | cron | 23:00 | `POST /api/marketing/report` | MARKETING_SECRET | date + source | 3 retries, 5s backoff | Telegram | Admin |
-| 04 AI KPI Coach | cron | 07:00 | `POST /api/ai/suggestions`, `GET /api/kpi/targets` | CRM_EMAIL, CRM_PASSWORD | dateKey | 3 retries, 5s backoff | Telegram | Admin |
-| 05 Outbound Worker | cron | */5 min | `POST /api/worker/outbound` | WORKER_SECRET | — | 3 retries, backoff | Telegram | Admin |
-| 06 Ops Pulse Report | cron | 21:00 | `POST /api/ops/pulse` | OPS_SECRET | dateKey + role | 3 retries, 5s backoff | Telegram | Admin |
-| 07 Stale Lead Alert | cron | 08:00 | `GET /api/leads/stale`, `POST /api/leads/auto-assign` | CRM_EMAIL, CRM_PASSWORD | — | 3 retries, 5s backoff | Telegram | Admin |
-| 08 Landing Webhook | webhook | realtime | `POST /api/public/lead` | ZALO_OA_ACCESS_TOKEN | phone | 3 retries, 2s backoff | Telegram | Admin |
+## 4. Runbook theo từng workflow
 
 ---
 
-## B3. Note chi tiết từng workflow
+### 01 Daily Cron Master
 
----
+#### 4.1 Mục tiêu
+Mỗi sáng 06:00 gọi CRM trigger daily jobs: notification, cleanup, stats aggregation.
 
-### S1: Get Bearer Token
+**KPI**: Chạy 100% hàng ngày, duration < 30s.
 
-#### 1) Mục tiêu & Output
-- **Mục tiêu**: Lấy JWT Bearer token từ CRM để authenticate các API call cần auth
-- **Output**: `{ bearerToken: string, userId: string }`
-- **KPI**: Login < 3s, success rate > 99%
+#### 4.2 Trigger / Schedule
+- **Cron**: `0 6 * * *` (06:00 Asia/Ho_Chi_Minh)
 
-#### 2) Trigger & Điều kiện
-- **Trigger**: Gọi bởi W04 (AI KPI Coach), W07 (Stale Lead Alert), W02 (Facebook Lead)
-- **Điều kiện**: Không có filter — luôn chạy khi được gọi
+#### 4.3 I/O Contract
 
-#### 3) I/O Contract
+**Request**
+- Endpoint: `POST /api/cron/daily`
+- Headers: `x-cron-secret: {{ $env.CRON_SECRET }}`, `X-Correlation-Id: <uuid>`
+- Body: `{ "force": false, "dryRun": false }`
 
-**Input**: (không có — tự lấy credentials từ env)
-
-**Headers bắt buộc**:
-```
-Content-Type: application/json
-```
-
-**Request body**:
+**Response**
 ```json
-{
-  "account": "{{ $env.CRM_EMAIL }}",
-  "password": "{{ $env.CRM_PASSWORD }}"
-}
+{ "ok": true, "ranAt": "2026-02-19T06:00:01Z", "notifications": 15, "messages": 8 }
 ```
 
-**Response mẫu (200 OK)**:
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIs...",
-  "user": { "id": "clxyz...", "role": "admin", "name": "Admin" }
-}
-```
-
-#### 4) Node Diagram
+#### 4.4 Node Diagram (Mermaid)
 
 ```mermaid
-graph LR
-    TRG["TRG_WorkflowCall"] --> HTTP["HTTP_Login<br/>POST /api/auth/login"]
-    HTTP --> IF["IF_TokenValid"]
-    IF -->|Yes| MAP["MAP_SetToken<br/>bearerToken, userId"]
-    IF -->|No| ERR["MAP_LoginError"]
+flowchart TD
+    TRG_Cron["TRG_Cron<br/>06:00 daily"] --> MAP_Correlation["MAP_Correlation<br/>set correlationId"]
+    MAP_Correlation --> HTTP_CronDaily["HTTP_CronDaily<br/>POST /api/cron/daily"]
+    HTTP_CronDaily --> IF_Ok{"IF_Ok<br/>status 200?"}
+    IF_Ok -->|yes| LOG_S3["LOG_S3<br/>log success"]
+    IF_Ok -->|fail| MAP_Error["MAP_Error<br/>build error context"]
+    MAP_Error --> ALERT_S2["ALERT_S2<br/>call S2 Alert Admin"]
 ```
 
-#### 5) Node-by-Node Table
+#### 4.5 Node-by-Node Table
 
-| NodeName | NodeType | Endpoint | Headers | Body | Output | Retry | Error Branch |
-|----------|----------|----------|---------|------|--------|-------|-------------|
-| TRG_WorkflowCall | executeWorkflowTrigger | — | — | — | trigger data | — | — |
-| HTTP_Login | httpRequest | `POST /api/auth/login` | Content-Type: application/json | account, password | token, user | 3x, 3s | continueRegularOutput |
-| IF_TokenValid | if | — | — | — | route | — | → MAP_LoginError |
-| MAP_SetToken | set | — | — | — | bearerToken, userId | — | — |
-| MAP_LoginError | set | — | — | — | error message | — | — |
+| Node | Type | Endpoint | Headers | Body mapping | Output used | Retry | Error branch |
+|------|------|----------|---------|-------------|-------------|-------|-------------|
+| TRG_Cron | Cron | — | — | — | — | — | — |
+| MAP_Correlation | Set | — | — | — | correlationId (uuid) | — | — |
+| HTTP_CronDaily | HTTP | `POST /api/cron/daily` | x-cron-secret, X-Correlation-Id | force, dryRun | ok, ranAt, notifications | 3× exp backoff | → MAP_Error |
+| IF_Ok | If | — | — | — | route | — | → MAP_Error |
+| LOG_S3 | Execute Workflow | S3 | — | correlationId, status, endpoint | — | — | — |
+| MAP_Error | Set | — | — | — | workflowName, endpoint, error | — | — |
+| ALERT_S2 | Execute Workflow | S2 | — | workflowName, error, statusCode | sent | — | continueRegularOutput |
 
-#### 6) Idempotency
-- Không cần — mỗi lần gọi tạo token mới
-- Token chỉ sống trong execution context, không cache cross-execution
+#### 4.6 Idempotency / Anti-duplicate
+- `correlationId` per execution (uuid)
+- CRM skips nếu cùng dateKey đã chạy (trừ `force: true`)
+- `dryRun: true` cho smoke-test production (không ghi data)
 
-#### 7) Failure Modes
-
-| # | Lỗi | Nguyên nhân | Triệu chứng |
-|---|------|-------------|-------------|
-| 1 | 401 Unauthorized | Password sai | `HTTP_Login` trả 401 |
-| 2 | 404 Not Found | Endpoint đổi URL | `HTTP_Login` trả 404 |
-| 3 | 500 Server Error | CRM crash | `HTTP_Login` trả 500 |
-| 4 | Timeout | CRM quá tải | `HTTP_Login` timeout 15s |
-| 5 | Network Error | DNS / connection refused | curl error |
-
-#### 8) Cách debug nhanh
-1. N8N: Execution → xem node `HTTP_Login` → response body
-2. CRM: Check server logs `docker logs thayduy-app | grep auth`
-3. Tái hiện:
-```bash
-curl -X POST https://thayduydaotaolaixe.com/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"account":"admin@thayduy.local","password":"Admin@123456"}'
-```
-
-#### 9) Rollback
-- JSON: `n8n/workflows/s1-get-bearer-token.json`
-- Import lại → disable workflow mới → enable workflow cũ
-
----
-
-### S2: Alert Admin
-
-#### 1) Mục tiêu & Output
-- **Mục tiêu**: Gửi cảnh báo lỗi qua Telegram khi workflow fail
-- **Output**: `{ sent: boolean }`
-
-#### 2) Trigger & Điều kiện
-- **Trigger**: Gọi bởi tất cả main workflows khi gặp lỗi
-- **Input**: `{ workflowName, error, endpoint, statusCode }`
-
-#### 3) I/O Contract
-
-**Input payload mẫu**:
-```json
-{
-  "workflowName": "01 Daily Cron Master",
-  "endpoint": "/api/cron/daily",
-  "statusCode": 500,
-  "error": "Internal Server Error"
-}
-```
-
-**Output message Telegram**:
-```
-🚨 [CRM N8N] Workflow FAIL
-━━━━━━━━━━━━━━━━━━━━
-Workflow: 01 Daily Cron Master
-Endpoint: /api/cron/daily
-Status: 500
-Error: Internal Server Error
-Time: 06:00 19/02/2026
-━━━━━━━━━━━━━━━━━━━━
-```
-
-#### 4) Node Diagram
-
-```mermaid
-graph LR
-    TRG["TRG_WorkflowCall"] --> FMT["MAP_FormatAlert"]
-    FMT --> TG["HTTP_SendTelegram<br/>Telegram Bot API"]
-    TG --> RES["MAP_Result<br/>sent: bool"]
-```
-
-#### 5) Node-by-Node Table
-
-| NodeName | NodeType | Endpoint | Headers | Body | Output | Retry | Error Branch |
-|----------|----------|----------|---------|------|--------|-------|-------------|
-| MAP_FormatAlert | set | — | — | — | alertMessage | — | — |
-| HTTP_SendTelegram | httpRequest | `POST Telegram Bot API` | — | chat_id, text, parse_mode | ok | 2x, 3s | continueRegularOutput |
-| MAP_Result | set | — | — | — | sent | — | — |
-
-#### 6) Idempotency
-- Không cần — alert có thể gửi nhiều lần (notification)
-
-#### 7) Failure Modes
-
-| # | Lỗi | Nguyên nhân |
-|---|------|-------------|
-| 1 | 401 | TELEGRAM_BOT_TOKEN sai |
-| 2 | 400 | TELEGRAM_CHAT_ID sai hoặc bot chưa join group |
-| 3 | 429 | Rate limit Telegram (max 30 msg/s) |
-| 4 | Timeout | Telegram API chậm |
-| 5 | Network | DNS resolution fail |
-
-#### 8) Cách debug nhanh
-```bash
-curl -X POST "https://api.telegram.org/bot<TOKEN>/sendMessage" \
-  -d '{"chat_id":"<CHAT_ID>","text":"Test alert","parse_mode":"HTML"}'
-```
-
----
-
-### S3: Standard Logger
-
-#### 1) Mục tiêu & Output
-- **Mục tiêu**: Format và output structured log cho mỗi workflow execution
-- **Output**: JSON log entry với correlationId
-
-#### 2) Correlation ID Format
-```
-{workflowName}-{executionId}-{dateKey}
-```
-Ví dụ: `01-daily-cron-master-12345-2026-02-19`
-
-#### 3) Log Entry Schema
-```json
-{
-  "correlationId": "01-daily-cron-master-12345-2026-02-19",
-  "timestamp": "2026-02-19T06:00:01.234Z",
-  "workflowName": "01-daily-cron-master",
-  "executionId": "12345",
-  "dateKey": "2026-02-19",
-  "branchCode": "Q1",
-  "endpoint": "/api/cron/daily",
-  "statusCode": 200,
-  "status": "SUCCESS",
-  "durationMs": 1523,
-  "payload": null
-}
-```
-
----
-
-### 01: Daily Cron Master
-
-#### 1) Mục tiêu & Output
-- **Mục tiêu**: Chạy cron job hàng ngày lúc 6:00 AM — trigger notification, cleanup, stats
-- **Output**: `{ ok: true, notifications: N, messages: N, ... }`
-- **KPI**: Chạy thành công 100% hàng ngày, duration < 30s
-
-#### 2) Trigger & Điều kiện
-- **Trigger**: Schedule Trigger — `0 6 * * *` (06:00 AM Asia/Ho_Chi_Minh)
-- **Body**: `{ force: false, dryRun: false }`
-
-#### 3) I/O Contract
-
-**Headers bắt buộc**:
-```
-Content-Type: application/json
-x-cron-secret: {{ $env.CRON_SECRET }}
-```
-
-**Request body**:
-```json
-{ "force": false, "dryRun": false }
-```
-
-**Response mẫu (200 OK)**:
-```json
-{ "ok": true, "notifications": 15, "messages": 8, "date": "2026-02-19" }
-```
-
-#### 4) Node Diagram
-
-```mermaid
-graph LR
-    TRG["TRG_Schedule<br/>Cron 06:00"] --> MAP["MAP_BuildBody"]
-    MAP --> HTTP["HTTP_CronDaily<br/>POST /api/cron/daily"]
-    HTTP --> IF["IF_StatusOk"]
-    IF -->|Yes| LOG["LOG_Success"]
-    IF -->|No| ERR["MAP_ErrorContext"]
-    ERR --> ALERT["ALERT_Admin (S2)"]
-```
-
-#### 5) Node-by-Node Table
-
-| NodeName | NodeType | Endpoint | Headers | Body | Output | Retry | Error Branch |
-|----------|----------|----------|---------|------|--------|-------|-------------|
-| TRG_Schedule | scheduleTrigger | — | — | — | trigger | — | — |
-| MAP_BuildBody | set | — | — | — | force, dryRun | — | — |
-| HTTP_CronDaily | httpRequest | `POST /api/cron/daily` | x-cron-secret | force, dryRun | ok, stats | 3x, 5s | continueRegularOutput |
-| IF_StatusOk | if | — | — | — | route | — | → MAP_ErrorContext |
-| LOG_Success | set | — | — | — | log entry | — | — |
-| MAP_ErrorContext | set | — | — | — | error context | — | → ALERT_Admin |
-| ALERT_Admin | executeWorkflow | S2 | — | — | sent | — | — |
-
-#### 6) Idempotency
-- **Key**: dateKey (ngày hiện tại)
-- CRM server sẽ skip nếu cùng ngày đã chạy (trừ khi `force: true`)
-
-#### 7) Failure Modes
+#### 4.7 Failure Modes (top 10)
 
 | # | Lỗi | Nguyên nhân | Fix |
 |---|------|-------------|-----|
-| 1 | 403 Forbidden | CRON_SECRET sai | Check `/opt/n8n/.env` vs `/opt/thayduy/.env` |
-| 2 | 500 Internal | CRM logic error | Check `docker logs thayduy-app` |
-| 3 | Timeout 30s | DB lock / heavy query | Tăng timeout hoặc check DB |
-| 4 | 429 Rate Limit | Quá nhiều request | Backoff tự động, check source |
-| 5 | Network Error | Container network issue | Check `docker network inspect thayduy_default` |
+| 1 | 403 Forbidden | `CRON_SECRET` sai | So sánh n8n env vs CRM env → fix → restart n8n |
+| 2 | 500 Internal | CRM logic error / DB down | `docker logs thayduy-app` → fix → redeploy |
+| 3 | 502/503 | Nginx proxy error / app crashed | `docker ps` → restart `thayduy-app` |
+| 4 | Timeout 30s | DB lock / heavy query | Tăng timeout node → check slow query |
+| 5 | 429 Rate Limit | Quá nhiều request | Tự backoff, check frequency |
+| 6 | ECONNREFUSED | Container down / network drop | `docker network inspect thayduy_default` |
+| 7 | DNS resolution fail | Docker DNS issue | Restart Docker daemon |
+| 8 | Schema mismatch | CRM API contract changed | Check request body vs API spec |
+| 9 | Token expired (nếu dùng S1) | JWT hết hạn | Re-call S1 trước HTTP |
+| 10 | Duplicate execution | Cron trigger twice | Check n8n execution history → idempotency key |
 
-#### 8) Cách debug nhanh
+#### 4.8 Debug nhanh (3 phút)
+1. **n8n**: Execution → click node fail → xem response body
+2. **CRM**: `docker logs thayduy-app --tail 50 | grep cron`
+3. **Reproduce**: `bash scripts/simulate-n8n.sh` (cron section) hoặc:
 ```bash
-# Tái hiện trên production
 curl -X POST https://thayduydaotaolaixe.com/api/cron/daily \
   -H "Content-Type: application/json" \
-  -H "x-cron-secret: <CRON_SECRET>" \
-  -d '{"force": true, "dryRun": true}'
+  -H "x-cron-secret: $CRON_SECRET" \
+  -d '{"force":true,"dryRun":true}'
 ```
 
-#### 9) Rollback
-- JSON: `n8n/workflows/01-daily-cron-master.json`
-- Disable → Import JSON cũ → Enable → Chạy smoke test
+#### 4.9 Rollback
+1. Disable workflow `3dvziGY3AdYINrob` trong n8n
+2. Import JSON `n8n/workflows/01-daily-cron-master.json` (version trước từ git)
+3. Enable → run `dryRun: true` → PASS
 
 ---
 
-### 02: Facebook Lead Capture
+### 02 Facebook Lead Capture
 
-#### 1) Mục tiêu & Output
-- **Mục tiêu**: Nhận webhook từ Facebook khi có lead mới → tạo lead trong CRM → auto-assign → thông báo
-- **Output**: Lead created + auto-assigned in CRM
+#### 4.1 Mục tiêu
+Nhận webhook từ Facebook Leadgen → lấy lead data từ Graph API → tạo lead trong CRM → auto-assign.
 
-#### 2) Trigger & Điều kiện
-- **Trigger**: Webhook — `POST /webhook/facebook-lead`
-- **Verification**: Facebook sends `GET` with `hub.challenge` → phải trả lại challenge
+#### 4.2 Trigger / Schedule
+- **Webhook**: `POST /webhook/facebook-lead` (n8n webhook URL)
+- **Verification**: Facebook sends `GET` with `hub.challenge` → trả lại challenge
 
-#### 3) I/O Contract
+#### 4.3 I/O Contract
 
-**Facebook Webhook payload**:
+**Request (Facebook webhook payload)**
 ```json
 {
   "object": "page",
-  "entry": [{
-    "changes": [{
-      "field": "leadgen",
-      "value": { "leadgen_id": "123456789" }
-    }]
-  }]
+  "entry": [{ "changes": [{ "field": "leadgen", "value": { "leadgen_id": "123456789" } }] }]
 }
 ```
 
-**CRM Request** (`POST /api/public/lead`):
-```json
-{
-  "fullName": "Nguyễn Văn A",
-  "phone": "0901234567",
-  "province": "Hồ Chí Minh",
-  "licenseType": "B2",
-  "source": "facebook"
-}
-```
+**CRM Request** (`POST /api/public/lead`)
+- Headers: `Content-Type: application/json`, `X-Correlation-Id: <uuid>`
+- Body: `{ "fullName": "...", "phone": "0901234567", "province": "...", "licenseType": "B2", "source": "facebook" }`
 
-#### 4) Node Diagram
+**Response**: `{ "ok": true, "leadId": "clxyz..." }`
+
+#### 4.4 Node Diagram
 
 ```mermaid
-graph LR
-    TRG["TRG_Webhook<br/>POST /webhook/facebook-lead"] --> IF1["IF_VerifyOrEvent"]
-    IF1 -->|Verify| CHALLENGE["MAP_ReturnChallenge"]
-    IF1 -->|Event| EXTRACT["MAP_ExtractLeadgenId"]
-    EXTRACT --> FB["HTTP_GetLeadData<br/>Graph API"]
-    FB --> TRANSFORM["MAP_TransformFields"]
-    TRANSFORM --> IF2["IF_HasPhone"]
+flowchart TD
+    TRG["TRG_Webhook"] --> IF1{"IF_VerifyOrEvent"}
+    IF1 -->|Verify| RET["Return challenge"]
+    IF1 -->|Event| EXT["Extract leadgenId"]
+    EXT --> FB["HTTP_GetLeadData<br/>FB Graph API"]
+    FB --> MAP["MAP_TransformFields"]
+    MAP --> IF2{"IF_HasPhone"}
+    IF2 -->|No| SKIP["Skip"]
     IF2 -->|Yes| CRM["HTTP_CreateLead<br/>POST /api/public/lead"]
-    IF2 -->|No| SKIP["Skip - no phone"]
-    CRM --> IFOK["IF_CrmOk"]
-    IFOK -->|Yes| AUTH["AUTH_GetToken (S1)"]
-    AUTH --> ASSIGN["HTTP_AutoAssign<br/>POST /api/leads/auto-assign"]
-    IFOK -->|No| ALERT["ALERT_Admin (S2)"]
+    CRM --> AUTH["AUTH_GetToken (S1)"]
+    AUTH --> ASSIGN["HTTP_AutoAssign"]
+    CRM -->|fail| ALERT["ALERT_S2"]
 ```
 
-#### 5) Idempotency
-- **Key**: `phone` — CRM upserts lead by phone number
-- Trùng phone → update existing lead (không tạo mới)
+#### 4.5 Node-by-Node Table
+
+| Node | Type | Endpoint | Headers | Body mapping | Retry | Error branch |
+|------|------|----------|---------|-------------|-------|-------------|
+| TRG_Webhook | Webhook | `/webhook/facebook-lead` | — | — | — | — |
+| HTTP_GetLeadData | HTTP | `GET graph.facebook.com/v18.0/{leadgen_id}` | access_token | — | 3× 2s | → ALERT_S2 |
+| HTTP_CreateLead | HTTP | `POST /api/public/lead` | X-Correlation-Id | fullName, phone, source | 3× 2s | → ALERT_S2 |
+| AUTH_GetToken | Execute WF | S1 (`rM8NCtXchLsIhLxG`) | — | — | — | — |
+| HTTP_AutoAssign | HTTP | `POST /api/leads/auto-assign` | Authorization: Bearer | strategy, leadIds | 3× 2s | continueRegularOutput |
+| ALERT_S2 | Execute WF | S2 (`naX5gYVTYw9cz3dA`) | — | workflowName, error | — | — |
+
+#### 4.6 Idempotency
+- **Key**: `phone` — CRM upserts by phone (trùng → update, không tạo mới)
 - `leadgenId` từ Facebook luôn unique
 
-#### 6) Failure Modes
-
-| # | Lỗi | Nguyên nhân | Fix |
-|---|------|-------------|-----|
-| 1 | FB Graph 400 | FB_PAGE_TOKEN hết hạn (60 ngày) | Refresh token trong Facebook App |
-| 2 | CRM 409 Conflict | Lead phone trùng | Expected — CRM tự update |
-| 3 | Auto-assign 404 | Không có telesale active | Thêm user role telesale |
-| 4 | Webhook không nhận | WEBHOOK_URL sai / Nginx | Check `n8n/.env` WEBHOOK_URL |
-| 5 | Schema mismatch | Facebook thay đổi fields | Check MAP_TransformFields |
-
----
-
-### 03: Marketing Ads Sync
-
-#### 1) Mục tiêu & Output
-- **Mục tiêu**: Sync chi phí quảng cáo từ Facebook Ads vào CRM mỗi ngày lúc 23:00
-- **Output**: Marketing report record in CRM
-
-#### 2) Trigger
-- **Cron**: `0 23 * * *` (23:00 VN) — sau khi ngày quảng cáo kết thúc
-
-#### 3) I/O Contract
-
-**Headers**: `x-marketing-secret: {{ $env.MARKETING_SECRET }}`
-
-**Request body**:
-```json
-{
-  "date": "2026-02-19",
-  "source": "meta_ads",
-  "spendVnd": 1500000,
-  "messages": 42,
-  "branchCode": "Q1",
-  "meta": { "campaign": "...", "adSet": "..." }
-}
-```
-
-#### 4) Node Diagram
-
-```mermaid
-graph LR
-    TRG["TRG_Schedule<br/>Cron 23:00"] --> AUTH["AUTH_GetToken (S1)"]
-    AUTH --> FBAPI["HTTP_FetchAdStats<br/>Facebook Ads API"]
-    FBAPI --> MAP["MAP_TransformData"]
-    MAP --> HTTP["HTTP_PostReport<br/>POST /api/marketing/report"]
-    HTTP --> IF["IF_StatusOk"]
-    IF -->|No| ALERT["ALERT_Admin (S2)"]
-```
-
-#### 5) Failure Modes
+#### 4.7 Failure Modes
 
 | # | Lỗi | Fix |
 |---|------|-----|
-| 1 | 403 | MARKETING_SECRET sai → check env |
-| 2 | FB Ads API 401 | Facebook token hết hạn → refresh |
-| 3 | 500 CRM | Check server logs |
+| 1 | FB Graph 401 | `FB_PAGE_TOKEN` hết hạn (60 ngày) → refresh |
+| 2 | CRM 409 Conflict | Lead trùng phone → expected (upsert) |
+| 3 | Webhook không nhận | Check WEBHOOK_URL + Nginx proxy |
+| 4 | Auto-assign 404 | Không có telesale active → thêm user |
+| 5 | Schema mismatch | Facebook thay đổi fields → update MAP node |
+
+#### 4.8 Debug nhanh
+```bash
+# Test tạo lead
+curl -X POST https://thayduydaotaolaixe.com/api/public/lead \
+  -H "Content-Type: application/json" \
+  -d '{"fullName":"Test","phone":"0900000001","source":"test","licenseType":"B2"}'
+```
+
+#### 4.9 Rollback
+Disable → Import `02-facebook-lead-capture.json` cũ → Enable → test webhook
 
 ---
 
-### 04: AI KPI Coach
+### 03 Marketing Ads Sync
 
-#### 1) Mục tiêu & Output
-- **Mục tiêu**: Phân tích KPI hàng ngày bằng AI → tạo gợi ý cải thiện cho từng role/chi nhánh
-- **Output**: AI suggestions stored in CRM
+#### 4.1 Mục tiêu
+Sync chi phí quảng cáo Facebook Ads vào CRM mỗi tối 23:00.
 
-#### 2) Trigger
-- **Cron**: `0 7 * * *` (07:00 AM VN) — sau Daily Cron (06:00)
+#### 4.2 Trigger / Schedule
+- **Cron**: `0 23 * * *` (23:00 VN)
 
-#### 3) I/O Contract
+#### 4.3 I/O Contract
 
-**Headers**: `Authorization: Bearer {{ bearerToken }}`
-
-**Request body** (`POST /api/ai/suggestions`):
+**Request**
+- Endpoint: `POST /api/marketing/report`
+- Headers: `x-marketing-secret: {{ $env.MARKETING_SECRET }}`, `X-Correlation-Id: <uuid>`
+- Body:
 ```json
-{
-  "dateKey": "2026-02-19",
-  "role": "telesales",
-  "branchId": "clxyz...",
-  "ownerId": "clabc...",
-  "title": "KPI đạt 95%",
-  "content": "Bạn đã đạt 95% KPI...",
-  "scoreColor": "GREEN",
-  "actionsJson": [{"key": "CALL_REMIND", "label": "Gọi nhắc"}],
-  "metricsJson": {"callCount": 25, "conversionRate": 45}
-}
+{ "date": "2026-02-19", "source": "meta_ads", "spendVnd": 1500000, "messages": 42, "branchCode": "Q1", "meta": {} }
 ```
 
-#### 4) Node Diagram
+**Response**: `{ "ok": true }`
+
+#### 4.4 Node Diagram
 
 ```mermaid
-graph LR
-    TRG["TRG_Schedule<br/>Cron 07:00"] --> AUTH["AUTH_GetToken (S1)"]
-    AUTH --> KPI["HTTP_GetKPI<br/>GET /api/kpi/targets"]
+flowchart TD
+    TRG["TRG_Cron 23:00"] --> MAP["MAP_Correlation"]
+    MAP --> FB["HTTP_FetchAdStats<br/>FB Ads API"]
+    FB --> TRANSFORM["MAP_Transform"]
+    TRANSFORM --> HTTP["HTTP_PostReport<br/>POST /api/marketing/report"]
+    HTTP --> IF{"IF_Ok"}
+    IF -->|fail| ALERT["ALERT_S2"]
+    IF -->|ok| LOG["LOG_S3"]
+```
+
+#### 4.5 Failure Modes
+
+| # | Lỗi | Fix |
+|---|------|-----|
+| 1 | 403 | `MARKETING_SECRET` sai → check n8n env |
+| 2 | FB Ads 401 | Token hết hạn → refresh Facebook App |
+| 3 | 500 CRM | `docker logs thayduy-app | grep marketing` |
+
+#### 4.8 Debug nhanh
+```bash
+curl -X POST https://thayduydaotaolaixe.com/api/marketing/report \
+  -H "Content-Type: application/json" \
+  -H "x-marketing-secret: $MARKETING_SECRET" \
+  -d '{"date":"2026-02-19","source":"meta_ads","spendVnd":0,"messages":0,"branchCode":"HCM1"}'
+```
+
+#### 4.9 Rollback
+Disable → Import `03-marketing-ads-sync.json` cũ → Enable → test
+
+---
+
+### 04 AI KPI Coach
+
+#### 4.1 Mục tiêu
+Phân tích KPI hàng ngày bằng AI → tạo gợi ý cho từng role/chi nhánh.
+
+#### 4.2 Trigger / Schedule
+- **Cron**: `0 7 * * *` (07:00 VN — sau Daily Cron 06:00)
+
+#### 4.3 I/O Contract
+
+**Step 1**: `GET /api/kpi/targets` → Headers: `Authorization: Bearer {{ bearerToken }}`
+**Step 2**: `POST /api/ai/suggestions` → Body:
+```json
+{ "dateKey": "2026-02-19", "role": "telesales", "branchId": "clxyz...", "title": "...", "content": "...", "scoreColor": "GREEN" }
+```
+
+#### 4.4 Node Diagram
+
+```mermaid
+flowchart TD
+    TRG["TRG_Cron 07:00"] --> AUTH["AUTH_GetToken (S1)"]
+    AUTH --> KPI["HTTP_GetKPI"]
     KPI --> AI["AI Analysis"]
-    AI --> HTTP["HTTP_PostSuggestions<br/>POST /api/ai/suggestions"]
-    HTTP --> IF["IF_StatusOk"]
-    IF -->|No| ALERT["ALERT_Admin (S2)"]
+    AI --> HTTP["HTTP_PostSuggestions"]
+    HTTP --> IF{"IF_Ok"}
+    IF -->|fail| ALERT["ALERT_S2"]
 ```
 
-#### 5) Failure Modes
+#### 4.7 Failure Modes
 
 | # | Lỗi | Fix |
 |---|------|-----|
-| 1 | Login fail (S1) | Check CRM_EMAIL/CRM_PASSWORD |
-| 2 | KPI 404 | Chưa có KPI targets → tạo targets trước |
+| 1 | S1 login fail | Check CRM_EMAIL/CRM_PASSWORD |
+| 2 | KPI 404 | Chưa có KPI targets → tạo targets |
 | 3 | AI timeout | OpenAI chậm → tăng timeout |
-| 4 | Suggestion 422 | Payload schema thay đổi → check API docs |
+| 4 | Suggestion 422 | Payload schema thay đổi |
 
 ---
 
-### 05: Outbound Message Worker
+### 05 Outbound Message Worker
 
-#### 1) Mục tiêu & Output
-- **Mục tiêu**: Poll CRM mỗi 5 phút để gửi tin nhắn pending (Zalo, SMS)
-- **Output**: `{ processed: N, sent: N, failed: N, skipped: N }`
+#### 4.1 Mục tiêu
+Poll CRM mỗi 5 phút để gửi tin nhắn pending (Zalo, SMS).
 
-#### 2) Trigger
-- **Cron**: `*/5 * * * *` (mỗi 5 phút)
+#### 4.2 Trigger / Schedule
+- **Cron**: `*/5 * * * *`
 
-#### 3) I/O Contract
+#### 4.3 I/O Contract
 
-**Headers**: `x-worker-secret: {{ $env.WORKER_SECRET }}`
+**Request**
+- Endpoint: `POST /api/worker/outbound`
+- Headers: `x-worker-secret: {{ $env.WORKER_SECRET }}`
+- Body: `{ "batchSize": 50, "concurrency": 5, "dryRun": false }`
 
-**Request body**:
-```json
-{
-  "batchSize": 50,
-  "concurrency": 5,
-  "dryRun": false,
-  "retryFailedOnly": false,
-  "force": false
-}
-```
+**Response**: `{ "processed": 10, "sent": 8, "failed": 1, "skipped": 1 }`
 
-**Response mẫu**:
-```json
-{ "processed": 10, "sent": 8, "failed": 1, "skipped": 1, "rateLimited": 0 }
-```
-
-#### 4) Node Diagram
+#### 4.4 Node Diagram
 
 ```mermaid
-graph LR
-    TRG["TRG_Schedule<br/>Mỗi 5 phút"] --> MAP["MAP_BuildBody"]
+flowchart TD
+    TRG["TRG_Cron */5min"] --> MAP["MAP_BuildBody"]
     MAP --> HTTP["HTTP_Worker<br/>POST /api/worker/outbound"]
-    HTTP --> IF["IF_StatusOk"]
-    IF -->|No| ALERT["ALERT_Admin (S2)"]
+    HTTP --> IF{"IF_Ok"}
+    IF -->|fail| ALERT["ALERT_S2"]
+    IF -->|ok| LOG["LOG_S3"]
 ```
 
-#### 5) Failure Modes
+#### 4.7 Failure Modes
 
 | # | Lỗi | Fix |
 |---|------|-----|
-| 1 | 403 | WORKER_SECRET sai |
-| 2 | Zalo OA 429 | Rate limit → giảm concurrency |
-| 3 | 500 | CRM worker logic error |
-| 4 | DB deadlock | Giảm batchSize |
+| 1 | 403 | `WORKER_SECRET` sai |
+| 2 | Zalo 429 | Rate limit → giảm concurrency |
+| 3 | DB deadlock | Giảm batchSize |
+
+#### 4.8 Debug nhanh
+```bash
+curl -X POST https://thayduydaotaolaixe.com/api/worker/outbound \
+  -H "Content-Type: application/json" \
+  -H "x-worker-secret: $WORKER_SECRET" \
+  -d '{"batchSize":10,"concurrency":2,"dryRun":true}'
+```
 
 ---
 
-### 06: Ops Pulse Report
+### 06 Ops Pulse Report
 
-#### 1) Mục tiêu & Output
-- **Mục tiêu**: Thu thập metrics hiệu suất vận hành (messages, data, calls) mỗi tối
-- **Output**: Pulse record in CRM with computed KPI
+#### 4.1 Mục tiêu
+Thu thập metrics hiệu suất vận hành mỗi tối 21:00.
 
-#### 2) Trigger
-- **Cron**: `0 21 * * *` (21:00 VN)
+#### 4.2 Trigger / Schedule
+- **Cron**: `0 21 * * *`
 
-#### 3) I/O Contract
+#### 4.3 I/O Contract
 
-**Headers**: `x-ops-secret: {{ $env.OPS_SECRET }}`
-
-**Request body**:
+**Request**
+- Endpoint: `POST /api/ops/pulse`
+- Headers: `x-ops-secret: {{ $env.OPS_SECRET }}`
+- Body:
 ```json
-{
-  "role": "TELESALES",
-  "branchId": "clxyz...",
-  "ownerId": "clabc...",
-  "dateKey": "2026-02-19",
-  "metrics": {
-    "dataToday": 9,
-    "calledToday": 25,
-    "appointedToday": 6,
-    "arrivedToday": 4,
-    "signedToday": 2
-  }
-}
+{ "role": "PAGE", "branchId": "clxyz...", "dateKey": "2026-02-19", "metrics": { "dataToday": 9, "calledToday": 25 } }
 ```
 
-#### 4) Failure Modes
+#### 4.7 Failure Modes
 
 | # | Lỗi | Fix |
 |---|------|-----|
-| 1 | 403 | OPS_SECRET sai |
+| 1 | 403 | `OPS_SECRET` sai |
 | 2 | 422 | Missing required fields |
-| 3 | 409 | Duplicate dateKey+role+branch → CRM auto-handles |
+| 3 | 409 | Duplicate dateKey (CRM auto-handles) |
+
+#### 4.8 Debug nhanh
+```bash
+curl -X POST https://thayduydaotaolaixe.com/api/ops/pulse \
+  -H "Content-Type: application/json" \
+  -H "x-ops-secret: $OPS_SECRET" \
+  -d '{"role":"PAGE","branchId":"test","dateKey":"2026-02-19","metrics":{"dataToday":1}}'
+```
 
 ---
 
-### 07: Stale Lead Alert & Auto-Assign
+### 07 Stale Lead Alert & Auto-Assign
 
-#### 1) Mục tiêu & Output
-- **Mục tiêu**: Tìm lead "thiu" (>48h không liên lạc) → alert → auto-assign lại
-- **Output**: Alert sent + leads reassigned
+#### 4.1 Mục tiêu
+Tìm lead >48h không liên lạc → alert → auto-assign lại.
 
-#### 2) Trigger
-- **Cron**: `0 8 * * *` (08:00 AM VN)
+#### 4.2 Trigger / Schedule
+- **Cron**: `0 8 * * *` (08:00 VN)
 
-#### 3) I/O Contract
+#### 4.3 I/O Contract
 
-**Step 1**: `GET /api/leads/stale?page=1&pageSize=50`
-- **Headers**: `Authorization: Bearer {{ bearerToken }}`
-- **Response**: `{ items: [{id, fullName, phone, lastContactAt, ...}], total: N }`
+**Step 1**: `GET /api/leads/stale?page=1&pageSize=50` → `Authorization: Bearer {{ token }}`
+**Step 2**: `POST /api/leads/auto-assign` → `{ "strategy": "round_robin", "leadIds": [...] }`
 
-**Step 2**: `POST /api/leads/auto-assign`
-- **Headers**: `Authorization: Bearer {{ bearerToken }}`
-- **Body**: `{ strategy: "round_robin", leadIds: ["id1", "id2"] }`
-- **Response**: `{ updated: N, assigned: [{leadId, userId}] }`
-
-#### 4) Node Diagram
+#### 4.4 Node Diagram
 
 ```mermaid
-graph LR
-    TRG["TRG_Schedule<br/>Cron 08:00"] --> AUTH["AUTH_GetToken (S1)"]
-    AUTH --> HTTP1["HTTP_GetStaleLeads<br/>GET /api/leads/stale"]
-    HTTP1 --> IF1["IF_HasStaleLeads"]
-    IF1 -->|Yes| ASSIGN["HTTP_AutoAssign<br/>POST /api/leads/auto-assign"]
+flowchart TD
+    TRG["TRG_Cron 08:00"] --> AUTH["AUTH_GetToken (S1)"]
+    AUTH --> HTTP1["HTTP_GetStaleLeads"]
+    HTTP1 --> IF1{"IF_HasLeads"}
     IF1 -->|No| DONE["No Action"]
-    ASSIGN --> LOG["LOG_Result"]
-    ASSIGN -->|Error| ALERT["ALERT_Admin (S2)"]
+    IF1 -->|Yes| ASSIGN["HTTP_AutoAssign"]
+    ASSIGN -->|fail| ALERT["ALERT_S2"]
 ```
 
 ---
 
-### 08: Landing CRM Zalo Notify
+### 08 Landing CRM Zalo Notify
 
-#### 1) Mục tiêu & Output
-- **Mục tiêu**: Nhận lead từ landing page → tạo trong CRM → gửi Zalo xác nhận
-- **Output**: Lead created + Zalo notification sent
+#### 4.1 Mục tiêu
+Nhận lead từ landing page → tạo trong CRM → gửi Zalo xác nhận.
 
-#### 2) Trigger
+#### 4.2 Trigger / Schedule
 - **Webhook**: `POST /webhook/landing-lead`
 
-#### 3) I/O Contract
+#### 4.3 I/O Contract
 
-**Webhook payload**:
+**Request**
 ```json
-{
-  "fullName": "Nguyễn Văn B",
-  "phone": "0987654321",
-  "province": "Hồ Chí Minh",
-  "licenseType": "B2"
-}
+{ "fullName": "Nguyễn Văn B", "phone": "0987654321", "province": "HCM", "licenseType": "B2" }
 ```
 
-#### 4) Idempotency
+#### 4.6 Idempotency
 - **Key**: `phone` — CRM upserts by phone
-- Gửi Zalo notification sau khi CRM confirm tạo thành công
 
 ---
 
-## B4. Test & Reproduce
+## 5. Test & Reproduce
 
-### Script: `scripts/simulate-n8n.sh`
-
-Script test 12 endpoint contracts, in PASS/FAIL rõ ràng.
-
-#### Chạy local
+### Local/Staging
 ```bash
-# Start CRM dev server first
-npm run dev
-
-# Run simulation
-BASE_URL=http://127.0.0.1:3000 \
-CRON_SECRET=test-cron-secret-local \
-WORKER_SECRET=test-worker-secret-local \
-OPS_SECRET=test-ops-secret-local \
-MARKETING_SECRET=test-marketing-secret-local \
+BASE_URL=http://localhost:3000 \
+CRON_SECRET=test-secret \
+WORKER_SECRET=test-secret \
+OPS_SECRET=test-secret \
+MARKETING_SECRET=test-secret \
+CRM_EMAIL=admin@thayduy.local \
+CRM_PASSWORD=Admin@123456 \
 bash scripts/simulate-n8n.sh
 ```
 
-#### Chạy staging
-```bash
-BASE_URL=https://staging.thayduydaotaolaixe.com \
-CRON_SECRET=<staging-secret> \
-WORKER_SECRET=<staging-secret> \
-OPS_SECRET=<staging-secret> \
-MARKETING_SECRET=<staging-secret> \
-bash scripts/simulate-n8n.sh
-```
-
-#### Smoke test production (safe — dùng dryRun)
+### Production smoke-test (dryRun)
 ```bash
 BASE_URL=https://thayduydaotaolaixe.com \
-CRON_SECRET=cron-prod-secret-2026 \
-WORKER_SECRET=worker-prod-secret-2026 \
-OPS_SECRET=ops-prod-secret-2026 \
-MARKETING_SECRET=marketing-prod-secret-2026 \
+DRY_RUN=1 \
+CRON_SECRET=$CRON_SECRET \
+WORKER_SECRET=$WORKER_SECRET \
+OPS_SECRET=$OPS_SECRET \
+MARKETING_SECRET=$MARKETING_SECRET \
+CRM_EMAIL=$CRM_EMAIL \
+CRM_PASSWORD=$CRM_PASSWORD \
 bash scripts/simulate-n8n.sh
 ```
 
-> [!WARNING]
-> Production smoke test **sẽ tạo data thật** (leads, courses, KPI targets, etc.). Chỉ chạy khi cần verify sau deploy.
-
-#### Curl test nhanh từng endpoint
-
-```bash
-# 1. Login
-curl -s https://thayduydaotaolaixe.com/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"account":"admin@thayduy.local","password":"Admin@123456"}'
-
-# 2. Cron daily (dry run)
-curl -s https://thayduydaotaolaixe.com/api/cron/daily \
-  -H "Content-Type: application/json" \
-  -H "x-cron-secret: cron-prod-secret-2026" \
-  -d '{"force": true, "dryRun": true}'
-
-# 3. Worker outbound (dry run)
-curl -s https://thayduydaotaolaixe.com/api/worker/outbound \
-  -H "Content-Type: application/json" \
-  -H "x-worker-secret: worker-prod-secret-2026" \
-  -d '{"dryRun": true, "batchSize": 10}'
-
-# 4. Ops pulse
-curl -s https://thayduydaotaolaixe.com/api/ops/pulse \
-  -H "Content-Type: application/json" \
-  -H "x-ops-secret: ops-prod-secret-2026" \
-  -d '{"role":"PAGE","branchId":"test","dateKey":"2026-02-19","metrics":{}}'
-
-# 5. Marketing report
-curl -s https://thayduydaotaolaixe.com/api/marketing/report \
-  -H "Content-Type: application/json" \
-  -H "x-marketing-secret: marketing-prod-secret-2026" \
-  -d '{"date":"2026-02-19","source":"test","spendVnd":0,"messages":0}'
-```
-
 ---
 
-## B5. Troubleshooting Matrix
+## 6. Troubleshooting Matrix
 
-| Symptom | Where to Look | Likely Cause | Fix | Verification |
-|---------|--------------|-------------|-----|-------------|
-| `cron/daily 403` | n8n env `CRON_SECRET` | Secret mismatch giữa n8n ↔ CRM | So sánh `/opt/n8n/.env` vs `/opt/thayduy/.env` → set đúng → restart n8n | Rerun node → 200 |
-| `marketing/report 403` | n8n env `MARKETING_SECRET` | Secret sai | Set đúng secret → restart | Rerun → 200 |
-| `ops/pulse 403` | n8n env `OPS_SECRET` | Secret sai | Set đúng → restart | Rerun → 200 |
-| `worker/outbound 403` | n8n env `WORKER_SECRET` | Secret sai | Set đúng → restart | Rerun → 200 |
+| Symptom | Where to look | Likely cause | Fix | Verify |
+|---------|--------------|-------------|-----|--------|
+| `cron/daily 403` | n8n env `CRON_SECRET` | Secret mismatch | So sánh n8n env vs CRM env → set đúng → restart | rerun node → 200 |
+| `marketing/report 403` | n8n env `MARKETING_SECRET` | Secret sai | Set đúng → restart n8n | rerun → 200 |
+| `ops/pulse 403` | n8n env `OPS_SECRET` | Secret sai | Set đúng → restart | rerun → 200 |
+| `worker/outbound 403` | n8n env `WORKER_SECRET` | Secret sai | Set đúng → restart | rerun → 200 |
 | `auth/login 401` | n8n env `CRM_EMAIL/PASSWORD` | Credentials sai | Fix credentials → restart | curl login → token |
-| `auth/login 500` | CRM server logs | CRM crash / DB down | `docker logs thayduy-app`, check postgres | Login test PASS |
-| Webhook không nhận | n8n env `WEBHOOK_URL`, Nginx config | Sai base URL hoặc SSL expired | Check `WEBHOOK_URL` = `https://n8n...`, check Nginx | Send test webhook |
-| FB Graph 401 | Facebook App Dashboard | Page token hết hạn (60 ngày) | Refresh long-lived token | Test Graph API call |
-| Telegram alert không gửi | n8n env `TELEGRAM_BOT_TOKEN/CHAT_ID` | Token sai hoặc bot chưa join group | Check token, thêm bot vào group | curl sendMessage |
-| Workflow không chạy theo schedule | n8n Settings > Timezone | Timezone sai | Set `GENERIC_TIMEZONE=Asia/Ho_Chi_Minh` | Chờ đợi next trigger |
-| `429 Too Many Requests` | CRM API / External API | Rate limiting | Giảm frequency, tăng backoff | Monitor rate headers |
-| `ECONNREFUSED` | Docker network | Container network isolation | Check `docker network inspect thayduy_default` | ping container |
-| Duplicate leads | CRM database | Webhook retry gửi trùng | CRM upsert by phone (expected behavior) | Check DB |
-| Stale leads không tìm thấy | CRM API `/api/leads/stale` | Không có lead quá 48h | Expected khi data mới | Check lead dates |
-| Execution history trống | n8n Settings | Execution retention too short | Tăng `EXECUTIONS_DATA_MAX_AGE` | Check settings |
+| `auth/login 500` | CRM server logs | DB down / Prisma timeout | `docker logs thayduy-app` → check postgres → restart app | login test PASS |
+| Webhook không nhận | WEBHOOK_URL, Nginx | Sai base URL / SSL expired | Check `WEBHOOK_URL=https://n8n...` + Nginx config | test webhook |
+| FB Graph 401 | Facebook App Dashboard | Page token hết hạn (60 ngày) | Refresh long-lived token | FB API call OK |
+| TG alert không gửi | TELEGRAM_BOT_TOKEN/CHAT_ID | Token sai / bot chưa join group | Check + thêm bot vào group | curl sendMessage |
+| Workflow không trigger | n8n Settings → Timezone | `GENERIC_TIMEZONE` sai | Set `Asia/Ho_Chi_Minh` | chờ next trigger |
+| 429 spam | CRM/External API | Rate limiting | Giảm frequency + tăng backoff | monitor OK |
+| `ECONNREFUSED` | Docker network | Container isolation | `docker network inspect thayduy_default` | ping |
+| Duplicate leads | CRM database | Webhook retry trùng | Expected — CRM upsert by phone | check DB |
+| `Connection timeout` (Prisma) | CRM `.env` | `DATABASE_URL` có quotes `"..."` | Xóa quotes → restart app | login OK |
+| N8N execution history trống | n8n Settings | Retention too short | Tăng `EXECUTIONS_DATA_MAX_AGE` | check settings |
 
 ---
 
-## C. Versioning & Rollback
+## 7. Change log
 
-### Quy ước version
-
-| Level | Khi nào | Ví dụ |
-|-------|---------|-------|
-| **PATCH** (v1.0.x) | Bugfix nhỏ, sửa typo, adjust timeout | Sửa timeout từ 15s → 30s |
-| **MINOR** (v1.x.0) | Thêm node, thêm nhánh error handling | Thêm Zalo notification node |
-| **MAJOR** (vx.0.0) | Đổi contract/payload, đổi endpoint | Đổi từ `x-cron-secret` → `Bearer token` |
-
-### Manifest file
-
-`n8n/workflows/manifest.json` — chứa version, trigger, schedule, endpoints cho mỗi workflow.
-
-### Rollback procedure
-
-1. **Disable** workflow hiện tại trong n8n UI
-2. **Import** JSON version trước từ `n8n/workflows/`
-3. **Enable** workflow vừa import
-4. **Chạy smoke test**: `bash scripts/simulate-n8n.sh`
-5. **Verify** execution history trong n8n
-
-### Git workflow
-
-```bash
-# Export workflow mới từ n8n
-# Save vào n8n/workflows/XX-name.json
-# Update manifest.json (bump version)
-git add n8n/workflows/
-git commit -m "n8n: bump W01 daily cron v1.0.1 — increase timeout"
-git push origin main
-```
-
----
-
-## D. Logging / Tracing
-
-### Standard Logger (S3)
-
-Mỗi execution log tối thiểu:
-
-| Field | Mô tả |
-|-------|--------|
-| `correlationId` | `{workflowName}-{executionId}-{dateKey}` |
-| `workflowName` | Tên workflow |
-| `endpoint` | API endpoint được gọi |
-| `statusCode` | HTTP status code |
-| `durationMs` | Thời gian xử lý |
-| `dateKey` | Ngày chạy |
-| `branchCode` | Mã chi nhánh (nếu có) |
-| `ownerId` | User ID phụ trách (nếu có) |
-
-### Alert Admin (S2) — Khi fail
-
-Alert gồm:
-- `workflowName` + `nodeName` + `error` + `correlationId`
-- Link execution: `https://n8n.thayduydaotaolaixe.com/workflow/{id}/executions/{execId}`
-- **First aid** gợi ý: "Check secret/token/rate limit"
+| Date | Version | Changes |
+|------|---------|---------|
+| 2026-02-19 | v1.0.0 | Initial import: 3 sub + 8 main workflows. Env vars set. All published. |
 
 ---
 
@@ -894,18 +579,21 @@ Alert gồm:
 # SSH vào server
 ssh root@76.13.190.139
 
-# Xem n8n logs
+# N8N logs
 docker logs n8n --tail 100 -f
 
 # Restart n8n
 cd /opt/n8n && docker compose restart n8n
 
-# Xem env vars
+# Xem env vars (n8n)
 docker exec n8n env | grep CRM
 
-# Xem CRM logs
+# CRM logs
 docker logs thayduy-app --tail 50 -f
 
 # Check network
 docker network inspect thayduy_default
+
+# PostgreSQL connections
+docker exec thayduy-postgres psql -U thayduy -d thayduy_crm -c "SELECT count(*) FROM pg_stat_activity;"
 ```
