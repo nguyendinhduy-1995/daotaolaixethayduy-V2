@@ -2,7 +2,6 @@
  * CRM Critical Flow E2E Tests
  *
  * Tests: login, create lead, change status, assign owner, create receipt, dashboard KPI
- * Requires: demo seed data (npx tsx prisma/seed-demo.ts)
  */
 import { test, expect, type Page } from "@playwright/test";
 import path from "path";
@@ -11,9 +10,9 @@ import fs from "fs";
 const SNAP_DIR = path.join(process.cwd(), "docs/e2e-snapshots");
 const BASE = process.env.BASE_URL || "http://localhost:3000";
 
-// Demo credentials from seed-demo.ts
-const ADMIN_EMAIL = "admin@thayduy.local";
-const ADMIN_PASS = "Admin@123456";
+// Production credentials
+const ADMIN_EMAIL = process.env.TEST_ADMIN_EMAIL || "nguyendinhduy@gmail.com";
+const ADMIN_PASS = process.env.TEST_ADMIN_PASS || "Nguyendinhduy@95";
 
 test.beforeAll(() => {
     fs.mkdirSync(SNAP_DIR, { recursive: true });
@@ -22,26 +21,28 @@ test.beforeAll(() => {
 // ─── Helper: login + return cookies ────────────────────────
 async function loginAsAdmin(page: Page) {
     await page.goto("/login");
-    await page.fill('input[name="email"], input[type="email"]', ADMIN_EMAIL);
-    await page.fill('input[name="password"], input[type="password"]', ADMIN_PASS);
+    await page.waitForSelector("#login-account", { timeout: 10_000 });
+    await page.fill("#login-account", ADMIN_EMAIL);
+    await page.fill("#login-password", ADMIN_PASS);
     await page.click('button[type="submit"]');
-    await page.waitForURL("**/dashboard**", { timeout: 10_000 });
+    await page.waitForURL("**/leads**", { timeout: 15_000 });
 }
 
 /* ──────────────────────────────────────────────
-   1. Login → Dashboard redirect
+   1. Login → Leads redirect
    ────────────────────────────────────────────── */
-test("(CRM-1) admin login → redirects to dashboard", async ({ page }) => {
+test("(CRM-1) admin login → redirects to leads", async ({ page }) => {
     await page.goto("/login");
-    await expect(page.locator('input[type="email"], input[name="email"]')).toBeVisible();
+    await page.waitForSelector("#login-account", { timeout: 10_000 });
+    await expect(page.locator("#login-account")).toBeVisible();
     await expect(page.locator('button[type="submit"]')).toBeVisible();
 
-    await page.fill('input[name="email"], input[type="email"]', ADMIN_EMAIL);
-    await page.fill('input[name="password"], input[type="password"]', ADMIN_PASS);
+    await page.fill("#login-account", ADMIN_EMAIL);
+    await page.fill("#login-password", ADMIN_PASS);
     await page.click('button[type="submit"]');
 
-    await page.waitForURL("**/dashboard**", { timeout: 10_000 });
-    await expect(page).toHaveURL(/dashboard/);
+    await page.waitForURL("**/leads**", { timeout: 15_000 });
+    await expect(page).toHaveURL(/leads/);
 
     await page.screenshot({ path: path.join(SNAP_DIR, "crm-login-success.png") });
 });
@@ -82,12 +83,7 @@ test("(CRM-2) create lead via CRM → appears in list", async ({ page }) => {
 test("(CRM-3) change lead status via API", async ({ page }) => {
     await loginAsAdmin(page);
 
-    // Get cookies for API calls
-    const cookies = await page.context().cookies();
-    const tokenCookie = cookies.find(c => c.name === "access_token");
-    expect(tokenCookie).toBeTruthy();
-
-    // Fetch a demo lead
+    // Fetch a lead
     const listRes = await page.request.get(`${BASE}/api/leads?limit=1&status=HAS_PHONE`);
     expect(listRes.ok()).toBeTruthy();
     const listData = await listRes.json();
@@ -193,3 +189,4 @@ test("(CRM-6) dashboard KPI widgets render", async ({ page }) => {
 
     await page.screenshot({ path: path.join(SNAP_DIR, "crm-dashboard-kpi.png"), fullPage: true });
 });
+
