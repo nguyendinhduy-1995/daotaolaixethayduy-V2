@@ -40,6 +40,7 @@ export async function GET(req: Request, context: RouteContext) {
       include: {
         lead: { select: { id: true, fullName: true, phone: true, status: true, ownerId: true } },
         course: { select: { id: true, code: true } },
+        instructor: { select: { id: true, name: true, phone: true } },
         tuitionPlan: {
           select: { id: true, province: true, licenseType: true, tuition: true, isActive: true },
         },
@@ -99,9 +100,9 @@ export async function PATCH(req: Request, context: RouteContext) {
     const planForSnapshot =
       typeof body.tuitionPlanId === "string" && body.tuitionPlanId
         ? await prisma.tuitionPlan.findUnique({
-            where: { id: body.tuitionPlanId },
-            select: { tuition: true },
-          })
+          where: { id: body.tuitionPlanId },
+          select: { tuition: true },
+        })
         : null;
 
     const student = await prisma.student.update({

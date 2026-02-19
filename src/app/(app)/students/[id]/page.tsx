@@ -37,6 +37,7 @@ type StudentDetail = {
     ownerId: string | null;
   };
   course: { id: string; code: string } | null;
+  instructor: { id: string; name: string; phone: string | null } | null;
   tuitionPlan: {
     id: string;
     province: string;
@@ -47,6 +48,13 @@ type StudentDetail = {
     note?: string | null;
     isActive?: boolean;
   } | null;
+};
+
+type InstructorOption = {
+  id: string;
+  name: string;
+  phone: string | null;
+  status: string;
 };
 
 type ReceiptItem = {
@@ -192,7 +200,7 @@ export default function StudentDetailPage() {
         ? "timeline"
         : searchParams.get("tab") === "messages"
           ? "messages"
-        : "overview"
+          : "overview"
   );
   const [student, setStudent] = useState<StudentDetail | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -229,6 +237,11 @@ export default function StudentDetailPage() {
   const [selectedTuitionPlanId, setSelectedTuitionPlanId] = useState("");
   const [tuitionTotalOverride, setTuitionTotalOverride] = useState("");
   const [tuitionSaving, setTuitionSaving] = useState(false);
+
+  const [instructors, setInstructors] = useState<InstructorOption[]>([]);
+  const [selectedInstructorId, setSelectedInstructorId] = useState("");
+  const [instructorReason, setInstructorReason] = useState("");
+  const [instructorSaving, setInstructorSaving] = useState(false);
 
   const handleAuthError = useCallback(
     (err: ApiClientError) => {
@@ -450,10 +463,59 @@ export default function StudentDetailPage() {
     loadMessages();
   }, [loadMessages, tab]);
 
+  const loadInstructors = useCallback(async () => {
+    const token = getToken();
+    if (!token || !isAdmin) return;
+    try {
+      const data = await fetchJson<{ items: InstructorOption[] }>(
+        "/api/instructors?status=ACTIVE&pageSize=100",
+        { token }
+      );
+      setInstructors(data.items);
+    } catch {
+      setInstructors([]);
+    }
+  }, [isAdmin]);
+
+  async function changeInstructor() {
+    const token = getToken();
+    if (!token) return;
+    setInstructorSaving(true);
+    setError("");
+    try {
+      await fetchJson(`/api/students/${studentId}/change-instructor`, {
+        method: "POST",
+        token,
+        body: {
+          instructorId: selectedInstructorId || null,
+          reason: instructorReason || undefined,
+        },
+      });
+      setInstructorReason("");
+      await loadStudent();
+    } catch (e) {
+      const err = e as ApiClientError;
+      if (!handleAuthError(err)) setError(`Có lỗi xảy ra: ${err.code}: ${err.message}`);
+    } finally {
+      setInstructorSaving(false);
+    }
+  }
+
   useEffect(() => {
     if (!isAdmin) return;
     loadTuitionPlans();
   }, [isAdmin, loadTuitionPlans]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    loadInstructors();
+  }, [isAdmin, loadInstructors]);
+
+  useEffect(() => {
+    if (student) {
+      setSelectedInstructorId(student.instructor?.id || "");
+    }
+  }, [student]);
 
   async function createReceipt() {
     const token = getToken();
@@ -610,6 +672,12 @@ export default function StudentDetailPage() {
               <p className="text-zinc-900">{student.course?.code || "-"}</p>
             </div>
             <div>
+              <p className="text-sm text-zinc-500">Giáo viên thực hành</p>
+              <p className="text-zinc-900">
+                {student.instructor ? `${student.instructor.name}${student.instructor.phone ? ` (${student.instructor.phone})` : ""}` : "Chưa gán"}
+              </p>
+            </div>
+            <div>
               <p className="text-sm text-zinc-500">Học phí</p>
               <p className="text-zinc-900">
                 {student.tuitionSnapshot !== null ? formatCurrencyVnd(student.tuitionSnapshot) : "-"}
@@ -660,6 +728,38 @@ export default function StudentDetailPage() {
               <p className="text-sm text-zinc-600">Không có dữ liệu tài chính</p>
             )}
           </div>
+
+          {isAdmin ? (
+            <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+              <h3 className="mb-3 text-sm font-semibold text-zinc-900">Gán giáo viên thực hành</h3>
+              <div className="grid gap-2 md:grid-cols-3">
+                <Select
+                  value={selectedInstructorId}
+                  onChange={(e) => setSelectedInstructorId(e.target.value)}
+                >
+                  <option value="">— Không gán —</option>
+                  {instructors.map((ins) => (
+                    <option key={ins.id} value={ins.id}>
+                      {ins.name}{ins.phone ? ` (${ins.phone})` : ""}
+                    </option>
+                  ))}
+                </Select>
+                <Input
+                  placeholder="Lý do (tuỳ chọn)"
+                  value={instructorReason}
+                  onChange={(e) => setInstructorReason(e.target.value)}
+                />
+                <div className="flex justify-end">
+                  <Button
+                    onClick={changeInstructor}
+                    disabled={instructorSaving || selectedInstructorId === (student.instructor?.id || "")}
+                  >
+                    {instructorSaving ? "Đang lưu..." : "Cập nhật GV"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           <div className="rounded-lg border border-zinc-200 p-4">
             <h3 className="mb-3 text-sm font-semibold text-zinc-900">Thiết lập học phí</h3>
