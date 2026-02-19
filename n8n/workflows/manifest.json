@@ -1,0 +1,188 @@
+{
+    "version": "1.0.0",
+    "lastUpdatedAt": "2026-02-19T10:40:00+07:00",
+    "n8nDomain": "https://n8n.thayduydaotaolaixe.com",
+    "crmDomain": "https://thayduydaotaolaixe.com",
+    "workflows": [
+        {
+            "id": "rM8NCtXchLsIhLxG",
+            "name": "[CRM] S1 Get Bearer Token",
+            "file": "s1-get-bearer-token.json",
+            "version": "v1.0.0",
+            "lastUpdatedAt": "2026-02-19",
+            "trigger": "sub-workflow",
+            "schedule": null,
+            "endpoints": [
+                "POST /api/auth/login"
+            ],
+            "requiredEnvKeys": [
+                "CRM_BASE_URL",
+                "CRM_EMAIL",
+                "CRM_PASSWORD"
+            ]
+        },
+        {
+            "id": "naX5gYVTYw9cz3dA",
+            "name": "[CRM] S2 Alert Admin",
+            "file": "s2-alert-admin.json",
+            "version": "v1.0.0",
+            "lastUpdatedAt": "2026-02-19",
+            "trigger": "sub-workflow",
+            "schedule": null,
+            "endpoints": [
+                "Telegram Bot API"
+            ],
+            "requiredEnvKeys": [
+                "TELEGRAM_BOT_TOKEN",
+                "TELEGRAM_CHAT_ID"
+            ]
+        },
+        {
+            "id": "e1WhICIEbwErc0ej",
+            "name": "[CRM] S3 Standard Logger",
+            "file": "s3-standard-logger.json",
+            "version": "v1.0.0",
+            "lastUpdatedAt": "2026-02-19",
+            "trigger": "sub-workflow",
+            "schedule": null,
+            "endpoints": [],
+            "requiredEnvKeys": []
+        },
+        {
+            "id": "3dvziGY3AdYINrob",
+            "name": "[CRM] 01 Daily Cron Master",
+            "file": "01-daily-cron-master.json",
+            "version": "v1.0.0",
+            "lastUpdatedAt": "2026-02-19",
+            "trigger": "cron",
+            "schedule": "0 6 * * * (06:00 AM VN)",
+            "endpoints": [
+                "POST /api/cron/daily"
+            ],
+            "requiredEnvKeys": [
+                "CRM_BASE_URL",
+                "CRON_SECRET"
+            ]
+        },
+        {
+            "id": "d4VbLHU3Li2ORnD7",
+            "name": "[CRM] 02 Facebook Lead Capture",
+            "file": "02-facebook-lead-capture.json",
+            "version": "v1.0.0",
+            "lastUpdatedAt": "2026-02-19",
+            "trigger": "webhook",
+            "schedule": null,
+            "endpoints": [
+                "POST /api/public/lead",
+                "POST /api/leads/auto-assign",
+                "GET Graph API"
+            ],
+            "requiredEnvKeys": [
+                "CRM_BASE_URL",
+                "CRM_EMAIL",
+                "CRM_PASSWORD",
+                "FB_PAGE_TOKEN"
+            ]
+        },
+        {
+            "id": "aT7zN4h6T0ziCOHa",
+            "name": "[CRM] 03 Marketing Ads Sync",
+            "file": "03-marketing-ads-sync.json",
+            "version": "v1.0.0",
+            "lastUpdatedAt": "2026-02-19",
+            "trigger": "cron",
+            "schedule": "0 23 * * * (23:00 VN)",
+            "endpoints": [
+                "POST /api/marketing/report"
+            ],
+            "requiredEnvKeys": [
+                "CRM_BASE_URL",
+                "MARKETING_SECRET"
+            ]
+        },
+        {
+            "id": "mA40Z49COZ01Pm0d",
+            "name": "[CRM] 04 AI KPI Coach",
+            "file": "04-ai-kpi-coach.json",
+            "version": "v1.0.0",
+            "lastUpdatedAt": "2026-02-19",
+            "trigger": "cron",
+            "schedule": "0 7 * * * (07:00 AM VN)",
+            "endpoints": [
+                "POST /api/ai/suggestions",
+                "GET /api/kpi/targets"
+            ],
+            "requiredEnvKeys": [
+                "CRM_BASE_URL",
+                "CRM_EMAIL",
+                "CRM_PASSWORD"
+            ]
+        },
+        {
+            "id": "49Aw1IvGmLG611PI",
+            "name": "[CRM] 05 Outbound Message Worker",
+            "file": "05-outbound-message-worker.json",
+            "version": "v1.0.0",
+            "lastUpdatedAt": "2026-02-19",
+            "trigger": "cron",
+            "schedule": "*/5 * * * * (mỗi 5 phút)",
+            "endpoints": [
+                "POST /api/worker/outbound"
+            ],
+            "requiredEnvKeys": [
+                "CRM_BASE_URL",
+                "WORKER_SECRET"
+            ]
+        },
+        {
+            "id": "ywxhG2irMLrxZf7V",
+            "name": "[CRM] 06 Ops Pulse Report",
+            "file": "06-ops-pulse-report.json",
+            "version": "v1.0.0",
+            "lastUpdatedAt": "2026-02-19",
+            "trigger": "cron",
+            "schedule": "0 21 * * * (21:00 VN)",
+            "endpoints": [
+                "POST /api/ops/pulse"
+            ],
+            "requiredEnvKeys": [
+                "CRM_BASE_URL",
+                "OPS_SECRET"
+            ]
+        },
+        {
+            "id": "s5QxHfy1AayJngqp",
+            "name": "[CRM] 07 Stale Lead Alert & Auto-Assign",
+            "file": "07-stale-lead-alert-auto-assign.json",
+            "version": "v1.0.0",
+            "lastUpdatedAt": "2026-02-19",
+            "trigger": "cron",
+            "schedule": "0 8 * * * (08:00 AM VN)",
+            "endpoints": [
+                "GET /api/leads/stale",
+                "POST /api/leads/auto-assign"
+            ],
+            "requiredEnvKeys": [
+                "CRM_BASE_URL",
+                "CRM_EMAIL",
+                "CRM_PASSWORD"
+            ]
+        },
+        {
+            "id": "Bd7LpHje2XQPPLuc",
+            "name": "[CRM] 08 Landing CRM Zalo Notify",
+            "file": "08-landing-crm-zalo-notify.json",
+            "version": "v1.0.0",
+            "lastUpdatedAt": "2026-02-19",
+            "trigger": "webhook",
+            "schedule": null,
+            "endpoints": [
+                "POST /api/public/lead"
+            ],
+            "requiredEnvKeys": [
+                "CRM_BASE_URL",
+                "ZALO_OA_ACCESS_TOKEN"
+            ]
+        }
+    ]
+}
