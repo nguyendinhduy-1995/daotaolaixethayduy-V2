@@ -84,7 +84,12 @@ export const HOTLINE = "0948 742 666";
 export const HOTLINE_TEL = "tel:0948742666";
 
 export const PROVINCES = [
-  "TPHCM", "Đồng Nai", "Tây Ninh", "Long An", "Cần Thơ",
-  "Hậu Giang", "Bạc Liêu", "Tiền Giang", "Vĩnh Long", "Sóc Trăng",
+  "Hồ Chí Minh", "Bình Dương", "Đồng Nai", "Tiền Giang",
+  "Cần Thơ", "Vĩnh Long", "Sóc Trăng",
 ];
-export const LICENSE_TYPES = ["B1", "B2", "C"];
+export const LICENSE_TYPES = [
+  "B (số tự động)", "B (số sàn)", "C1",
+  "B, C1, C lên D1", "B, C1, C, D1 lên D2", "C, D1, D2 lên D",
+  "B lên C", "C1 lên C", "C lên CE",
+];
+

@@ -16,7 +16,7 @@ interface Props {
 }
 
 export default function PricingSection({ scrollTo }: Props) {
-    const [selectedProvince, setSelectedProvince] = useState("TPHCM");
+    const [selectedProvince, setSelectedProvince] = useState("Hồ Chí Minh");
     const [selectedLicense, setSelectedLicense] = useState("");
     const [tuitionData, setTuitionData] = useState<TuitionItem[]>([]);
     const [loading, setLoading] = useState(false);
@@ -97,7 +97,7 @@ export default function PricingSection({ scrollTo }: Props) {
                                     </p>
                                     <div className="mt-4 flex flex-wrap justify-center gap-3">
                                         <button
-                                            onClick={() => setSelectedProvince("TPHCM")}
+                                            onClick={() => setSelectedProvince("Hồ Chí Minh")}
                                             className="rounded-xl border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 active:scale-[0.97]"
                                         >
                                             Chọn tỉnh khác
@@ -117,17 +117,12 @@ export default function PricingSection({ scrollTo }: Props) {
                                             key={item.id}
                                             className={`rounded-2xl border border-slate-200/60 bg-white p-4 shadow-sm transition-shadow hover:shadow-md ${visible ? `ld-scale-in ld-d${Math.min(idx + 1, 6)}` : "opacity-0"}`}
                                         >
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-sm font-bold text-slate-900">
-                                                        {item.licenseType}
-                                                    </span>
-                                                    <div>
-                                                        <p className="text-sm font-semibold text-slate-900">Hạng {item.licenseType}</p>
-                                                        <p className="text-[10px] text-slate-400">{item.province}</p>
-                                                    </div>
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="text-sm font-semibold leading-snug text-slate-900">{item.licenseType}</p>
+                                                    <p className="mt-0.5 text-[10px] text-slate-400">{item.province}</p>
                                                 </div>
-                                                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                                                <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">
                                                     Trọn gói
                                                 </span>
                                             </div>
