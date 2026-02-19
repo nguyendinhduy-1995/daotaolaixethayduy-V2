@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useMemo } from "react";
 import { APP_SHORT } from "@/lib/app-meta";
+import { TrackingScriptsClient } from "@/components/tracking/TrackingScriptsClient";
 
 const NAV = [
   { href: "/student", label: "Tổng quan", icon: "🏠" },
@@ -70,8 +71,8 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
                 key={item.href}
                 href={item.href}
                 className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-all ${active
-                    ? "bg-slate-900 text-white shadow-sm"
-                    : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                  ? "bg-slate-900 text-white shadow-sm"
+                  : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
                   }`}
               >
                 <span className="text-xs">{item.icon}</span>
@@ -84,6 +85,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
 
       {/* Content */}
       <main className="relative mx-auto max-w-[1120px] px-4 py-5 md:px-6 md:py-6">{children}</main>
+      <TrackingScriptsClient site="STUDENT" />
     </div>
   );
 }

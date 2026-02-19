@@ -264,6 +264,7 @@ enum PermissionModule {
   expenses
   salary
   insights
+  admin_tracking
 }
 
 enum PermissionAction {
@@ -306,6 +307,20 @@ enum AiSuggestionFeedbackType {
   HELPFUL
   NOT_HELPFUL
   DONE
+}
+
+enum TrackingCodePlacement {
+  HEAD
+  BODY_TOP
+  BODY_BOTTOM
+}
+
+enum TrackingSite {
+  GLOBAL
+  LANDING
+  CRM
+  STUDENT
+  TAPLAI
 }
 
 model User {
@@ -1247,4 +1262,20 @@ model StudentExamPlan {
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@index([studentId])
+}
+
+model TrackingCode {
+  id          String                @id @default(cuid())
+  site        TrackingSite          @default(GLOBAL)
+  key         String
+  name        String
+  placement   TrackingCodePlacement
+  code        String
+  isEnabled   Boolean               @default(true)
+  updatedById String?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  @@unique([site, key])
+  @@index([site, placement, isEnabled])
 }

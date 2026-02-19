@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { APP_NAME } from "@/lib/app-meta";
+import { TrackingScripts, TrackingScriptsBottom } from "./_components/TrackingScripts";
 
 export const metadata: Metadata = {
     title: `${APP_NAME} – Đào Tạo Lái Xe Uy Tín`,
@@ -29,7 +30,10 @@ export default function LandingLayout({
 }>) {
     return (
         <>
+            <TrackingScripts site="LANDING" />
             {children}
+            <TrackingScriptsBottom site="LANDING" />
         </>
     );
 }
+

@@ -38,6 +38,7 @@ export const MODULE_KEYS = [
   "expenses",
   "salary",
   "insights",
+  "admin_tracking",
 ] as const;
 
 export const ACTION_KEYS = ["VIEW", "CREATE", "UPDATE", "FEEDBACK", "EDIT", "DELETE", "EXPORT", "ASSIGN", "RUN", "INGEST"] as const;

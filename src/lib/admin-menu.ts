@@ -338,4 +338,12 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     keywords: ["salary profile", "muc luong", "ho so"],
     icon: "📄",
   },
+  {
+    key: "admin-tracking",
+    label: "Mã tracking",
+    href: "/admin/tracking",
+    group: "Quản trị",
+    keywords: ["tracking", "gtag", "pixel", "analytics", "ga4", "meta", "tiktok"],
+    icon: "📡",
+  },
 ];

@@ -19,6 +19,7 @@ export const PUBLIC_API_ROUTES: Array<{ method?: string; pattern: RegExp }> = [
   { method: "GET", pattern: /^\/api\/public\/tuition-plans$/ },
   { method: "POST", pattern: /^\/api\/public\/lead$/ },
   { method: "POST", pattern: /^\/api\/public\/seed-tuition$/ },
+  { method: "GET", pattern: /^\/api\/tracking-codes$/ },
 ];
 
 export const SECRET_AUTH_ROUTES: Array<{ method?: string; pattern: RegExp }> = [
@@ -181,6 +182,11 @@ export const ROUTE_PERMISSION_RULES: RoutePermissionRule[] = [
   { method: "GET", pattern: /^\/api\/expenses\/base-salary$/, module: "salary", action: "VIEW" },
   { method: "POST", pattern: /^\/api\/expenses\/base-salary$/, module: "salary", action: "EDIT" },
   { method: "GET", pattern: /^\/api\/insights\/expenses$/, module: "insights", action: "VIEW" },
+
+  { method: "GET", pattern: /^\/api\/admin\/tracking-codes$/, module: "admin_tracking", action: "VIEW" },
+  { method: "POST", pattern: /^\/api\/admin\/tracking-codes$/, module: "admin_tracking", action: "CREATE" },
+  { method: "PATCH", pattern: /^\/api\/admin\/tracking-codes\/[^/]+$/, module: "admin_tracking", action: "UPDATE" },
+  { method: "DELETE", pattern: /^\/api\/admin\/tracking-codes\/[^/]+$/, module: "admin_tracking", action: "DELETE" },
 ];
 
 function matchesAllowlist(

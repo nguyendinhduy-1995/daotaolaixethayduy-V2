@@ -12,6 +12,7 @@ import { DesktopSidebarMenu } from "@/components/admin/DesktopSidebarMenu";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { ToastProvider } from "@/components/ui/toast";
+import { TrackingScriptsClient } from "@/components/tracking/TrackingScriptsClient";
 import { APP_DESCRIPTION, APP_SHORT } from "@/lib/app-meta";
 
 function roleLabel(role: string) {
@@ -200,6 +201,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         </div>
 
         {!usePageMobileShell ? <MobileAdminMenu /> : null}
+        <TrackingScriptsClient site="CRM" />
       </div>
     </ToastProvider>
   );
