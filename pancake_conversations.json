@@ -1,0 +1,3138 @@
+{
+  "success": true,
+  "conversations": [
+    {
+      "id": "382049544990443_25928195623438901",
+      "type": "INBOX",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "email": "25928195623438901@facebook.com",
+        "id": "25928195623438901",
+        "name": "Ba Ghẹ"
+      },
+      "snippet": "[BotcakeAI] Chào bạn, bạn có cần mình hỗ trợ thêm thông tin về học phí ho...",
+      "inserted_at": "2026-02-15T03:38:23.579696",
+      "updated_at": "2026-02-15T04:08:35.000000",
+      "message_count": 5,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "25928195623438901",
+          "id": "2ad2ac5c-eecd-416a-9237-35abb5ad2ab2",
+          "name": "Ba Ghẹ"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "admin_id": "382049544990443",
+        "admin_name": "BotcakeAI",
+        "app_id": 556376998159104,
+        "flow_id": null,
+        "id": "382049544990443",
+        "name": "Thầy Duy - Đào Tạo Lái Xe Ô Tô - 0948 742 666"
+      },
+      "post_id": null,
+      "recent_phone_numbers": [],
+      "customer_id": "0eb42875-eddf-4b33-9fca-7c6c5cf6b5e8",
+      "page_customer": {
+        "id": "2ad2ac5c-eecd-416a-9237-35abb5ad2ab2",
+        "name": "Ba Ghẹ",
+        "inserted_at": "2026-02-15T03:38:14",
+        "customer_id": "0eb42875-eddf-4b33-9fca-7c6c5cf6b5e8",
+        "psid": "25928195623438901",
+        "gender": "male",
+        "global_id": "61560940082545",
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "ads": [
+        {
+          "ad_id": "120240327471810506",
+          "inserted_at": "2026-02-15T03:38:11",
+          "post_id": "382049544990443_122192721758441403"
+        }
+      ],
+      "ad_ids": [
+        "120240327471810506"
+      ],
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "382049544990443_25156680460692611",
+      "type": "INBOX",
+      "tags": [
+        null
+      ],
+      "seen": true,
+      "from": {
+        "email": "25156680460692611@facebook.com",
+        "id": "25156680460692611",
+        "name": "Miphammi Miphammi"
+      },
+      "snippet": "Mai thầy liên hệ nhé",
+      "inserted_at": "2026-02-11T13:06:40.408204",
+      "updated_at": "2026-02-11T13:52:41.956000",
+      "message_count": 4,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "25156680460692611",
+          "id": "a5fd9858-4fd6-4b66-be2a-eceb2a304432",
+          "name": "Miphammi Miphammi"
+        }
+      ],
+      "has_phone": true,
+      "last_sent_by": {
+        "admin_name": "Duy Nguyễn Đình",
+        "id": "382049544990443",
+        "name": "Thầy Duy - Đào Tạo Lái Xe Ô Tô - 0948 742 666",
+        "platform": "mobile",
+        "uid": "90490d72-ccd1-457e-b11d-d438a6c38ce7"
+      },
+      "post_id": null,
+      "recent_phone_numbers": [
+        {
+          "captured": "0933350040",
+          "length": 10,
+          "m_id": "m_aRgThXwvMtjrcTKJXacGq9dPsGgv4-DyQr1Elap2QOZ5zHVyOLFhNpQicvzWmmxNozmkZZrQPTO7QiuyouydQw",
+          "offset": 0,
+          "phone_number": "0933350040",
+          "status": 0
+        }
+      ],
+      "customer_id": "d2501742-f40b-405e-8cc6-0fd3b53d7859",
+      "page_customer": {
+        "id": "a5fd9858-4fd6-4b66-be2a-eceb2a304432",
+        "name": "Miphammi Miphammi",
+        "inserted_at": "2025-12-05T07:57:00",
+        "customer_id": "d2501742-f40b-405e-8cc6-0fd3b53d7859",
+        "psid": "25156680460692611",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "ads": [],
+      "ad_ids": [],
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "382049544990443_32212279761719103",
+      "type": "INBOX",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "email": "32212279761719103@facebook.com",
+        "id": "32212279761719103",
+        "name": "Nguyễn Đình Duy"
+      },
+      "snippet": "[BotcakeAI] Chào bạn! Học phí trọn gói hạng C1 tại Tiền Giang là 21.500.0...",
+      "inserted_at": "2025-11-02T00:11:40.708328",
+      "updated_at": "2026-02-11T10:32:13.000000",
+      "message_count": 81,
+      "page_id": "382049544990443",
+      "assignee_ids": [
+        "b2cdea0c-dc78-4de2-9c5a-d61ef4c83b8c"
+      ],
+      "customers": [
+        {
+          "fb_id": "32212279761719103",
+          "id": "9c050392-54a0-4b90-9681-f071dbdab174",
+          "name": "Nguyễn Đình Duy"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "admin_id": "382049544990443",
+        "admin_name": "BotcakeAI",
+        "app_id": 556376998159104,
+        "flow_id": null,
+        "id": "382049544990443",
+        "name": "Thầy Duy - Đào Tạo Lái Xe Ô Tô - 0948 742 666"
+      },
+      "post_id": null,
+      "recent_phone_numbers": [],
+      "customer_id": "9f6c6083-4fff-4368-a087-ca94cdb9c3aa",
+      "page_customer": {
+        "id": "9c050392-54a0-4b90-9681-f071dbdab174",
+        "name": "Nguyễn Đình Duy",
+        "inserted_at": "2025-11-02T00:11:39",
+        "customer_id": "9f6c6083-4fff-4368-a087-ca94cdb9c3aa",
+        "psid": "32212279761719103",
+        "gender": "male",
+        "global_id": "100013413187352",
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "ads": [
+        {
+          "ad_id": "120236849295620450",
+          "inserted_at": "2025-11-04T06:17:19",
+          "post_id": "382049544990443_122190322094441403"
+        },
+        {
+          "ad_id": "120237032673780450",
+          "inserted_at": "2026-02-11T09:12:54",
+          "post_id": "382049544990443_122190322094441403"
+        }
+      ],
+      "ad_ids": [
+        "120236849295620450",
+        "120237032673780450"
+      ],
+      "assignee_histories": [
+        {
+          "inserted_at": "2026-01-22T08:55:41.509083",
+          "payload": {
+            "added_users": [
+              {
+                "id": "b2cdea0c-dc78-4de2-9c5a-d61ef4c83b8c",
+                "name": "Ngọc Hạnh",
+                "email": null,
+                "fb_id": "146259813725228"
+              }
+            ],
+            "deleted_users": []
+          },
+          "conversation_id": "382049544990443_32212279761719103"
+        }
+      ],
+      "current_assign_users": [
+        {
+          "id": "b2cdea0c-dc78-4de2-9c5a-d61ef4c83b8c",
+          "name": "Ngọc Hạnh",
+          "email": null,
+          "fb_id": "146259813725228"
+        }
+      ],
+      "tag_histories": []
+    },
+    {
+      "id": "382049544990443_8225953287438308",
+      "type": "INBOX",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "email": "8225953287438308@facebook.com",
+        "id": "8225953287438308",
+        "name": "Alixia Flaire"
+      },
+      "snippet": "[BotcakeAI] Chào bạn, mình muốn hỏi bạn có cần tư vấn thêm về các gói học...",
+      "inserted_at": "2026-02-11T08:48:45.406236",
+      "updated_at": "2026-02-11T09:26:27.000000",
+      "message_count": 9,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "8225953287438308",
+          "id": "8c4a1437-d42a-4661-af31-a1442438355e",
+          "name": "Alixia Flaire"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "admin_id": "382049544990443",
+        "admin_name": "BotcakeAI",
+        "app_id": 556376998159104,
+        "flow_id": null,
+        "id": "382049544990443",
+        "name": "Thầy Duy - Đào Tạo Lái Xe Ô Tô - 0948 742 666"
+      },
+      "post_id": null,
+      "recent_phone_numbers": [],
+      "customer_id": "fe98c9fb-0789-4bd1-b7a7-8904e6d19df4",
+      "page_customer": {
+        "id": "8c4a1437-d42a-4661-af31-a1442438355e",
+        "name": "Alixia Flaire",
+        "inserted_at": "2026-02-11T08:48:44",
+        "customer_id": "fe98c9fb-0789-4bd1-b7a7-8904e6d19df4",
+        "psid": "8225953287438308",
+        "gender": "male",
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "ads": [],
+      "ad_ids": [],
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122202573494441403_1397138931489944",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "26360569886869384",
+        "name": "Huy Đoàn"
+      },
+      "snippet": "Mình chia sẽ các bạn vài điều\n1. Xác định rõ mục đích: học để...",
+      "inserted_at": "2026-02-11T01:08:56.000000",
+      "updated_at": "2026-02-11T01:08:51.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "26360569886869384",
+          "id": "44e4554e-be9c-4743-bc12-0c5e8490c8f6",
+          "name": "Huy Đoàn"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "26360569886869384",
+        "name": "Huy Đoàn"
+      },
+      "post_id": "382049544990443_122202573494441403",
+      "recent_phone_numbers": [],
+      "customer_id": "9f5ced5a-2d2e-41bb-abf3-22bbb0689545",
+      "page_customer": {
+        "id": "44e4554e-be9c-4743-bc12-0c5e8490c8f6",
+        "name": "Huy Đoàn",
+        "inserted_at": "2026-02-11T01:08:56",
+        "customer_id": "9f5ced5a-2d2e-41bb-abf3-22bbb0689545",
+        "psid": "26360569886869384",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122202573494441403_1584084109502404",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "24863801806629964",
+        "name": "Quốc Hảo"
+      },
+      "snippet": "Đợi tiền học phí lên cao, vs học khó hơn hãy thử học",
+      "inserted_at": "2026-02-08T01:37:07.000000",
+      "updated_at": "2026-02-08T01:37:01.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "24863801806629964",
+          "id": "b98d80ad-cc04-4f58-b39f-30c2ffc69660",
+          "name": "Quốc Hảo"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "24863801806629964",
+        "name": "Quốc Hảo"
+      },
+      "post_id": "382049544990443_122202573494441403",
+      "recent_phone_numbers": [],
+      "customer_id": "019f4138-7f78-4d90-8647-a5fbdd43d59a",
+      "page_customer": {
+        "id": "b98d80ad-cc04-4f58-b39f-30c2ffc69660",
+        "name": "Quốc Hảo",
+        "inserted_at": "2026-02-08T01:37:07",
+        "customer_id": "019f4138-7f78-4d90-8647-a5fbdd43d59a",
+        "psid": "24863801806629964",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "382049544990443_24950964251201307",
+      "type": "INBOX",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "email": "24950964251201307@facebook.com",
+        "id": "24950964251201307",
+        "name": "Thanh Khoan"
+      },
+      "snippet": "E ko biết sử dụng máy tính sao thầy",
+      "inserted_at": "2025-10-17T02:45:29.678060",
+      "updated_at": "2026-02-06T14:43:08.000000",
+      "message_count": 40,
+      "page_id": "382049544990443",
+      "assignee_ids": [
+        "0a37f99d-9019-48e3-a54e-1ed48ece2601"
+      ],
+      "customers": [
+        {
+          "fb_id": "24950964251201307",
+          "id": "16a52794-314f-485a-be02-b9119d8e3017",
+          "name": "Thanh Khoan"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "ai_generated": false,
+        "email": "24950964251201307@facebook.com",
+        "id": "24950964251201307",
+        "name": "Thanh Khoan"
+      },
+      "post_id": null,
+      "recent_phone_numbers": [],
+      "customer_id": "5fb1c27b-93db-4305-8766-63806bb1126c",
+      "page_customer": {
+        "id": "16a52794-314f-485a-be02-b9119d8e3017",
+        "name": "Thanh Khoan",
+        "inserted_at": "2025-09-26T23:01:59",
+        "customer_id": "5fb1c27b-93db-4305-8766-63806bb1126c",
+        "psid": "24950964251201307",
+        "gender": "male",
+        "global_id": "100037973198917",
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "ads": [
+        {
+          "ad_id": "120230484179990678",
+          "inserted_at": "2025-09-26T23:01:58",
+          "post_id": "382049544990443_122185302668441403"
+        },
+        {
+          "ad_id": "120241169302640502",
+          "inserted_at": "2026-01-19T06:36:34",
+          "post_id": "382049544990443_122199464162441403"
+        }
+      ],
+      "ad_ids": [
+        "120230484179990678",
+        "120241169302640502"
+      ],
+      "assignee_histories": [
+        {
+          "inserted_at": "2026-01-22T08:55:49.453588",
+          "payload": {
+            "added_users": [
+              {
+                "id": "0a37f99d-9019-48e3-a54e-1ed48ece2601",
+                "name": "Linh Ngọc Bùi",
+                "email": null,
+                "fb_id": "672502186232570"
+              }
+            ],
+            "deleted_users": []
+          },
+          "conversation_id": "382049544990443_24950964251201307"
+        }
+      ],
+      "current_assign_users": [
+        {
+          "id": "0a37f99d-9019-48e3-a54e-1ed48ece2601",
+          "name": "Linh Ngọc Bùi",
+          "email": null,
+          "fb_id": "672502186232570"
+        }
+      ],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_1429923418519212",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "25775638302085108",
+        "name": "John Trần"
+      },
+      "snippet": "Cài đặt thế nào vậy bạn",
+      "inserted_at": "2026-02-05T05:08:00.000000",
+      "updated_at": "2026-02-05T05:07:53.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "25775638302085108",
+          "id": "c93a8de0-db4d-454d-a0f3-54968f43c3c8",
+          "name": "John Trần"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "25775638302085108",
+        "name": "John Trần"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [],
+      "customer_id": "753a1933-929e-4423-a01b-ef9852d67052",
+      "page_customer": {
+        "id": "c93a8de0-db4d-454d-a0f3-54968f43c3c8",
+        "name": "John Trần",
+        "inserted_at": "2026-02-05T05:08:00",
+        "customer_id": "753a1933-929e-4423-a01b-ef9852d67052",
+        "psid": "25775638302085108",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "382049544990443_24691778433826975",
+      "type": "INBOX",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "email": "24691778433826975@facebook.com",
+        "id": "24691778433826975",
+        "name": "Dac Rin Tran"
+      },
+      "snippet": "Em cho thầy sdt nha",
+      "inserted_at": "2026-02-04T05:43:56.451936",
+      "updated_at": "2026-02-05T04:58:48.798000",
+      "message_count": 6,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "24691778433826975",
+          "id": "df8ef8f7-493b-4fa9-a0c1-0e354aedf76b",
+          "name": "Dac Rin Tran"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "admin_name": "Duy Nguyễn Đình",
+        "id": "382049544990443",
+        "name": "Thầy Duy - Đào Tạo Lái Xe Ô Tô - 0948 742 666",
+        "platform": "mobile",
+        "uid": "90490d72-ccd1-457e-b11d-d438a6c38ce7"
+      },
+      "post_id": null,
+      "recent_phone_numbers": [],
+      "customer_id": "055fba2e-6116-4c67-a370-a41685b81444",
+      "page_customer": {
+        "id": "df8ef8f7-493b-4fa9-a0c1-0e354aedf76b",
+        "name": "Dac Rin Tran",
+        "inserted_at": "2026-02-04T05:43:52",
+        "customer_id": "055fba2e-6116-4c67-a370-a41685b81444",
+        "psid": "24691778433826975",
+        "gender": "male",
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "ads": [
+        {
+          "ad_id": "120241169513620502",
+          "inserted_at": "2026-02-04T05:43:48",
+          "post_id": "382049544990443_122199464114441403"
+        }
+      ],
+      "ad_ids": [
+        "120241169513620502"
+      ],
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "382049544990443_25488242617503927",
+      "type": "INBOX",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "email": "25488242617503927@facebook.com",
+        "id": "25488242617503927",
+        "name": "Hoài Sơn Minh"
+      },
+      "snippet": "Ok thầy",
+      "inserted_at": "2026-01-31T11:54:51.732033",
+      "updated_at": "2026-02-05T04:04:35.000000",
+      "message_count": 22,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "25488242617503927",
+          "id": "88b1303a-1acd-438d-96d1-7c7675f27e6a",
+          "name": "Hoài Sơn Minh"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "ai_generated": false,
+        "email": "25488242617503927@facebook.com",
+        "id": "25488242617503927",
+        "name": "Hoài Sơn Minh"
+      },
+      "post_id": null,
+      "recent_phone_numbers": [],
+      "customer_id": "01c12fcd-4b60-442e-ad7b-7088f2c3169e",
+      "page_customer": {
+        "id": "88b1303a-1acd-438d-96d1-7c7675f27e6a",
+        "name": "Hoài Sơn Minh",
+        "inserted_at": "2026-01-31T11:54:46",
+        "customer_id": "01c12fcd-4b60-442e-ad7b-7088f2c3169e",
+        "psid": "25488242617503927",
+        "gender": "male",
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "ads": [
+        {
+          "ad_id": "6989635805883",
+          "inserted_at": "2026-01-31T11:54:42",
+          "post_id": "382049544990443_122192721758441403"
+        }
+      ],
+      "ad_ids": [
+        "6989635805883"
+      ],
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "382049544990443_25471114855916606",
+      "type": "INBOX",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "email": "25471114855916606@facebook.com",
+        "id": "25471114855916606",
+        "name": "Điện Lạnh Thanh Nhiều"
+      },
+      "snippet": "Xa quá thì học bên đó cho tiện",
+      "inserted_at": "2026-02-02T08:51:42.511072",
+      "updated_at": "2026-02-05T02:15:30.247000",
+      "message_count": 16,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "25471114855916606",
+          "id": "75b66b0f-2e0e-46c2-b531-1cc8a2214a7e",
+          "name": "Điện Lạnh Thanh Nhiều"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "admin_name": "Duy Nguyễn Đình",
+        "id": "382049544990443",
+        "name": "Thầy Duy - Đào Tạo Lái Xe Ô Tô - 0948 742 666",
+        "platform": "mobile",
+        "uid": "90490d72-ccd1-457e-b11d-d438a6c38ce7"
+      },
+      "post_id": null,
+      "recent_phone_numbers": [],
+      "customer_id": "c3f31017-790e-4d4c-ae5d-185e531dbb5c",
+      "page_customer": {
+        "id": "75b66b0f-2e0e-46c2-b531-1cc8a2214a7e",
+        "name": "Điện Lạnh Thanh Nhiều",
+        "inserted_at": "2026-02-02T08:51:35",
+        "customer_id": "c3f31017-790e-4d4c-ae5d-185e531dbb5c",
+        "psid": "25471114855916606",
+        "gender": "male",
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "ads": [
+        {
+          "ad_id": "120241169513620502",
+          "inserted_at": "2026-02-02T08:51:32",
+          "post_id": "382049544990443_122199464114441403"
+        }
+      ],
+      "ad_ids": [
+        "120241169513620502"
+      ],
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "382049544990443_25578888381806901",
+      "type": "INBOX",
+      "tags": [
+        null
+      ],
+      "seen": true,
+      "from": {
+        "email": "25578888381806901@facebook.com",
+        "id": "25578888381806901",
+        "name": "Hải Duy"
+      },
+      "snippet": "Dạ thầy",
+      "inserted_at": "2026-02-04T15:34:26.558569",
+      "updated_at": "2026-02-05T02:09:10.000000",
+      "message_count": 17,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "25578888381806901",
+          "id": "6880066e-51e6-40bd-a3ff-ce580d170d42",
+          "name": "Hải Duy"
+        }
+      ],
+      "has_phone": true,
+      "last_sent_by": {
+        "ai_generated": false,
+        "email": "25578888381806901@facebook.com",
+        "id": "25578888381806901",
+        "name": "Hải Duy"
+      },
+      "post_id": null,
+      "recent_phone_numbers": [
+        {
+          "captured": "0766386674",
+          "length": 10,
+          "m_id": "m_WjalH6JL6EdMIxgMFyUxmRJ5yRS2s-hfpudB5Ug9Kjvvu1Ho3AylsV_KiU7T3IL99am2rZb8ZKRIcaban6Hjpg",
+          "offset": 0,
+          "phone_number": "0766386674",
+          "status": 0
+        }
+      ],
+      "customer_id": "4ede93f5-c8e8-43f6-a6e3-a76c4e40bf4b",
+      "page_customer": {
+        "id": "6880066e-51e6-40bd-a3ff-ce580d170d42",
+        "name": "Hải Duy",
+        "inserted_at": "2026-02-04T15:34:24",
+        "customer_id": "4ede93f5-c8e8-43f6-a6e3-a76c4e40bf4b",
+        "psid": "25578888381806901",
+        "gender": "male",
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "ads": [
+        {
+          "ad_id": "120241169513620502",
+          "inserted_at": "2026-02-04T15:35:48",
+          "post_id": "382049544990443_122199464114441403"
+        }
+      ],
+      "ad_ids": [
+        "120241169513620502"
+      ],
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "382049544990443_25062846456700143",
+      "type": "INBOX",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "email": "25062846456700143@facebook.com",
+        "id": "25062846456700143",
+        "name": "Chin Chin"
+      },
+      "snippet": "0948 742 666 thầy gửi nha",
+      "inserted_at": "2026-01-20T13:17:59.529434",
+      "updated_at": "2026-02-05T01:48:31.326000",
+      "message_count": 21,
+      "page_id": "382049544990443",
+      "assignee_ids": [
+        "b5b4cbd0-8e63-4c10-b18b-891e804a370c"
+      ],
+      "customers": [
+        {
+          "fb_id": "25062846456700143",
+          "id": "28b6009b-bea9-4b8c-ba83-59f7228cf3d5",
+          "name": "Chin Chin"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "admin_name": "Duy Nguyễn Đình",
+        "id": "382049544990443",
+        "name": "Thầy Duy - Đào Tạo Lái Xe Ô Tô - 0948 742 666",
+        "platform": "mobile",
+        "uid": "90490d72-ccd1-457e-b11d-d438a6c38ce7"
+      },
+      "post_id": null,
+      "recent_phone_numbers": [],
+      "customer_id": "6cf48c1c-42f0-4b61-b463-17d477804aec",
+      "page_customer": {
+        "id": "28b6009b-bea9-4b8c-ba83-59f7228cf3d5",
+        "name": "Chin Chin",
+        "inserted_at": "2026-01-20T13:17:54",
+        "customer_id": "6cf48c1c-42f0-4b61-b463-17d477804aec",
+        "psid": "25062846456700143",
+        "gender": "male",
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "ads": [
+        {
+          "ad_id": "120241169302640502",
+          "inserted_at": "2026-01-25T15:38:21",
+          "post_id": "382049544990443_122199464162441403"
+        }
+      ],
+      "ad_ids": [
+        "120241169302640502"
+      ],
+      "assignee_histories": [
+        {
+          "inserted_at": "2026-01-20T13:17:59.739135",
+          "payload": {
+            "added_users": [
+              {
+                "id": "b5b4cbd0-8e63-4c10-b18b-891e804a370c",
+                "name": "Tâm Bùi",
+                "email": null,
+                "fb_id": "122274528842226375"
+              }
+            ],
+            "deleted_users": []
+          },
+          "conversation_id": "382049544990443_25062846456700143"
+        }
+      ],
+      "current_assign_users": [
+        {
+          "id": "b5b4cbd0-8e63-4c10-b18b-891e804a370c",
+          "name": "Tâm Bùi",
+          "email": null,
+          "fb_id": "122274528842226375"
+        }
+      ],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_901204025980293",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "25937168505973658",
+        "name": "Nhàn Duy"
+      },
+      "snippet": "Mình thi 2 ngày mà chưa có",
+      "inserted_at": "2026-02-04T10:40:06.000000",
+      "updated_at": "2026-02-04T10:39:59.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "25937168505973658",
+          "id": "a04a51b9-ac61-4e17-b5da-814223415a10",
+          "name": "Nhàn Duy"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "25937168505973658",
+        "name": "Nhàn Duy"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [],
+      "customer_id": "b41d20bf-4342-4d26-beab-89e1b98933d2",
+      "page_customer": {
+        "id": "a04a51b9-ac61-4e17-b5da-814223415a10",
+        "name": "Nhàn Duy",
+        "inserted_at": "2026-02-04T10:40:06",
+        "customer_id": "b41d20bf-4342-4d26-beab-89e1b98933d2",
+        "psid": "25937168505973658",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_4234964820151420",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "26437474669170304",
+        "name": "Đồng Xuân Nghi"
+      },
+      "snippet": "Cô giáo hướng dẫn giúp thanhks",
+      "inserted_at": "2026-02-03T12:59:39.000000",
+      "updated_at": "2026-02-03T12:59:32.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "26437474669170304",
+          "id": "caa55f9d-acc7-4cfa-a2d3-754f9f15fc49",
+          "name": "Đồng Xuân Nghi"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "26437474669170304",
+        "name": "Đồng Xuân Nghi"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [],
+      "customer_id": "8a68ffbc-dfa6-457b-95b0-be36ea17d4e8",
+      "page_customer": {
+        "id": "caa55f9d-acc7-4cfa-a2d3-754f9f15fc49",
+        "name": "Đồng Xuân Nghi",
+        "inserted_at": "2026-02-03T12:59:39",
+        "customer_id": "8a68ffbc-dfa6-457b-95b0-be36ea17d4e8",
+        "psid": "26437474669170304",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201322848441403_754189547349316",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "26820149057574423",
+        "name": "Văn Nam"
+      },
+      "snippet": "Sợ cái nhẹ nhàng lắm cô ạ",
+      "inserted_at": "2026-02-03T07:49:20.000000",
+      "updated_at": "2026-02-03T07:49:14.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "26820149057574423",
+          "id": "917a9956-e112-4bd7-ab90-31718faf6ae8",
+          "name": "Văn Nam"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "26820149057574423",
+        "name": "Văn Nam"
+      },
+      "post_id": "382049544990443_122201322848441403",
+      "recent_phone_numbers": [],
+      "customer_id": "60ed4ed7-0703-4bd2-841f-52bdfd76aa59",
+      "page_customer": {
+        "id": "917a9956-e112-4bd7-ab90-31718faf6ae8",
+        "name": "Văn Nam",
+        "inserted_at": "2026-02-03T07:49:20",
+        "customer_id": "60ed4ed7-0703-4bd2-841f-52bdfd76aa59",
+        "psid": "26820149057574423",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122200319912441403_1222943532639032",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "33555984234050346",
+        "name": "Nguyên Đoàn"
+      },
+      "snippet": "Có Nhận học nôi tru không ?",
+      "inserted_at": "2026-02-03T06:34:02.000000",
+      "updated_at": "2026-02-03T06:33:53.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "33555984234050346",
+          "id": "e44f8562-870e-4627-a589-254d83ad5af2",
+          "name": "Nguyên Đoàn"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "33555984234050346",
+        "name": "Nguyên Đoàn"
+      },
+      "post_id": "382049544990443_122200319912441403",
+      "recent_phone_numbers": [],
+      "customer_id": "5e455424-2cc9-40df-983a-5babff6121d3",
+      "page_customer": {
+        "id": "e44f8562-870e-4627-a589-254d83ad5af2",
+        "name": "Nguyên Đoàn",
+        "inserted_at": "2026-02-03T00:49:29",
+        "customer_id": "5e455424-2cc9-40df-983a-5babff6121d3",
+        "psid": "33555984234050346",
+        "gender": "male",
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_1406160427635618",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "33614508838192597",
+        "name": "Hạnh Lê"
+      },
+      "snippet": "Ib",
+      "inserted_at": "2026-02-03T06:13:51.000000",
+      "updated_at": "2026-02-03T06:13:49.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "33614508838192597",
+          "id": "618bf39d-10b6-4a52-b8e4-2633c7e4ee6f",
+          "name": "Hạnh Lê"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "33614508838192597",
+        "name": "Hạnh Lê"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [],
+      "customer_id": "145ce604-a4e1-489e-aa89-c7611b56cba4",
+      "page_customer": {
+        "id": "618bf39d-10b6-4a52-b8e4-2633c7e4ee6f",
+        "name": "Hạnh Lê",
+        "inserted_at": "2026-02-03T06:13:51",
+        "customer_id": "145ce604-a4e1-489e-aa89-c7611b56cba4",
+        "psid": "33614508838192597",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_2298973413960247",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "26591312543805027",
+        "name": "Quan Tấn Khoanh"
+      },
+      "snippet": "Mình thi từ hôm 31/1 đến nay chưa có 😮",
+      "inserted_at": "2026-02-03T06:10:43.000000",
+      "updated_at": "2026-02-03T06:10:36.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "26591312543805027",
+          "id": "3856ebaf-d491-417c-aa98-a05026ea6820",
+          "name": "Quan Tấn Khoanh"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "26591312543805027",
+        "name": "Quan Tấn Khoanh"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [],
+      "customer_id": "6290b7ed-be4e-42cb-9e0f-99737b35c545",
+      "page_customer": {
+        "id": "3856ebaf-d491-417c-aa98-a05026ea6820",
+        "name": "Quan Tấn Khoanh",
+        "inserted_at": "2026-02-03T06:10:43",
+        "customer_id": "6290b7ed-be4e-42cb-9e0f-99737b35c545",
+        "psid": "26591312543805027",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_2811962642483212",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "26717530281172376",
+        "name": "Phạm Huyên"
+      },
+      "snippet": "Nhờ bạn hướng dẫn dùm tôi Xin cảm ơn",
+      "inserted_at": "2026-02-03T05:57:29.000000",
+      "updated_at": "2026-02-03T05:57:23.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "26717530281172376",
+          "id": "5366d9e0-5add-4400-9e27-35cd9fcb2320",
+          "name": "Phạm Huyên"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "26717530281172376",
+        "name": "Phạm Huyên"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [],
+      "customer_id": "5225cb25-1be9-4f4c-a690-5ea87dfee817",
+      "page_customer": {
+        "id": "5366d9e0-5add-4400-9e27-35cd9fcb2320",
+        "name": "Phạm Huyên",
+        "inserted_at": "2026-02-03T05:57:29",
+        "customer_id": "5225cb25-1be9-4f4c-a690-5ea87dfee817",
+        "psid": "26717530281172376",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_1423433465952741",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "26169986922606667",
+        "name": "Thoa Phuong Hoàng"
+      },
+      "snippet": "E oi có bằng b2  roi có phai thi bang a1 k",
+      "inserted_at": "2026-02-03T05:07:03.000000",
+      "updated_at": "2026-02-03T05:06:57.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "26169986922606667",
+          "id": "a7e56281-4a93-482c-b47a-98e5187a656a",
+          "name": "Thoa Phuong Hoàng"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "26169986922606667",
+        "name": "Thoa Phuong Hoàng"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [],
+      "customer_id": "3bd423aa-a9ca-4190-b925-00865583fe86",
+      "page_customer": {
+        "id": "a7e56281-4a93-482c-b47a-98e5187a656a",
+        "name": "Thoa Phuong Hoàng",
+        "inserted_at": "2026-02-03T05:07:03",
+        "customer_id": "3bd423aa-a9ca-4190-b925-00865583fe86",
+        "psid": "26169986922606667",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_1442624107370396",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "33564751846504103",
+        "name": "Ánh Tuyết"
+      },
+      "snippet": "Muốn tích hợp giấy phép lái xe mô tô vào vne traffic  hoặc vn...",
+      "inserted_at": "2026-02-03T03:20:42.000000",
+      "updated_at": "2026-02-03T03:20:37.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "33564751846504103",
+          "id": "35e19b6d-d9ce-4ab9-bd08-afaca2655e5c",
+          "name": "Ánh Tuyết"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "33564751846504103",
+        "name": "Ánh Tuyết"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [],
+      "customer_id": "7602afc5-24b9-415c-8ea1-c34bdf48ed27",
+      "page_customer": {
+        "id": "35e19b6d-d9ce-4ab9-bd08-afaca2655e5c",
+        "name": "Ánh Tuyết",
+        "inserted_at": "2026-02-03T03:20:42",
+        "customer_id": "7602afc5-24b9-415c-8ea1-c34bdf48ed27",
+        "psid": "33564751846504103",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_1228028459474566",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "25681383651520893",
+        "name": "Dung Nguyen"
+      },
+      "snippet": "Ok hướng dần cho mình với",
+      "inserted_at": "2026-02-03T01:46:29.000000",
+      "updated_at": "2026-02-03T01:46:23.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "25681383651520893",
+          "id": "87e504f2-b5bb-49f3-a9bd-c5fe80f61a15",
+          "name": "Dung Nguyen"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "25681383651520893",
+        "name": "Dung Nguyen"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [],
+      "customer_id": "42013181-d8ea-4696-8c1a-8202cd541c27",
+      "page_customer": {
+        "id": "87e504f2-b5bb-49f3-a9bd-c5fe80f61a15",
+        "name": "Dung Nguyen",
+        "inserted_at": "2026-02-03T01:46:29",
+        "customer_id": "42013181-d8ea-4696-8c1a-8202cd541c27",
+        "psid": "25681383651520893",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "382049544990443_33555984234050346",
+      "type": "INBOX",
+      "tags": [
+        null
+      ],
+      "seen": true,
+      "from": {
+        "email": "33555984234050346@facebook.com",
+        "id": "33555984234050346",
+        "name": "Nguyên Đoàn"
+      },
+      "snippet": "Tôi xin Lưu lại địa chỉ Thầy Duy Đạo Tạo lái xe ô tô - O948 7...",
+      "inserted_at": "2026-02-03T00:49:31.102706",
+      "updated_at": "2026-02-03T00:49:24.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "33555984234050346",
+          "id": "e44f8562-870e-4627-a589-254d83ad5af2",
+          "name": "Nguyên Đoàn"
+        }
+      ],
+      "has_phone": true,
+      "last_sent_by": {
+        "ai_generated": false,
+        "email": "33555984234050346@facebook.com",
+        "id": "33555984234050346",
+        "name": "Nguyên Đoàn"
+      },
+      "post_id": null,
+      "recent_phone_numbers": [
+        {
+          "captured": "O948 742 666",
+          "length": 12,
+          "m_id": "m_danF3GK4ic_sgkwjYM2Bso9cg1nYFVb3x-9AK3H2hVbeeBRdv3YUgwkEVABPNA5yaX7Iau7G26v5akHgbZZq2Q",
+          "offset": 55,
+          "phone_number": "0948742666",
+          "status": 1
+        }
+      ],
+      "customer_id": "5e455424-2cc9-40df-983a-5babff6121d3",
+      "page_customer": {
+        "id": "e44f8562-870e-4627-a589-254d83ad5af2",
+        "name": "Nguyên Đoàn",
+        "inserted_at": "2026-02-03T00:49:29",
+        "customer_id": "5e455424-2cc9-40df-983a-5babff6121d3",
+        "psid": "33555984234050346",
+        "gender": "male",
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "ads": [],
+      "ad_ids": [],
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_1957101415686116",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "25687899244195079",
+        "name": "Uih Siu"
+      },
+      "snippet": "Làm thế nào ạ?....",
+      "inserted_at": "2026-02-02T17:51:09.000000",
+      "updated_at": "2026-02-02T17:51:03.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "25687899244195079",
+          "id": "072aa223-230a-44ad-88aa-4a98ea488d1b",
+          "name": "Uih Siu"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "25687899244195079",
+        "name": "Uih Siu"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [],
+      "customer_id": "d571f560-aa1b-4f94-9b08-01e5efe799f1",
+      "page_customer": {
+        "id": "072aa223-230a-44ad-88aa-4a98ea488d1b",
+        "name": "Uih Siu",
+        "inserted_at": "2026-02-02T17:51:09",
+        "customer_id": "d571f560-aa1b-4f94-9b08-01e5efe799f1",
+        "psid": "25687899244195079",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_1064679582509063",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "24901770396164828",
+        "name": "Văn Cẩm"
+      },
+      "snippet": "[Photo] Minh thi đậu sau 2 ngày đã cập nhật",
+      "inserted_at": "2026-02-02T16:35:18.000000",
+      "updated_at": "2026-02-02T16:35:08.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "24901770396164828",
+          "id": "506b50eb-9628-4593-937e-1155f87cf66e",
+          "name": "Văn Cẩm"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "24901770396164828",
+        "name": "Văn Cẩm"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [],
+      "customer_id": "8038db2a-22a4-4220-b1cc-ee56ab73be86",
+      "page_customer": {
+        "id": "506b50eb-9628-4593-937e-1155f87cf66e",
+        "name": "Văn Cẩm",
+        "inserted_at": "2026-02-02T16:35:18",
+        "customer_id": "8038db2a-22a4-4220-b1cc-ee56ab73be86",
+        "psid": "24901770396164828",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_2532654007130525",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "25163225133355493",
+        "name": "Vương Hải Âu"
+      },
+      "snippet": "Tôi thi đỗ ngày 24/1 mà đến nay cũng chưa có đây các bác",
+      "inserted_at": "2026-02-02T00:25:05.000000",
+      "updated_at": "2026-02-02T14:49:42.000000",
+      "message_count": 5,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "25163225133355493",
+          "id": "74158799-4ab9-44d8-80e1-af5bf93babc2",
+          "name": "Vương Hải Âu"
+        },
+        {
+          "fb_id": "25005522779057294",
+          "id": "56dfae8b-4ce2-4498-9044-95071001304d",
+          "name": "Nguyễn Trọng Năng"
+        },
+        {
+          "fb_id": "33542673282042536",
+          "id": "ea64d04b-4fbf-4045-8869-083de1ababc1",
+          "name": "Trang Hoàng"
+        },
+        {
+          "fb_id": "25638958122426603",
+          "id": "c939b9db-ce72-4982-bd1a-b17a5b7966cc",
+          "name": "Thọ Đỗ"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "25638958122426603",
+        "name": "Thọ Đỗ"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [],
+      "customer_id": "c06ad843-8e36-4ac7-b49b-e52d604e20c0",
+      "page_customer": {
+        "id": "74158799-4ab9-44d8-80e1-af5bf93babc2",
+        "name": "Vương Hải Âu",
+        "inserted_at": "2026-02-02T00:25:05",
+        "customer_id": "c06ad843-8e36-4ac7-b49b-e52d604e20c0",
+        "psid": "25163225133355493",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_2757845837893584",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "25793365876987615",
+        "name": "Nguyễn Văn Thông"
+      },
+      "snippet": "Kết quả ngay cái cái lồn của mày đó du mẹ tao một năm rồi mà ...",
+      "inserted_at": "2026-02-02T14:09:27.000000",
+      "updated_at": "2026-02-02T14:09:20.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "25793365876987615",
+          "id": "0d91b7e9-e9fa-4895-879f-2fc254e385b9",
+          "name": "Nguyễn Văn Thông"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "25793365876987615",
+        "name": "Nguyễn Văn Thông"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [],
+      "customer_id": "a4c20f17-7fd0-4b29-ac70-487996a4217d",
+      "page_customer": {
+        "id": "0d91b7e9-e9fa-4895-879f-2fc254e385b9",
+        "name": "Nguyễn Văn Thông",
+        "inserted_at": "2026-02-02T14:09:27",
+        "customer_id": "a4c20f17-7fd0-4b29-ac70-487996a4217d",
+        "psid": "25793365876987615",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_1222563039341454",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "26808906758697814",
+        "name": "Huan Dam"
+      },
+      "snippet": "Hướng dan dum nhé",
+      "inserted_at": "2026-02-02T13:52:49.000000",
+      "updated_at": "2026-02-02T13:52:42.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "26808906758697814",
+          "id": "5f96222b-f3f0-422e-b02b-d31e070d3dfc",
+          "name": "Huan Dam"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "26808906758697814",
+        "name": "Huan Dam"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [],
+      "customer_id": "ffd732b3-42c4-4fcc-96a2-5c2a88866737",
+      "page_customer": {
+        "id": "5f96222b-f3f0-422e-b02b-d31e070d3dfc",
+        "name": "Huan Dam",
+        "inserted_at": "2026-02-02T13:52:49",
+        "customer_id": "ffd732b3-42c4-4fcc-96a2-5c2a88866737",
+        "psid": "26808906758697814",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_24875593035450817",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "25583294681372636",
+        "name": "Lê Bá Tuần"
+      },
+      "snippet": "Chỉ cho mình với",
+      "inserted_at": "2026-02-02T12:37:26.000000",
+      "updated_at": "2026-02-02T12:37:21.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "25583294681372636",
+          "id": "ab7c0a90-9d20-4465-8d92-dfd5d95648a9",
+          "name": "Lê Bá Tuần"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "25583294681372636",
+        "name": "Lê Bá Tuần"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [],
+      "customer_id": "028fee0d-c730-4d62-8e92-9f072735cef6",
+      "page_customer": {
+        "id": "ab7c0a90-9d20-4465-8d92-dfd5d95648a9",
+        "name": "Lê Bá Tuần",
+        "inserted_at": "2026-02-02T12:37:26",
+        "customer_id": "028fee0d-c730-4d62-8e92-9f072735cef6",
+        "psid": "25583294681372636",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_2134924357361221",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "34836677805931764",
+        "name": "Thị Hayy"
+      },
+      "snippet": "Mình chưa biết nhờ chỉ giùm",
+      "inserted_at": "2026-02-02T10:26:31.000000",
+      "updated_at": "2026-02-02T10:26:16.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "34836677805931764",
+          "id": "fd533862-88a5-499e-bba5-b6e6132a011c",
+          "name": "Thị Hayy"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "34836677805931764",
+        "name": "Thị Hayy"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [],
+      "customer_id": "1dbb72e1-d5e6-4b1b-920a-56a645cad338",
+      "page_customer": {
+        "id": "fd533862-88a5-499e-bba5-b6e6132a011c",
+        "name": "Thị Hayy",
+        "inserted_at": "2026-02-02T10:26:31",
+        "customer_id": "1dbb72e1-d5e6-4b1b-920a-56a645cad338",
+        "psid": "34836677805931764",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_934121022850886",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "25905950905729875",
+        "name": "Đạt Đặng"
+      },
+      "snippet": "Lz có t đỗ sh từ 15h ngày 01/02 mà nay m2/2 r còn chưa có lấy...",
+      "inserted_at": "2026-02-02T10:03:44.000000",
+      "updated_at": "2026-02-02T10:03:36.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "25905950905729875",
+          "id": "874e6b87-3acb-4127-89cd-d87dabc7dfd0",
+          "name": "Đạt Đặng"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "25905950905729875",
+        "name": "Đạt Đặng"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [],
+      "customer_id": "3b0e8e1e-3419-4bcb-9851-436048d00a1b",
+      "page_customer": {
+        "id": "874e6b87-3acb-4127-89cd-d87dabc7dfd0",
+        "name": "Đạt Đặng",
+        "inserted_at": "2026-02-02T10:03:44",
+        "customer_id": "3b0e8e1e-3419-4bcb-9851-436048d00a1b",
+        "psid": "25905950905729875",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_785153387950682",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "27175887675332812",
+        "name": "Kết Nguyễn Văn"
+      },
+      "snippet": "Tôi chưa có",
+      "inserted_at": "2026-02-02T09:25:10.000000",
+      "updated_at": "2026-02-02T09:25:05.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "27175887675332812",
+          "id": "34bae307-d6b3-4b8a-bc26-d24b8d1e2e4a",
+          "name": "Kết Nguyễn Văn"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "27175887675332812",
+        "name": "Kết Nguyễn Văn"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [],
+      "customer_id": "9709564b-4ea6-4a63-84ed-7bf915e44413",
+      "page_customer": {
+        "id": "34bae307-d6b3-4b8a-bc26-d24b8d1e2e4a",
+        "name": "Kết Nguyễn Văn",
+        "inserted_at": "2026-02-02T09:25:10",
+        "customer_id": "9709564b-4ea6-4a63-84ed-7bf915e44413",
+        "psid": "27175887675332812",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_1811906706148153",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "25646062458413328",
+        "name": "Quách Tĩnh"
+      },
+      "snippet": "sao mình k thấy ở đâu nhỉ bạn",
+      "inserted_at": "2026-02-02T06:41:53.000000",
+      "updated_at": "2026-02-02T06:41:48.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "25646062458413328",
+          "id": "e01251d8-3e2a-4b6f-8a4b-6b3a6e5c7d2a",
+          "name": "Quách Tĩnh"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "25646062458413328",
+        "name": "Quách Tĩnh"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [],
+      "customer_id": "06090df0-9b11-4ce6-a5f1-6b4bd9a876d5",
+      "page_customer": {
+        "id": "e01251d8-3e2a-4b6f-8a4b-6b3a6e5c7d2a",
+        "name": "Quách Tĩnh",
+        "inserted_at": "2026-02-02T06:41:53",
+        "customer_id": "06090df0-9b11-4ce6-a5f1-6b4bd9a876d5",
+        "psid": "25646062458413328",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_878937455003502",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "33839846498962106",
+        "name": "Duc Hoang"
+      },
+      "snippet": "Hướng dẫn cho mình với bạn",
+      "inserted_at": "2026-02-02T04:16:05.000000",
+      "updated_at": "2026-02-02T04:16:01.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "33839846498962106",
+          "id": "c55b4a5f-f853-4d22-bddb-afa0e2aef8d8",
+          "name": "Duc Hoang"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "33839846498962106",
+        "name": "Duc Hoang"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [],
+      "customer_id": "0309ff24-29d5-41ab-97fc-c8f4c29b4676",
+      "page_customer": {
+        "id": "c55b4a5f-f853-4d22-bddb-afa0e2aef8d8",
+        "name": "Duc Hoang",
+        "inserted_at": "2026-02-02T04:16:05",
+        "customer_id": "0309ff24-29d5-41ab-97fc-c8f4c29b4676",
+        "psid": "33839846498962106",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_2114232399115183",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "25699400589722554",
+        "name": "Vi Lieu"
+      },
+      "snippet": "Mình 2 ngày chưa thấy",
+      "inserted_at": "2026-02-02T04:06:18.000000",
+      "updated_at": "2026-02-02T04:06:13.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "25699400589722554",
+          "id": "28a24223-c90f-4b15-9a57-3c2caf158851",
+          "name": "Vi Lieu"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "25699400589722554",
+        "name": "Vi Lieu"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [],
+      "customer_id": "2a8a0555-a08a-45c4-bae8-ba02463955f5",
+      "page_customer": {
+        "id": "28a24223-c90f-4b15-9a57-3c2caf158851",
+        "name": "Vi Lieu",
+        "inserted_at": "2026-02-02T04:06:18",
+        "customer_id": "2a8a0555-a08a-45c4-bae8-ba02463955f5",
+        "psid": "25699400589722554",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_835219042887937",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "33709531811994075",
+        "name": "Trần Lan"
+      },
+      "snippet": "Hướng dẫn mình với",
+      "inserted_at": "2026-02-02T03:04:38.000000",
+      "updated_at": "2026-02-02T03:04:32.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "33709531811994075",
+          "id": "ddeba3fb-244f-41e2-a9a5-1c677e0704a7",
+          "name": "Trần Lan"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "33709531811994075",
+        "name": "Trần Lan"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [],
+      "customer_id": "95093f9c-ed7e-4e58-a678-3194b9786d9b",
+      "page_customer": {
+        "id": "ddeba3fb-244f-41e2-a9a5-1c677e0704a7",
+        "name": "Trần Lan",
+        "inserted_at": "2026-02-02T03:04:38",
+        "customer_id": "95093f9c-ed7e-4e58-a678-3194b9786d9b",
+        "psid": "33709531811994075",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "382049544990443_25666126973043226",
+      "type": "INBOX",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "email": "25666126973043226@facebook.com",
+        "id": "25666126973043226",
+        "name": "Hồ Mạnh Hùng"
+      },
+      "snippet": "[Sticker]",
+      "inserted_at": "2026-02-02T03:00:52.189663",
+      "updated_at": "2026-02-02T03:00:47.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "25666126973043226",
+          "id": "4435ec83-8886-4322-829c-eeaee405f7cb",
+          "name": "Hồ Mạnh Hùng"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "ai_generated": false,
+        "email": "25666126973043226@facebook.com",
+        "id": "25666126973043226",
+        "name": "Hồ Mạnh Hùng"
+      },
+      "post_id": null,
+      "recent_phone_numbers": [],
+      "customer_id": "47106673-76d2-456f-ab52-8ccb078a25d1",
+      "page_customer": {
+        "id": "4435ec83-8886-4322-829c-eeaee405f7cb",
+        "name": "Hồ Mạnh Hùng",
+        "inserted_at": "2026-02-02T03:00:50",
+        "customer_id": "47106673-76d2-456f-ab52-8ccb078a25d1",
+        "psid": "25666126973043226",
+        "gender": "male",
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "ads": [],
+      "ad_ids": [],
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122200319894441403_1524261525343318",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "25706646308928471",
+        "name": "Trung Ma"
+      },
+      "snippet": "Có dại bằng xe ba bánh không thầy",
+      "inserted_at": "2026-02-02T01:48:05.000000",
+      "updated_at": "2026-02-02T01:47:55.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "25706646308928471",
+          "id": "c06f616f-322e-4e65-a1b8-d73e32954965",
+          "name": "Trung Ma"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "25706646308928471",
+        "name": "Trung Ma"
+      },
+      "post_id": "382049544990443_122200319894441403",
+      "recent_phone_numbers": [],
+      "customer_id": "14d7a37c-0fd8-4f1d-af1c-8e69210524cc",
+      "page_customer": {
+        "id": "c06f616f-322e-4e65-a1b8-d73e32954965",
+        "name": "Trung Ma",
+        "inserted_at": "2025-11-20T12:27:20",
+        "customer_id": "14d7a37c-0fd8-4f1d-af1c-8e69210524cc",
+        "psid": "25706646308928471",
+        "gender": "male",
+        "global_id": "61578323890904",
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201322848441403_2927502904116215",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "26262632690000398",
+        "name": "Thiều Quang Thắng"
+      },
+      "snippet": "GPLX ngoài tỉnh có đổi được o em",
+      "inserted_at": "2026-02-02T01:42:22.000000",
+      "updated_at": "2026-02-02T01:42:18.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "26262632690000398",
+          "id": "2d950c9c-c733-4a5e-9917-b9b25d0f5aee",
+          "name": "Thiều Quang Thắng"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "26262632690000398",
+        "name": "Thiều Quang Thắng"
+      },
+      "post_id": "382049544990443_122201322848441403",
+      "recent_phone_numbers": [],
+      "customer_id": "01e02e9f-75c5-407b-8d3c-59709d8481c9",
+      "page_customer": {
+        "id": "2d950c9c-c733-4a5e-9917-b9b25d0f5aee",
+        "name": "Thiều Quang Thắng",
+        "inserted_at": "2026-02-02T01:42:22",
+        "customer_id": "01e02e9f-75c5-407b-8d3c-59709d8481c9",
+        "psid": "26262632690000398",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_885987664326463",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "25480923468267314",
+        "name": "Huyền Long Thị Thanh"
+      },
+      "snippet": "Muốn tích hợp giấy phép lái xe mô tô vào vne traffic  hoặc vn...",
+      "inserted_at": "2026-02-02T00:24:57.000000",
+      "updated_at": "2026-02-02T00:14:46.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "25480923468267314",
+          "id": "1b9e152d-fd83-40ed-ba00-0d96043a3ee4",
+          "name": "Huyền Long Thị Thanh"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "25480923468267314",
+        "name": "Huyền Long Thị Thanh"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [],
+      "customer_id": "fb7bc29d-a9ed-4392-99e4-233f0e40288e",
+      "page_customer": {
+        "id": "1b9e152d-fd83-40ed-ba00-0d96043a3ee4",
+        "name": "Huyền Long Thị Thanh",
+        "inserted_at": "2026-02-02T00:24:57",
+        "customer_id": "fb7bc29d-a9ed-4392-99e4-233f0e40288e",
+        "psid": "25480923468267314",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_1653999075757913",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "25523868653982336",
+        "name": "Xuân Trung Lê"
+      },
+      "snippet": "Nhờ bạn hướng dẫn hộ tôi nhé",
+      "inserted_at": "2026-02-02T01:16:06.000000",
+      "updated_at": "2026-02-01T23:31:49.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "25523868653982336",
+          "id": "90c23010-7a53-4729-b0f8-1675c4db1cd5",
+          "name": "Xuân Trung Lê"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "25523868653982336",
+        "name": "Xuân Trung Lê"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [],
+      "customer_id": "6c0931d1-ebcc-497a-a68b-fd2b322b5d6d",
+      "page_customer": {
+        "id": "90c23010-7a53-4729-b0f8-1675c4db1cd5",
+        "name": "Xuân Trung Lê",
+        "inserted_at": "2026-02-02T01:16:06",
+        "customer_id": "6c0931d1-ebcc-497a-a68b-fd2b322b5d6d",
+        "psid": "25523868653982336",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_2768525486897740",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "33422250457419913",
+        "name": "Thanh Huỳnh"
+      },
+      "snippet": "Tôi thi xong, nhờ hướng dẫn với",
+      "inserted_at": "2026-02-01T16:10:17.000000",
+      "updated_at": "2026-02-01T16:10:09.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "33422250457419913",
+          "id": "73deb1e1-e579-4655-b210-7be7e3e21cbd",
+          "name": "Thanh Huỳnh"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "33422250457419913",
+        "name": "Thanh Huỳnh"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [],
+      "customer_id": "e1e6608e-d2fb-4d07-8e8f-4e84aaad4f0e",
+      "page_customer": {
+        "id": "73deb1e1-e579-4655-b210-7be7e3e21cbd",
+        "name": "Thanh Huỳnh",
+        "inserted_at": "2026-02-01T16:10:17",
+        "customer_id": "e1e6608e-d2fb-4d07-8e8f-4e84aaad4f0e",
+        "psid": "33422250457419913",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_1600908784286582",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "25826028520417604",
+        "name": "Sang Pham"
+      },
+      "snippet": "Chưa thay",
+      "inserted_at": "2026-02-01T13:34:55.000000",
+      "updated_at": "2026-02-01T13:34:49.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "25826028520417604",
+          "id": "d58fd550-f31f-4b37-bb39-12bcdd582376",
+          "name": "Sang Pham"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "25826028520417604",
+        "name": "Sang Pham"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [],
+      "customer_id": "577d62ed-c379-4f60-8526-39e222c78a25",
+      "page_customer": {
+        "id": "d58fd550-f31f-4b37-bb39-12bcdd582376",
+        "name": "Sang Pham",
+        "inserted_at": "2026-02-01T13:34:55",
+        "customer_id": "577d62ed-c379-4f60-8526-39e222c78a25",
+        "psid": "25826028520417604",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_815414791563436",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "33682995034678426",
+        "name": "Ánh Dương"
+      },
+      "snippet": "OK em hướng dẫn a với",
+      "inserted_at": "2026-02-01T13:33:52.000000",
+      "updated_at": "2026-02-01T13:33:47.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "33682995034678426",
+          "id": "d98d2cf9-cb96-4c19-980c-054ca8f4cc17",
+          "name": "Ánh Dương"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "33682995034678426",
+        "name": "Ánh Dương"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [],
+      "customer_id": "abb26a78-e7f2-4123-a529-d1042fa5d387",
+      "page_customer": {
+        "id": "d98d2cf9-cb96-4c19-980c-054ca8f4cc17",
+        "name": "Ánh Dương",
+        "inserted_at": "2026-02-01T13:33:52",
+        "customer_id": "abb26a78-e7f2-4123-a529-d1042fa5d387",
+        "psid": "33682995034678426",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_1446270763769168",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "25214689338209136",
+        "name": "Danh Cuong"
+      },
+      "snippet": "E. Hướng dẫn hộ a với",
+      "inserted_at": "2026-02-01T12:58:37.000000",
+      "updated_at": "2026-02-01T12:58:30.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "25214689338209136",
+          "id": "5f576106-5fb6-4f09-b1a6-f2851348b0fa",
+          "name": "Danh Cuong"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "25214689338209136",
+        "name": "Danh Cuong"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [],
+      "customer_id": "282f1704-a4be-471d-8358-afbdddbda163",
+      "page_customer": {
+        "id": "5f576106-5fb6-4f09-b1a6-f2851348b0fa",
+        "name": "Danh Cuong",
+        "inserted_at": "2026-02-01T12:58:37",
+        "customer_id": "282f1704-a4be-471d-8358-afbdddbda163",
+        "psid": "25214689338209136",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "382049544990443_33495361680107992",
+      "type": "INBOX",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "email": "33495361680107992@facebook.com",
+        "id": "33495361680107992",
+        "name": "Trung Nhựt"
+      },
+      "snippet": "Mình đóng 3 triệu làm hồ sơ để xắp lớp khai giảng khoá học. Đ...",
+      "inserted_at": "2026-02-01T05:32:45.437003",
+      "updated_at": "2026-02-01T12:56:38.869000",
+      "message_count": 6,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "33495361680107992",
+          "id": "a6903f94-c1d9-4fa3-a338-80c019ec936d",
+          "name": "Trung Nhựt"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "admin_name": "Duy Nguyễn Đình",
+        "id": "382049544990443",
+        "name": "Thầy Duy - Đào Tạo Lái Xe Ô Tô - 0948 742 666",
+        "platform": "mobile",
+        "uid": "90490d72-ccd1-457e-b11d-d438a6c38ce7"
+      },
+      "post_id": null,
+      "recent_phone_numbers": [],
+      "customer_id": "e9fee672-ee0a-40f4-875c-1e4a304f165f",
+      "page_customer": {
+        "id": "a6903f94-c1d9-4fa3-a338-80c019ec936d",
+        "name": "Trung Nhựt",
+        "inserted_at": "2026-02-01T05:32:44",
+        "customer_id": "e9fee672-ee0a-40f4-875c-1e4a304f165f",
+        "psid": "33495361680107992",
+        "gender": "male",
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "ads": [],
+      "ad_ids": [],
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "382049544990443_34123563673893592",
+      "type": "INBOX",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "email": "34123563673893592@facebook.com",
+        "id": "34123563673893592",
+        "name": "Nhôm Kính Tiến Đạt"
+      },
+      "snippet": "Mai thầy gọi nha",
+      "inserted_at": "2026-02-01T11:26:51.179319",
+      "updated_at": "2026-02-01T12:54:51.019000",
+      "message_count": 3,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "34123563673893592",
+          "id": "1819288b-1b56-4af2-9c3a-123f02f2437b",
+          "name": "Nhôm Kính Tiến Đạt"
+        }
+      ],
+      "has_phone": true,
+      "last_sent_by": {
+        "admin_name": "Duy Nguyễn Đình",
+        "id": "382049544990443",
+        "name": "Thầy Duy - Đào Tạo Lái Xe Ô Tô - 0948 742 666",
+        "platform": "mobile",
+        "uid": "90490d72-ccd1-457e-b11d-d438a6c38ce7"
+      },
+      "post_id": null,
+      "recent_phone_numbers": [
+        {
+          "captured": "0984684176",
+          "length": 10,
+          "m_id": "m_yjSioTbaFrj0e11cWSnl8firHi0OPkud6gPLsNqEqD-MdFAZEz5cgBYJF-WI6kLaG1cwzXuIsv45_oB5xwrbNA",
+          "offset": 0,
+          "phone_number": "0984684176",
+          "status": 2
+        }
+      ],
+      "customer_id": "7d6ae7f9-755e-4e23-b917-176e3398bd67",
+      "page_customer": {
+        "id": "1819288b-1b56-4af2-9c3a-123f02f2437b",
+        "name": "Nhôm Kính Tiến Đạt",
+        "inserted_at": "2026-02-01T11:26:40",
+        "customer_id": "7d6ae7f9-755e-4e23-b917-176e3398bd67",
+        "psid": "34123563673893592",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "ads": [],
+      "ad_ids": [],
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201324090441403_1402304337742338",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "26018377484469300",
+        "name": "Vinh Pham"
+      },
+      "snippet": "[Attachment] VẨn ngon mà thì môn nào đõ luôn",
+      "inserted_at": "2026-02-01T12:29:01.000000",
+      "updated_at": "2026-02-01T12:28:52.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "26018377484469300",
+          "id": "a7afcad5-a111-4118-a6fa-f6d6de65f1bb",
+          "name": "Vinh Pham"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "26018377484469300",
+        "name": "Vinh Pham"
+      },
+      "post_id": "382049544990443_122201324090441403",
+      "recent_phone_numbers": [],
+      "customer_id": "b307a13b-1391-4b1c-b4bd-66af52deadfe",
+      "page_customer": {
+        "id": "a7afcad5-a111-4118-a6fa-f6d6de65f1bb",
+        "name": "Vinh Pham",
+        "inserted_at": "2026-02-01T12:29:01",
+        "customer_id": "b307a13b-1391-4b1c-b4bd-66af52deadfe",
+        "psid": "26018377484469300",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201322848441403_3788793798092466",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "26117300201228454",
+        "name": "Hoang Anh"
+      },
+      "snippet": "[Photo]",
+      "inserted_at": "2026-02-01T12:12:39.000000",
+      "updated_at": "2026-02-01T12:12:32.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "26117300201228454",
+          "id": "33a6a0f4-3e9d-4739-bc6b-75b3a4fa19c3",
+          "name": "Hoang Anh"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "26117300201228454",
+        "name": "Hoang Anh"
+      },
+      "post_id": "382049544990443_122201322848441403",
+      "recent_phone_numbers": [],
+      "customer_id": "4b863f37-38a9-4a41-a806-9d143265b2dd",
+      "page_customer": {
+        "id": "33a6a0f4-3e9d-4739-bc6b-75b3a4fa19c3",
+        "name": "Hoang Anh",
+        "inserted_at": "2026-02-01T12:12:39",
+        "customer_id": "4b863f37-38a9-4a41-a806-9d143265b2dd",
+        "psid": "26117300201228454",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_1622087515806334",
+      "type": "COMMENT",
+      "tags": [
+        null
+      ],
+      "seen": true,
+      "from": {
+        "id": "34123563673893592",
+        "name": "Nhôm Kính Tiến Đạt"
+      },
+      "snippet": "**********",
+      "inserted_at": "2026-02-01T11:26:40.000000",
+      "updated_at": "2026-02-01T11:26:44.000000",
+      "message_count": 2,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "34123563673893592",
+          "id": "1819288b-1b56-4af2-9c3a-123f02f2437b",
+          "name": "Nhôm Kính Tiến Đạt"
+        }
+      ],
+      "has_phone": true,
+      "last_sent_by": {
+        "id": "34123563673893592",
+        "name": "Nhôm Kính Tiến Đạt"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [
+        {
+          "captured": "0984684176",
+          "length": 10,
+          "m_id": "122201323646441403_1622087515806334",
+          "offset": 0,
+          "phone_number": "0984684176",
+          "status": 2
+        }
+      ],
+      "customer_id": "7d6ae7f9-755e-4e23-b917-176e3398bd67",
+      "page_customer": {
+        "id": "1819288b-1b56-4af2-9c3a-123f02f2437b",
+        "name": "Nhôm Kính Tiến Đạt",
+        "inserted_at": "2026-02-01T11:26:40",
+        "customer_id": "7d6ae7f9-755e-4e23-b917-176e3398bd67",
+        "psid": "34123563673893592",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201322848441403_1255254956494305",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "33804181359196633",
+        "name": "Nguyễn Cát Vàng"
+      },
+      "snippet": "[Photo]",
+      "inserted_at": "2026-02-01T10:57:04.000000",
+      "updated_at": "2026-02-01T10:57:44.000000",
+      "message_count": 6,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "33804181359196633",
+          "id": "3caa9194-7a89-4bb2-af8b-37c71ccdd9d8",
+          "name": "Nguyễn Cát Vàng"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "33804181359196633",
+        "name": "Nguyễn Cát Vàng"
+      },
+      "post_id": "382049544990443_122201322848441403",
+      "recent_phone_numbers": [],
+      "customer_id": "edefe4ac-ea93-4162-a933-c8eda843bc12",
+      "page_customer": {
+        "id": "3caa9194-7a89-4bb2-af8b-37c71ccdd9d8",
+        "name": "Nguyễn Cát Vàng",
+        "inserted_at": "2026-02-01T10:57:04",
+        "customer_id": "edefe4ac-ea93-4162-a933-c8eda843bc12",
+        "psid": "33804181359196633",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "382049544990443_25207025805651833",
+      "type": "INBOX",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "email": "25207025805651833@facebook.com",
+        "id": "25207025805651833",
+        "name": "Hau Tran Thanh"
+      },
+      "snippet": "15 triệu nè em",
+      "inserted_at": "2025-11-21T06:01:32.215066",
+      "updated_at": "2026-02-01T10:23:41.736000",
+      "message_count": 28,
+      "page_id": "382049544990443",
+      "assignee_ids": [
+        "0a37f99d-9019-48e3-a54e-1ed48ece2601"
+      ],
+      "customers": [
+        {
+          "fb_id": "25207025805651833",
+          "id": "d581ab6e-4e9d-4993-9417-1b9ccacfb475",
+          "name": "Hau Tran Thanh"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "admin_name": "Duy Nguyễn Đình",
+        "id": "382049544990443",
+        "name": "Thầy Duy - Đào Tạo Lái Xe Ô Tô - 0948 742 666",
+        "platform": "mobile",
+        "uid": "90490d72-ccd1-457e-b11d-d438a6c38ce7"
+      },
+      "post_id": null,
+      "recent_phone_numbers": [],
+      "customer_id": "247c7c60-ec7d-4b5e-b89e-13ac9f8b1d79",
+      "page_customer": {
+        "id": "d581ab6e-4e9d-4993-9417-1b9ccacfb475",
+        "name": "Hau Tran Thanh",
+        "inserted_at": "2025-11-21T06:01:28",
+        "customer_id": "247c7c60-ec7d-4b5e-b89e-13ac9f8b1d79",
+        "psid": "25207025805651833",
+        "gender": "male",
+        "global_id": "100022910750113",
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "ads": [
+        {
+          "ad_id": "120238195924100450",
+          "inserted_at": "2025-11-21T06:01:25",
+          "post_id": "382049544990443_122192721758441403"
+        }
+      ],
+      "ad_ids": [
+        "120238195924100450"
+      ],
+      "assignee_histories": [
+        {
+          "inserted_at": "2026-01-22T08:54:43.649073",
+          "payload": {
+            "added_users": [
+              {
+                "id": "0a37f99d-9019-48e3-a54e-1ed48ece2601",
+                "name": "Linh Ngọc Bùi",
+                "email": null,
+                "fb_id": "672502186232570"
+              }
+            ],
+            "deleted_users": []
+          },
+          "conversation_id": "382049544990443_25207025805651833"
+        }
+      ],
+      "current_assign_users": [
+        {
+          "id": "0a37f99d-9019-48e3-a54e-1ed48ece2601",
+          "name": "Linh Ngọc Bùi",
+          "email": null,
+          "fb_id": "672502186232570"
+        }
+      ],
+      "tag_histories": []
+    },
+    {
+      "id": "122201324090441403_2024450791733609",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "25309389048762345",
+        "name": "Tiến Lương"
+      },
+      "snippet": "đi thi có gì đâu phải sợ nhỉ bình thương mà",
+      "inserted_at": "2026-02-01T09:53:16.000000",
+      "updated_at": "2026-02-01T09:53:11.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "25309389048762345",
+          "id": "e1a5c14b-9259-4dc6-91c7-93a405450842",
+          "name": "Tiến Lương"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "25309389048762345",
+        "name": "Tiến Lương"
+      },
+      "post_id": "382049544990443_122201324090441403",
+      "recent_phone_numbers": [],
+      "customer_id": "e33c10ff-73fe-4072-b989-261ed26b516d",
+      "page_customer": {
+        "id": "e1a5c14b-9259-4dc6-91c7-93a405450842",
+        "name": "Tiến Lương",
+        "inserted_at": "2026-02-01T09:53:16",
+        "customer_id": "e33c10ff-73fe-4072-b989-261ed26b516d",
+        "psid": "25309389048762345",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_2003639573917625",
+      "type": "COMMENT",
+      "tags": [
+        null
+      ],
+      "seen": true,
+      "from": {
+        "id": "25711360308533297",
+        "name": "Giang Hà Đình"
+      },
+      "snippet": "tôi chưa biết , nhờ giúp với ,đ thoại: 0376768524",
+      "inserted_at": "2026-02-01T07:16:14.000000",
+      "updated_at": "2026-02-01T07:16:05.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "25711360308533297",
+          "id": "c338f803-64e3-4a58-ae63-dee454f3a7f9",
+          "name": "Giang Hà Đình"
+        }
+      ],
+      "has_phone": true,
+      "last_sent_by": {
+        "id": "25711360308533297",
+        "name": "Giang Hà Đình"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [
+        {
+          "captured": "0376768524",
+          "length": 10,
+          "m_id": "122201323646441403_2003639573917625",
+          "offset": 39,
+          "phone_number": "0376768524",
+          "status": 3
+        }
+      ],
+      "customer_id": "bb90f722-417e-414a-8df9-a4da21758d5e",
+      "page_customer": {
+        "id": "c338f803-64e3-4a58-ae63-dee454f3a7f9",
+        "name": "Giang Hà Đình",
+        "inserted_at": "2026-02-01T07:16:14",
+        "customer_id": "bb90f722-417e-414a-8df9-a4da21758d5e",
+        "psid": "25711360308533297",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201324090441403_1236794401763964",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "24789346287407852",
+        "name": "Nga Nguyễn Thị"
+      },
+      "snippet": "ai cũng sợ mô phỏng mà mình thi phát ăn ngay",
+      "inserted_at": "2026-02-01T06:36:53.000000",
+      "updated_at": "2026-02-01T06:36:44.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "24789346287407852",
+          "id": "3406349b-391a-4ddb-8295-84e98ca7c65d",
+          "name": "Nga Nguyễn Thị"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "24789346287407852",
+        "name": "Nga Nguyễn Thị"
+      },
+      "post_id": "382049544990443_122201324090441403",
+      "recent_phone_numbers": [],
+      "customer_id": "ad490e19-41d7-45ba-a66e-f6929fcc8413",
+      "page_customer": {
+        "id": "3406349b-391a-4ddb-8295-84e98ca7c65d",
+        "name": "Nga Nguyễn Thị",
+        "inserted_at": "2026-02-01T06:36:53",
+        "customer_id": "ad490e19-41d7-45ba-a66e-f6929fcc8413",
+        "psid": "24789346287407852",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "382049544990443_25193608293649735",
+      "type": "INBOX",
+      "tags": [
+        null
+      ],
+      "seen": true,
+      "from": {
+        "email": "25193608293649735@facebook.com",
+        "id": "25193608293649735",
+        "name": "Tuấn Kiệt"
+      },
+      "snippet": "Dạ",
+      "inserted_at": "2026-02-01T04:58:56.392309",
+      "updated_at": "2026-02-01T05:29:45.000000",
+      "message_count": 9,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "25193608293649735",
+          "id": "7205f928-0d56-47e4-a01b-670082d877f1",
+          "name": "Tuấn Kiệt"
+        }
+      ],
+      "has_phone": true,
+      "last_sent_by": {
+        "ai_generated": false,
+        "email": "25193608293649735@facebook.com",
+        "id": "25193608293649735",
+        "name": "Tuấn Kiệt"
+      },
+      "post_id": null,
+      "recent_phone_numbers": [
+        {
+          "captured": "0335272318",
+          "length": 10,
+          "m_id": "m_pmUpoexyeuAR0_gbcTEhUvgjV5xWTY1ecLYVwb7omKN1iomjr8xtqSBAgKPJXEIaaHzNEGYxqwEkGBC9R9MS6A",
+          "offset": 0,
+          "phone_number": "0335272318",
+          "status": 2
+        }
+      ],
+      "customer_id": "91e22059-5ba8-4bcb-80ba-6db42a2d76a1",
+      "page_customer": {
+        "id": "7205f928-0d56-47e4-a01b-670082d877f1",
+        "name": "Tuấn Kiệt",
+        "inserted_at": "2026-02-01T04:58:55",
+        "customer_id": "91e22059-5ba8-4bcb-80ba-6db42a2d76a1",
+        "psid": "25193608293649735",
+        "gender": "male",
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "ads": [],
+      "ad_ids": [],
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201322848441403_1419127753080903",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "25722476544029011",
+        "name": "Lê Tân Ngọc"
+      },
+      "snippet": "Dạ",
+      "inserted_at": "2026-02-01T02:12:52.000000",
+      "updated_at": "2026-02-01T02:12:45.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "25722476544029011",
+          "id": "3f8cd311-4179-42a5-ba24-616498f13fe7",
+          "name": "Lê Tân Ngọc"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "25722476544029011",
+        "name": "Lê Tân Ngọc"
+      },
+      "post_id": "382049544990443_122201322848441403",
+      "recent_phone_numbers": [],
+      "customer_id": "68747609-f1ac-43d6-b5dc-e90b23a51943",
+      "page_customer": {
+        "id": "3f8cd311-4179-42a5-ba24-616498f13fe7",
+        "name": "Lê Tân Ngọc",
+        "inserted_at": "2026-02-01T02:12:52",
+        "customer_id": "68747609-f1ac-43d6-b5dc-e90b23a51943",
+        "psid": "25722476544029011",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "122201323646441403_1445357153877953",
+      "type": "COMMENT",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "id": "26786014474321452",
+        "name": "Hai Le"
+      },
+      "snippet": "Tùy thôi",
+      "inserted_at": "2026-01-30T06:28:18.000000",
+      "updated_at": "2026-01-30T06:28:10.000000",
+      "message_count": 1,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "26786014474321452",
+          "id": "c31c781a-66f6-43dc-8fe3-6771749c81a4",
+          "name": "Hai Le"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "id": "26786014474321452",
+        "name": "Hai Le"
+      },
+      "post_id": "382049544990443_122201323646441403",
+      "recent_phone_numbers": [],
+      "customer_id": "db1c0d73-3718-4557-b71e-d1ff3bcae5df",
+      "page_customer": {
+        "id": "c31c781a-66f6-43dc-8fe3-6771749c81a4",
+        "name": "Hai Le",
+        "inserted_at": "2026-01-30T06:28:18",
+        "customer_id": "db1c0d73-3718-4557-b71e-d1ff3bcae5df",
+        "psid": "26786014474321452",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    },
+    {
+      "id": "382049544990443_25951384064494542",
+      "type": "INBOX",
+      "tags": [],
+      "seen": true,
+      "from": {
+        "email": "25951384064494542@facebook.com",
+        "id": "25951384064494542",
+        "name": "Lâm Mai"
+      },
+      "snippet": "Dạ",
+      "inserted_at": "2026-01-29T13:23:04.199957",
+      "updated_at": "2026-01-29T13:24:39.065000",
+      "message_count": 4,
+      "page_id": "382049544990443",
+      "assignee_ids": [],
+      "customers": [
+        {
+          "fb_id": "25951384064494542",
+          "id": "31787e76-465f-47f0-8b72-be1c0f0d10d5",
+          "name": "Lâm Mai"
+        }
+      ],
+      "has_phone": false,
+      "last_sent_by": {
+        "admin_name": "Duy Nguyễn Đình",
+        "id": "382049544990443",
+        "name": "Thầy Duy - Đào Tạo Lái Xe Ô Tô - 0948 742 666",
+        "platform": "mobile",
+        "uid": "90490d72-ccd1-457e-b11d-d438a6c38ce7"
+      },
+      "post_id": null,
+      "recent_phone_numbers": [],
+      "customer_id": "e9a3f1f6-1e43-4f22-a457-7576b54c836f",
+      "page_customer": {
+        "id": "31787e76-465f-47f0-8b72-be1c0f0d10d5",
+        "name": "Lâm Mai",
+        "inserted_at": "2026-01-29T13:15:36",
+        "customer_id": "e9a3f1f6-1e43-4f22-a457-7576b54c836f",
+        "psid": "25951384064494542",
+        "gender": null,
+        "global_id": null,
+        "birthday": null,
+        "notes": null,
+        "recent_orders": null
+      },
+      "ads": [],
+      "ad_ids": [],
+      "assignee_histories": [],
+      "current_assign_users": [],
+      "tag_histories": []
+    }
+  ]
+}

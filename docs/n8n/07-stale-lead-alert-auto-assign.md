@@ -199,3 +199,20 @@ Remove hoặc disable các node sau `WAIT_4h` trong N8N canvas.
 - [ ] `CRM_BASE_URL`, `CRM_EMAIL`, `CRM_PASSWORD`
 - [ ] Zalo OA credentials
 - [ ] `warningLevel` thresholds: HIGH=5 days, MEDIUM=3 days (cấu hình trong CRM)
+
+---
+
+## 11. Failure Modes + Debug 3 phút
+
+| Symptom | Check | Fix |
+|---------|-------|-----|
+| API 401 | Token expired | Kiểm tra S1 sub-workflow, `CRM_EMAIL`/`CRM_PASSWORD` |
+| Không tìm thấy stale lead | Threshold quá cao | Giảm `daysSinceContact` param (default: 3 days) |
+| Auto-assign fail | Không có user available | Kiểm tra có user active role telesales/direct_page |
+| WAIT_4h block | N8N execution timeout | Kiểm tra N8N `EXECUTIONS_TIMEOUT` > 14400 |
+| Telegram alert thiếu | S2 sub-workflow off | Activate S2 trong N8N |
+
+**Debug nhanh (3 phút):**
+1. **30s**: N8N UI → Executions → check node lỗi đỏ
+2. **60s**: Thử `GET /api/leads/stale?pageSize=5` với bearer token
+3. **90s**: SSH → `docker logs crm -f --tail 50` → xem stale query

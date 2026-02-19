@@ -1,16 +1,21 @@
 {
-    "name": "[CRM] 02 Facebook Lead Capture",
+    "name": "[CRM] 02 Pancake Lead Capture",
     "nodes": [
         {
             "parameters": {
-                "httpMethod": "POST",
-                "path": "facebook-lead",
-                "responseMode": "lastNode"
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "minutes",
+                            "minutesInterval": 5
+                        }
+                    ]
+                }
             },
             "id": "w02-trigger",
-            "name": "TRG_Webhook",
-            "type": "n8n-nodes-base.webhook",
-            "typeVersion": 1.1,
+            "name": "TRG_Cron_5min",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.2,
             "position": [
                 250,
                 300
@@ -18,89 +23,48 @@
         },
         {
             "parameters": {
-                "conditions": {
-                    "string": [
-                        {
-                            "value1": "={{ $json.query?.['hub.mode'] }}",
-                            "operation": "equals",
-                            "value2": "subscribe"
-                        }
-                    ]
-                }
-            },
-            "id": "w02-verify",
-            "name": "IF_VerifyOrEvent",
-            "type": "n8n-nodes-base.if",
-            "typeVersion": 1,
-            "position": [
-                480,
-                300
-            ]
-        },
-        {
-            "parameters": {
-                "values": {
-                    "string": [
-                        {
-                            "name": "challenge",
-                            "value": "={{ $json.query?.['hub.challenge'] }}"
-                        }
-                    ]
-                }
-            },
-            "id": "w02-challenge",
-            "name": "MAP_Challenge",
-            "type": "n8n-nodes-base.set",
-            "typeVersion": 2,
-            "position": [
-                710,
-                150
-            ]
-        },
-        {
-            "parameters": {
-                "jsCode": "const entry = $input.all()[0].json.body?.entry?.[0];\nconst change = entry?.changes?.[0]?.value;\nreturn [{ json: { leadgenId: change?.leadgen_id || '', pageId: change?.page_id || '' } }];"
-            },
-            "id": "w02-extract",
-            "name": "MAP_ExtractLeadgenId",
-            "type": "n8n-nodes-base.code",
-            "typeVersion": 2,
-            "position": [
-                710,
-                400
-            ]
-        },
-        {
-            "parameters": {
                 "method": "GET",
-                "url": "=https://graph.facebook.com/v21.0/{{ $json.leadgenId }}?access_token={{ $env.FB_PAGE_TOKEN }}",
+                "url": "=https://pages.fm/api/public_api/v2/pages/{{ $env.PANCAKE_PAGE_ID }}/conversations",
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "page_access_token",
+                            "value": "={{ $env.PANCAKE_PAGE_ACCESS_TOKEN }}"
+                        },
+                        {
+                            "name": "type[]",
+                            "value": "INBOX"
+                        }
+                    ]
+                },
                 "options": {
-                    "timeout": 15000
+                    "timeout": 30000
                 }
             },
-            "id": "w02-fb-get",
-            "name": "HTTP_GetLeadData",
+            "id": "w02-pancake-get",
+            "name": "HTTP_GetPancakeConversations",
             "type": "n8n-nodes-base.httpRequest",
             "typeVersion": 4,
             "position": [
-                940,
-                400
+                480,
+                300
             ],
             "retryOnFail": true,
             "maxTries": 2,
-            "waitBetweenTries": 3000
+            "waitBetweenTries": 5000
         },
         {
             "parameters": {
-                "jsCode": "const data = $input.all()[0].json;\nconst fields = {};\nif (data.field_data) {\n  for (const f of data.field_data) {\n    if (f.name === 'full_name') fields.fullName = (f.values?.[0] || '').trim();\n    if (f.name === 'phone_number') fields.phone = (f.values?.[0] || '').replace(/\\s+/g, '').replace(/^\\+84/, '0');\n    if (f.name === 'city') fields.province = (f.values?.[0] || '').trim();\n  }\n}\nfields.licenseType = fields.licenseType || 'B2';\nfields.isValid = /^0\\d{8,10}$/.test(fields.phone || '');\nreturn [{ json: fields }];"
+                "jsCode": "// Extract leads with phone numbers from Pancake conversations\nconst data = $input.all()[0].json;\nconst conversations = data.conversations || [];\nconst leads = [];\n\nfor (const conv of conversations) {\n  // Only process conversations that have phone numbers\n  if (!conv.has_phone || !conv.recent_phone_numbers || conv.recent_phone_numbers.length === 0) {\n    continue;\n  }\n\n  // Extract customer info\n  const customer = conv.page_customer || {};\n  const from = conv.from || {};\n  const name = (customer.name || from.name || '').trim();\n\n  // Extract and normalize phone number\n  let phone = (conv.recent_phone_numbers[0].phone_number || '').trim();\n  phone = phone.replace(/\\s+/g, '').replace(/^\\+84/, '0');\n\n  // Validate phone\n  const isValid = /^0\\d{8,10}$/.test(phone);\n  if (!isValid || !name) continue;\n\n  // Extract additional info\n  const gender = customer.gender || null;\n  const fbId = from.id || customer.psid || '';\n  const conversationId = conv.id || '';\n  const messageCount = conv.message_count || 0;\n  const fromAds = (conv.ad_ids && conv.ad_ids.length > 0);\n  const insertedAt = conv.inserted_at || '';\n  const updatedAt = conv.updated_at || '';\n\n  leads.push({\n    fullName: name,\n    phone: phone,\n    province: '',\n    licenseType: 'B2',\n    source: 'pancake',\n    channel: fromAds ? 'fb_ads_inbox' : 'facebook_inbox',\n    gender: gender,\n    pancakeFbId: fbId,\n    pancakeConversationId: conversationId,\n    messageCount: messageCount,\n    conversationInsertedAt: insertedAt,\n    conversationUpdatedAt: updatedAt\n  });\n}\n\n// Return leads as individual items for downstream processing\nif (leads.length === 0) {\n  return [{ json: { _noLeads: true, message: 'No new leads with phone numbers found' } }];\n}\n\nreturn leads.map(l => ({ json: l }));\n"
             },
-            "id": "w02-transform",
-            "name": "MAP_TransformFields",
+            "id": "w02-extract",
+            "name": "CODE_ExtractLeads",
             "type": "n8n-nodes-base.code",
             "typeVersion": 2,
             "position": [
-                1170,
-                400
+                710,
+                300
             ]
         },
         {
@@ -108,19 +72,19 @@
                 "conditions": {
                     "boolean": [
                         {
-                            "value1": "={{ $json.isValid }}",
+                            "value1": "={{ $json._noLeads !== true }}",
                             "value2": true
                         }
                     ]
                 }
             },
-            "id": "w02-valid",
-            "name": "IF_HasPhone",
+            "id": "w02-has-leads",
+            "name": "IF_HasLeads",
             "type": "n8n-nodes-base.if",
             "typeVersion": 1,
             "position": [
-                1400,
-                400
+                940,
+                300
             ]
         },
         {
@@ -140,7 +104,13 @@
                 "specifyBody": "json",
                 "jsonBody": "={{ JSON.stringify({ fullName: $json.fullName, phone: $json.phone, province: $json.province, licenseType: $json.licenseType }) }}",
                 "options": {
-                    "timeout": 15000
+                    "timeout": 15000,
+                    "batching": {
+                        "batch": {
+                            "batchSize": 1,
+                            "batchInterval": 1000
+                        }
+                    }
                 }
             },
             "id": "w02-create",
@@ -148,12 +118,13 @@
             "type": "n8n-nodes-base.httpRequest",
             "typeVersion": 4,
             "position": [
-                1630,
-                300
+                1170,
+                200
             ],
             "retryOnFail": true,
             "maxTries": 3,
-            "waitBetweenTries": 2000
+            "waitBetweenTries": 2000,
+            "onError": "continueRegularOutput"
         },
         {
             "parameters": {
@@ -171,8 +142,8 @@
             "type": "n8n-nodes-base.if",
             "typeVersion": 1,
             "position": [
-                1860,
-                300
+                1400,
+                200
             ]
         },
         {
@@ -184,8 +155,8 @@
             "type": "n8n-nodes-base.executeWorkflow",
             "typeVersion": 1,
             "position": [
-                2090,
-                200
+                1630,
+                100
             ]
         },
         {
@@ -217,8 +188,8 @@
             "type": "n8n-nodes-base.httpRequest",
             "typeVersion": 4,
             "position": [
-                2320,
-                200
+                1860,
+                100
             ],
             "onError": "continueRegularOutput"
         },
@@ -231,75 +202,46 @@
             "type": "n8n-nodes-base.executeWorkflow",
             "typeVersion": 1,
             "position": [
-                2090,
-                450
+                1630,
+                350
             ]
         }
     ],
     "connections": {
-        "TRG_Webhook": {
+        "TRG_Cron_5min": {
             "main": [
                 [
                     {
-                        "node": "IF_VerifyOrEvent",
+                        "node": "HTTP_GetPancakeConversations",
                         "type": "main",
                         "index": 0
                     }
                 ]
             ]
         },
-        "IF_VerifyOrEvent": {
+        "HTTP_GetPancakeConversations": {
             "main": [
                 [
                     {
-                        "node": "MAP_Challenge",
-                        "type": "main",
-                        "index": 0
-                    }
-                ],
-                [
-                    {
-                        "node": "MAP_ExtractLeadgenId",
+                        "node": "CODE_ExtractLeads",
                         "type": "main",
                         "index": 0
                     }
                 ]
             ]
         },
-        "MAP_ExtractLeadgenId": {
+        "CODE_ExtractLeads": {
             "main": [
                 [
                     {
-                        "node": "HTTP_GetLeadData",
+                        "node": "IF_HasLeads",
                         "type": "main",
                         "index": 0
                     }
                 ]
             ]
         },
-        "HTTP_GetLeadData": {
-            "main": [
-                [
-                    {
-                        "node": "MAP_TransformFields",
-                        "type": "main",
-                        "index": 0
-                    }
-                ]
-            ]
-        },
-        "MAP_TransformFields": {
-            "main": [
-                [
-                    {
-                        "node": "IF_HasPhone",
-                        "type": "main",
-                        "index": 0
-                    }
-                ]
-            ]
-        },
-        "IF_HasPhone": {
+        "IF_HasLeads": {
             "main": [
                 [
                     {
@@ -360,10 +302,10 @@
             "name": "CRM"
         },
         {
-            "name": "webhook"
+            "name": "cron"
         },
         {
-            "name": "facebook"
+            "name": "pancake"
         }
     ]
 }

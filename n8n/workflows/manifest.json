@@ -66,22 +66,23 @@
         },
         {
             "id": "d4VbLHU3Li2ORnD7",
-            "name": "02 Facebook Lead Capture",
+            "name": "02 Pancake Lead Capture",
             "file": "n8n/workflows/02-facebook-lead-capture.json",
-            "version": "1.0.0",
-            "type": "webhook",
-            "trigger": "webhook",
-            "schedule": null,
+            "version": "2.0.0",
+            "type": "cron",
+            "trigger": "cron",
+            "schedule": "*/5 * * * *",
             "endpoints": [
+                "GET pages.fm/api/public_api/v2/pages/{page_id}/conversations",
                 "POST /api/public/lead",
-                "POST /api/leads/auto-assign",
-                "GET graph.facebook.com/v18.0/{leadgen_id}"
+                "POST /api/leads/auto-assign"
             ],
             "requiredEnvKeys": [
                 "CRM_BASE_URL",
                 "CRM_EMAIL",
                 "CRM_PASSWORD",
-                "FB_PAGE_TOKEN"
+                "PANCAKE_PAGE_ACCESS_TOKEN",
+                "PANCAKE_PAGE_ID"
             ]
         },
         {

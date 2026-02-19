@@ -202,3 +202,20 @@ document.getElementById('lead-form').addEventListener('submit', async (e) => {
 - [ ] `CRM_BASE_URL`
 - [ ] Zalo OA ZNS template approved (cho customer notification)
 - [ ] Telegram Bot token + Chat ID (cho admin notification)
+
+---
+
+## 11. Failure Modes + Debug 3 phút
+
+| Symptom | Check | Fix |
+|---------|-------|-----|
+| Webhook 404 | Workflow inactive hoặc chưa publish | N8N UI → activate + save |
+| Lead duplicate | Phone trùng | CRM auto-upsert, không lỗi nhưng không tạo mới |
+| Zalo notify fail | OA token expired | Refresh Zalo OA access token |
+| CRM 500 | DB/validation error | SSH → `docker logs crm --tail 30` |
+| Webhook không nhận data | Landing form sai URL | Kiểm tra form action URL = N8N webhook URL |
+
+**Debug nhanh (3 phút):**
+1. **30s**: N8N UI → Executions → có execution mới không?
+2. **60s**: `curl -X POST` thử webhook URL với sample data
+3. **90s**: SSH → `docker logs crm -f --tail 50` → check `/api/public/lead`

@@ -195,3 +195,20 @@ curl -s -X POST "http://localhost:3000/api/ops/pulse" \
 - [ ] `OPS_SECRET` — khớp CRM server
 - [ ] `CRM_BASE_URL`
 - [ ] Branch IDs chính xác (lấy từ `/api/admin/branches`)
+
+---
+
+## 11. Failure Modes + Debug 3 phút
+
+| Symptom | Check | Fix |
+|---------|-------|-----|
+| Pulse 401/403 | `OPS_SECRET` sai hoặc thiếu | Kiểm tra `.env` server → `OPS_SECRET` khớp N8N |
+| Pulse 500 | DB lỗi / model thiếu | SSH → `docker logs crm --tail 30` → trace SQL error |
+| Không có data (metrics = 0) | Branch ID sai | Kiểm tra `/api/admin/branches` lấy ID đúng |
+| Không chạy | N8N schedule inactive | N8N UI → workflow → check Active toggle |
+| Alert Telegram không gửi | Bot token/Chat ID sai | Kiểm tra S2 sub-workflow env vars |
+
+**Debug nhanh (3 phút):**
+1. **30s**: N8N UI → Executions → check lỗi cuối cùng
+2. **60s**: `curl` thử endpoint trực tiếp (xem section 6)
+3. **90s**: SSH server → `docker logs crm -f --tail 50` → xem API response
