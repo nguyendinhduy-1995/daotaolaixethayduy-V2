@@ -13,7 +13,7 @@ export const PUBLIC_API_ROUTES: Array<{ method?: string; pattern: RegExp }> = [
   { method: "POST", pattern: /^\/api\/student\/auth\/login$/ },
   { method: "POST", pattern: /^\/api\/student\/auth\/register$/ },
   { method: "POST", pattern: /^\/api\/student\/auth\/logout$/ },
-  { method: "GET", pattern: /^\/api\/student\/me$/ },
+  { method: "GET", pattern: /^\/api\/student\/me(\/|$)/ },
   { method: "GET", pattern: /^\/api\/student\/content$/ },
   { pattern: /^\/api\/templates(\/|$)/ },
   { method: "GET", pattern: /^\/api\/public\/tuition-plans$/ },
