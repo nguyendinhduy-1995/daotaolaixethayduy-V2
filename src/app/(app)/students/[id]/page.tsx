@@ -17,6 +17,7 @@ import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Table } from "@/components/ui/table";
 import { formatCurrencyVnd, formatDateTimeVi } from "@/lib/date-utils";
+import { AppProgressWidget } from "@/components/AppProgressWidget";
 
 type StudentDetail = {
   id: string;
@@ -815,6 +816,9 @@ export default function StudentDetailPage() {
               </div>
             </div>
           </div>
+
+          {/* App Learning Progress Widget */}
+          <AppProgressWidget studentId={studentId} />
         </div>
       ) : null}
 

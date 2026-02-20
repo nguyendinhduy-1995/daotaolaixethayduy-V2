@@ -22,8 +22,19 @@ function parseCookie(header: string, name: string) {
 }
 
 export function requireStudentAuth(req: Request): StudentAuthPayload {
-  const cookieHeader = req.headers.get("cookie") ?? "";
-  const token = parseCookie(cookieHeader, STUDENT_ACCESS_TOKEN_COOKIE);
+  // 1) Try Authorization: Bearer <token> header first
+  const authHeader = req.headers.get("authorization") ?? "";
+  let token = "";
+  if (authHeader.startsWith("Bearer ")) {
+    token = authHeader.slice(7).trim();
+  }
+
+  // 2) Fallback to cookie
+  if (!token) {
+    const cookieHeader = req.headers.get("cookie") ?? "";
+    token = parseCookie(cookieHeader, STUDENT_ACCESS_TOKEN_COOKIE);
+  }
+
   if (!token) throw new StudentAuthError("AUTH_MISSING_BEARER", "Unauthorized");
   try {
     return verifyStudentAccessToken(token);

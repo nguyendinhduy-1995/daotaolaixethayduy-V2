@@ -4,8 +4,8 @@ import { prisma } from "./prisma.ts";
 
 async function main() {
   const email = "admin@thayduy.local";
-  const username = "Nguyendinhduy";
-  const password = "Admin@123456";
+  const username = "nguyendinhduy";
+  const password = "Nguyendinhduy@95";
 
   const hash = await bcrypt.hash(password, 10);
 

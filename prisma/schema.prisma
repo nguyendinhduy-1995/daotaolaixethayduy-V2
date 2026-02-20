@@ -571,6 +571,10 @@ model Student {
   account         StudentAccount?
   practicalLessons PracticalLesson[]
   examPlan        StudentExamPlan?
+  appDailySnapshots AppDailySnapshot[]
+  appAttempts       AppAttemptSummary[]
+  appAiSummary      AppAiSummary?
+  appEvents         AppEventLog[]
 
   @@index([courseId])
   @@index([branchId])
@@ -1293,4 +1297,74 @@ model PushSubscription {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+// ── App Learning Progress (pushed from PWA app) ──
+
+model AppDailySnapshot {
+  id                String   @id @default(cuid())
+  studentId         String
+  dateKey           String   // "2026-02-19" Asia/Ho_Chi_Minh
+  minutes           Int      @default(0)
+  questionsAnswered Int      @default(0)
+  correct           Int      @default(0)
+  accuracy          Int      @default(0)
+  streakCurrent     Int      @default(0)
+  streakLongest     Int      @default(0)
+  dueCount          Int      @default(0)
+  topWeakTopics     Json?    // [{topicId, accuracy}]
+  lastActiveAt      DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  student           Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, dateKey])
+  @@index([studentId, dateKey])
+}
+
+model AppAttemptSummary {
+  id             String   @id @default(cuid())
+  studentId      String
+  attemptId      String   @unique
+  mode           String   // "MOCK", "DAILY"
+  startedAt      DateTime
+  finishedAt     DateTime
+  score          Int
+  total          Int
+  accuracy       Int
+  topicBreakdown Json?    // [{topicId, total, correct, accuracy}]
+  createdAt      DateTime @default(now())
+
+  student        Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, createdAt])
+}
+
+model AppAiSummary {
+  id              String   @id @default(cuid())
+  studentId       String   @unique
+  passProbability Int
+  strengths       Json     // string[]
+  weaknesses      Json     // string[]
+  todayPlan       Json     // string[]
+  generatedAt     DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  student         Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model AppEventLog {
+  id         String   @id @default(cuid())
+  eventId    String   @unique // client-generated ULID for idempotency
+  studentId  String
+  type       String   // "DAILY_COMPLETED", "MOCK_FINISHED", etc.
+  occurredAt DateTime
+  payload    Json?
+  createdAt  DateTime @default(now())
+
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, occurredAt])
 }

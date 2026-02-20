@@ -9,6 +9,10 @@ import { formatCurrencyVnd, formatDateTimeVi } from "@/lib/date-utils";
 type InstructorInfo = { id: string; name: string; phone: string | null; status: string } | null;
 type PracticalLessonItem = { id: string; startAt: string; endAt: string | null; location: string | null; lessonType: string; instructorName: string; note: string | null };
 type ExamPlanInfo = { estimatedGraduationAt: string | null; estimatedExamAt: string | null; note: string | null };
+type TheoryProgress = {
+  answered: number; total: number; correct: number; wrong: number; streak: number;
+  topics: { id: string; name: string; answered: number; total: number; correct: number }[];
+} | null;
 
 type MeResponse = {
   student: {
@@ -136,6 +140,7 @@ export default function StudentDashboardPage() {
   const [practicalLessons, setPracticalLessons] = useState<PracticalLessonItem[]>([]);
   const [examPlan, setExamPlan] = useState<ExamPlanInfo | null>(null);
   const [modulesLoading, setModulesLoading] = useState(true);
+  const [theoryProgress, setTheoryProgress] = useState<TheoryProgress>(null);
 
   useEffect(() => {
     let active = true;
@@ -163,6 +168,12 @@ export default function StudentDashboardPage() {
       if (schedRes?.items) setPracticalLessons(schedRes.items);
       if (examRes) setExamPlan(examRes);
       setModulesLoading(false);
+
+      // Fetch theory learning progress from CRM database
+      try {
+        const progressRes = await fetch("/api/student/me/theory-progress", { credentials: "include" }).then(r => r.ok ? r.json() : null).catch(() => null);
+        if (progressRes && progressRes.answered > 0) setTheoryProgress(progressRes);
+      } catch { /* silent */ }
     })();
     return () => { active = false; };
   }, [router]);
@@ -499,6 +510,91 @@ export default function StudentDashboardPage() {
                   icon="📋"
                   title="Chưa có lịch thi dự kiến"
                   description="Sẽ cập nhật sau khi bạn đủ điều kiện thi sát hạch (hoàn thành giờ đường trường + DAT)."
+                />
+              </div>
+            )}
+          </SectionCard>
+
+          {/* Theory Learning Progress */}
+          <SectionCard className="border-orange-200/80 bg-gradient-to-br from-orange-50/50 to-white">
+            <SectionTitle action={
+              <a
+                href={typeof window !== "undefined" && window.location.hostname === "localhost" ? "http://localhost:3000" : "https://taplai.thayduydaotaolaixe.com"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-semibold text-orange-600 hover:text-orange-500"
+              >
+                Mở app →
+              </a>
+            }>
+              📖 Tiến độ lý thuyết
+            </SectionTitle>
+            {theoryProgress ? (
+              <div className="mt-4 space-y-4">
+                {/* Summary stats */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="rounded-xl bg-white p-3 text-center shadow-sm border border-slate-100">
+                    <p className="text-lg font-bold text-slate-900">{theoryProgress.answered}</p>
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Đã làm</p>
+                  </div>
+                  <div className="rounded-xl bg-white p-3 text-center shadow-sm border border-emerald-100">
+                    <p className="text-lg font-bold text-emerald-600">
+                      {theoryProgress.answered > 0 ? Math.round((theoryProgress.correct / theoryProgress.answered) * 100) : 0}%
+                    </p>
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Chính xác</p>
+                  </div>
+                  <div className="rounded-xl bg-white p-3 text-center shadow-sm border border-orange-100">
+                    <p className="text-lg font-bold text-orange-600">🔥 {theoryProgress.streak}</p>
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Chuỗi ngày</p>
+                  </div>
+                </div>
+
+                {/* Overall progress bar */}
+                <div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium text-slate-600">Tổng tiến độ</span>
+                    <span className="font-bold text-orange-600">{theoryProgress.answered}/{theoryProgress.total} câu</span>
+                  </div>
+                  <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-slate-200">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400 transition-all duration-700"
+                      style={{ width: `${Math.min(Math.round((theoryProgress.answered / Math.max(theoryProgress.total, 1)) * 100), 100)}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Per-topic breakdown */}
+                {theoryProgress.topics && theoryProgress.topics.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Theo chủ đề</p>
+                    {theoryProgress.topics.map((t) => {
+                      const pct = t.total > 0 ? Math.round((t.answered / t.total) * 100) : 0;
+                      return (
+                        <div key={t.id} className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="truncate font-medium text-slate-700">{t.name}</span>
+                            <span className="shrink-0 text-slate-500">{t.answered}/{t.total}</span>
+                          </div>
+                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+                            <div
+                              className="h-full rounded-full bg-orange-400 transition-all duration-500"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="mt-4">
+                <EmptyState
+                  icon="📱"
+                  title="Bắt đầu ôn lý thuyết"
+                  description="Mở app Học Lý Thuyết để ôn 600 câu hỏi mới nhất. Dữ liệu sẽ tự đồng bộ về đây."
+                  cta="Mở app"
+                  onAction={() => window.open(typeof window !== "undefined" && window.location.hostname === "localhost" ? "http://localhost:3000" : "https://taplai.thayduydaotaolaixe.com", "_blank")}
                 />
               </div>
             )}

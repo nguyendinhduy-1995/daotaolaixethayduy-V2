@@ -33,6 +33,10 @@ export const SECRET_AUTH_ROUTES: Array<{ method?: string; pattern: RegExp }> = [
   { method: "POST", pattern: /^\/api\/ai\/suggestions\/ingest$/ },
   { method: "PATCH", pattern: /^\/api\/outbound\/jobs\/[^/]+$/ },
   { method: "POST", pattern: /^\/api\/automation\/logs\/ingest$/ },
+  { method: "POST", pattern: /^\/api\/student-progress\/daily$/ },
+  { method: "POST", pattern: /^\/api\/student-progress\/attempt$/ },
+  { method: "POST", pattern: /^\/api\/student-progress\/ai-summary$/ },
+  { method: "POST", pattern: /^\/api\/student-progress\/events$/ },
 ];
 
 export const ROUTE_PERMISSION_RULES: RoutePermissionRule[] = [
@@ -74,6 +78,7 @@ export const ROUTE_PERMISSION_RULES: RoutePermissionRule[] = [
   { method: "PATCH", pattern: /^\/api\/students\/[^/]+$/, module: "students", action: "UPDATE" },
   { method: "POST", pattern: /^\/api\/students\/bulk-status$/, module: "students", action: "UPDATE" },
   { method: "GET", pattern: /^\/api\/students\/[^/]+\/finance$/, module: "students", action: "VIEW" },
+  { method: "GET", pattern: /^\/api\/students\/[^/]+\/app-progress$/, module: "students", action: "VIEW" },
 
   { method: "GET", pattern: /^\/api\/courses$/, module: "courses", action: "VIEW" },
   { method: "POST", pattern: /^\/api\/courses$/, module: "courses", action: "CREATE" },

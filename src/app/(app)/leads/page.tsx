@@ -1013,6 +1013,7 @@ export default function LeadsPage() {
                   <div><span className="text-zinc-500">Nguồn:</span> {detailLead.source || "-"}</div>
                   <div><span className="text-zinc-500">Kênh:</span> {detailLead.channel || "-"}</div>
                   <div><span className="text-zinc-500">Hạng bằng:</span> {detailLead.licenseType || "-"}</div>
+                  <div><span className="text-zinc-500">Tỉnh thành:</span> {detailLead.province || "-"}</div>
                   <div><span className="text-zinc-500">Phụ trách:</span> {detailLead.owner?.name || detailLead.owner?.email || "-"}</div>
                 </div>
               </div>

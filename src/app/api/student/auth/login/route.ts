@@ -7,6 +7,18 @@ import { signStudentAccessToken } from "@/lib/jwt";
 import { ensureStudentPortalSchema } from "@/lib/student-portal-db";
 import { checkRateLimit } from "@/lib/rate-limit";
 
+function corsHeaders() {
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  };
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: corsHeaders() });
+}
+
 function normalizePhone(value: string) {
   return value.replace(/\s+/g, "").trim();
 }
@@ -74,6 +86,7 @@ export async function POST(req: Request) {
       },
     });
     setStudentAuthCookie(response, accessToken);
+    Object.entries(corsHeaders()).forEach(([k, v]) => response.headers.set(k, v));
     return response;
   } catch (err) {
     console.error("[student.auth.login]", err);

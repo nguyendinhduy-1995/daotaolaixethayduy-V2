@@ -31,10 +31,6 @@
                         {
                             "name": "page_access_token",
                             "value": "={{ $env.PANCAKE_PAGE_ACCESS_TOKEN }}"
-                        },
-                        {
-                            "name": "type[]",
-                            "value": "INBOX"
                         }
                     ]
                 },
@@ -148,7 +144,7 @@
         },
         {
             "parameters": {
-                "workflowId": "={{ /* S1 Get Bearer Token */ }}"
+                "workflowId": "rM8NCtXchLsIhLxG"
             },
             "id": "w02-auth",
             "name": "AUTH_GetToken",
@@ -195,7 +191,7 @@
         },
         {
             "parameters": {
-                "workflowId": "={{ /* S2 Alert Admin */ }}"
+                "workflowId": "naX5gYVTYw9cz3dA"
             },
             "id": "w02-alert",
             "name": "ALERT_Admin",
