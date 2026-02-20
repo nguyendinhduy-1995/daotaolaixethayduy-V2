@@ -1,6 +1,6 @@
 import "dotenv/config";
 import bcrypt from "bcrypt";
-import { prisma } from "./scripts/prisma.ts";
+import { prisma } from "./scripts/prisma";
 
 async function main() {
     const branches = await prisma.branch.findMany({ take: 1 });
