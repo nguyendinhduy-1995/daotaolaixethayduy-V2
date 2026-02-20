@@ -13,6 +13,10 @@ type TheoryProgress = {
   answered: number; total: number; correct: number; wrong: number; streak: number;
   topics: { id: string; name: string; answered: number; total: number; correct: number }[];
 } | null;
+type SimulationProgress = {
+  totalAttempts: number; avgAccuracy: number;
+  recentAttempts: { attemptId: string; mode: string; score: number; total: number; accuracy: number; finishedAt: string }[];
+} | null;
 
 type MeResponse = {
   student: {
@@ -141,6 +145,7 @@ export default function StudentDashboardPage() {
   const [examPlan, setExamPlan] = useState<ExamPlanInfo | null>(null);
   const [modulesLoading, setModulesLoading] = useState(true);
   const [theoryProgress, setTheoryProgress] = useState<TheoryProgress>(null);
+  const [simProgress, setSimProgress] = useState<SimulationProgress>(null);
 
   useEffect(() => {
     let active = true;
@@ -173,6 +178,12 @@ export default function StudentDashboardPage() {
       try {
         const progressRes = await fetch("/api/student/me/theory-progress", { credentials: "include" }).then(r => r.ok ? r.json() : null).catch(() => null);
         if (progressRes && progressRes.answered > 0) setTheoryProgress(progressRes);
+      } catch { /* silent */ }
+
+      // Fetch simulation/Mophong progress
+      try {
+        const simRes = await fetch("/api/student/me/simulation-progress", { credentials: "include" }).then(r => r.ok ? r.json() : null).catch(() => null);
+        if (simRes?.ok && simRes.totalAttempts > 0) setSimProgress(simRes);
       } catch { /* silent */ }
     })();
     return () => { active = false; };
@@ -595,6 +606,65 @@ export default function StudentDashboardPage() {
                   description="Mở app Học Lý Thuyết để ôn 600 câu hỏi mới nhất. Dữ liệu sẽ tự đồng bộ về đây."
                   cta="Mở app"
                   onAction={() => window.open(typeof window !== "undefined" && window.location.hostname === "localhost" ? "http://localhost:3000" : "https://taplai.thayduydaotaolaixe.com", "_blank")}
+                />
+              </div>
+            )}
+          </SectionCard>
+
+          {/* Simulation / Mophong Progress */}
+          <SectionCard className="border-violet-200/80 bg-gradient-to-br from-violet-50/50 to-white">
+            <SectionTitle action={
+              <a
+                href={typeof window !== "undefined" && window.location.hostname === "localhost" ? "http://localhost:3000" : "https://mophong.thayduydaotaolaixe.com"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-semibold text-violet-600 hover:text-violet-500"
+              >
+                Mở app →
+              </a>
+            }>
+              🚗 Mô phỏng tình huống
+            </SectionTitle>
+            {simProgress ? (
+              <div className="mt-4 space-y-4">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-xl bg-white p-3 text-center shadow-sm border border-slate-100">
+                    <p className="text-lg font-bold text-violet-700">{simProgress.totalAttempts}</p>
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Đã làm</p>
+                  </div>
+                  <div className="rounded-xl bg-white p-3 text-center shadow-sm border border-emerald-100">
+                    <p className="text-lg font-bold text-emerald-600">{simProgress.avgAccuracy}%</p>
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Trung bình</p>
+                  </div>
+                </div>
+
+                {simProgress.recentAttempts.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Gần đây</p>
+                    {simProgress.recentAttempts.slice(0, 3).map((a) => (
+                      <div key={a.attemptId} className="flex items-center justify-between rounded-xl border border-slate-200/80 bg-white px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold" style={{ color: a.accuracy >= 80 ? "#16a34a" : a.accuracy >= 60 ? "#d97706" : "#dc2626" }}>
+                            {a.score}/{a.total}
+                          </span>
+                          <span className="text-xs text-slate-500">({a.accuracy}%)</span>
+                        </div>
+                        <span className="text-xs text-slate-400">
+                          {new Date(a.finishedAt).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="mt-4">
+                <EmptyState
+                  icon="🚗"
+                  title="Bắt đầu học mô phỏng"
+                  description="Mở app Mô Phỏng để luyện 120 tình huống giao thông. Dữ liệu sẽ tự đồng bộ về đây."
+                  cta="Mở app"
+                  onAction={() => window.open(typeof window !== "undefined" && window.location.hostname === "localhost" ? "http://localhost:3000" : "https://mophong.thayduydaotaolaixe.com", "_blank")}
                 />
               </div>
             )}
