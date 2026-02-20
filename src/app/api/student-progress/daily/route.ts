@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-response";
-import { verifyServiceAuth } from "@/lib/service-auth";
+import { verifyServiceOrStudentAuth } from "@/lib/service-auth";
 
 export async function POST(req: Request) {
-    const auth = await verifyServiceAuth(req);
+    const auth = await verifyServiceOrStudentAuth(req);
     if (!auth.ok) return auth.response;
 
     const body = auth.body as {

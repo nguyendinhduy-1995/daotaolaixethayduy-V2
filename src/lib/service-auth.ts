@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { jsonError } from "@/lib/api-response";
+import jwt from "jsonwebtoken";
 
 const REPLAY_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -51,3 +52,37 @@ export async function verifyServiceAuth(
 
     return { ok: true, body };
 }
+
+/**
+ * Accept EITHER service auth (HMAC) OR student JWT Bearer token.
+ * Used by student-progress endpoints so the PWA can sync directly.
+ */
+export async function verifyServiceOrStudentAuth(
+    req: Request
+): Promise<{ ok: true; body: unknown } | { ok: false; response: Response }> {
+    // Try student JWT first (Authorization: Bearer <token>)
+    const authHeader = req.headers.get("authorization") ?? "";
+    if (authHeader.startsWith("Bearer ")) {
+        const token = authHeader.slice(7);
+        const secret = process.env.JWT_SECRET ?? process.env.SERVICE_TOKEN ?? "";
+        try {
+            const payload = jwt.verify(token, secret) as { role?: string; studentId?: string };
+            if (payload.role === "student" && payload.studentId) {
+                const rawBody = await req.text();
+                let body: unknown;
+                try {
+                    body = JSON.parse(rawBody);
+                } catch {
+                    return { ok: false, response: jsonError(400, "INVALID_JSON", "Invalid JSON body") };
+                }
+                return { ok: true, body };
+            }
+        } catch {
+            // JWT invalid — fall through to service auth
+        }
+    }
+
+    // Fall back to service auth (HMAC)
+    return verifyServiceAuth(req);
+}
+
