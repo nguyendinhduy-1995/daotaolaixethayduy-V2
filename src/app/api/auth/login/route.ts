@@ -5,6 +5,7 @@ import { jsonError } from "@/lib/api-response";
 import { setAuthCookies } from "@/lib/auth-cookies";
 import { signAccessToken, signRefreshToken } from "@/lib/jwt";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { logAudit, getRequestIp } from "@/lib/audit";
 
 export async function POST(req: Request) {
   const rateLimited = checkRateLimit(req, { name: "admin-login", maxRequests: 10, windowSec: 60 });
@@ -41,6 +42,18 @@ export async function POST(req: Request) {
       user: { id: user.id, email: user.email, username: user.username, name: user.name, role: user.role },
     });
     setAuthCookies(response, accessToken, refreshToken);
+
+    // Audit: log successful login
+    logAudit({
+      action: "LOGIN",
+      entity: "user",
+      entityId: user.id,
+      userId: user.id,
+      userEmail: user.email,
+      summary: `Đăng nhập: ${user.name || user.email} (${user.role})`,
+      ip: getRequestIp(req),
+    });
+
     return response;
   } catch (err) {
     console.error("[auth.login]", err);

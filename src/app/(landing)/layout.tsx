@@ -31,6 +31,10 @@ export default function LandingLayout({
 }>) {
     return (
         <>
+            {/* Zalo in-app browser stub — prevents "Can't find variable: zaloJSV2" */}
+            <Script id="zalo-stub" strategy="beforeInteractive">{`
+                if (typeof window.zaloJSV2 === 'undefined') { window.zaloJSV2 = {}; }
+            `}</Script>
             {/* Meta Pixel Code */}
             <Script id="meta-pixel" strategy="afterInteractive">{`
                 !function(f,b,e,v,n,t,s)

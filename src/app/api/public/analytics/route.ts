@@ -19,7 +19,7 @@ const VALID_EVENT_TYPES = [
     // Common
     "page_view", "page_duration", "click", "scroll",
     "video_play", "video_pause", "video_ended",
-    "session_end",
+    "session_end", "js_error", "perf", "perf_lcp",
     // Mophong-specific
     "scenario_view", "scenario_brake", "scenario_score",
     "exam_start", "exam_finish",
@@ -68,6 +68,29 @@ export async function POST(req: Request) {
         const forwarded = req.headers.get("x-forwarded-for");
         const ip = forwarded ? forwarded.split(",")[0].trim() : null;
 
+        // GeoIP country + region/province resolution
+        let country: string | null = null;
+        let region: string | null = null;
+        // Try Cloudflare header first (free, no API call)
+        const cfCountry = req.headers.get("cf-ipcountry");
+        if (cfCountry && cfCountry !== "XX") {
+            country = cfCountry;
+        }
+        // Use ipapi.co JSON for both country and region (province for VN)
+        if (ip && ip !== "127.0.0.1" && ip !== "::1") {
+            try {
+                const geoRes = await fetch(`https://ipapi.co/${ip}/json/`, { signal: AbortSignal.timeout(2000) });
+                if (geoRes.ok) {
+                    const geo = await geoRes.json() as { country_code?: string; region?: string; city?: string };
+                    if (geo.country_code && geo.country_code.length === 2) {
+                        if (!country) country = geo.country_code;
+                        // Store region (province for VN, state/region for others)
+                        if (geo.region) region = geo.region;
+                    }
+                }
+            } catch { /* timeout/error — skip geo */ }
+        }
+
         // Validate & prepare records
         const records = [];
 
@@ -97,6 +120,8 @@ export async function POST(req: Request) {
                         : null,
                 payload: evt.payload ? (evt.payload as object) : undefined,
                 ip,
+                country,
+                region,
             });
         }
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { jsonError } from "@/lib/api-response";
 import { requireRouteAuth } from "@/lib/route-auth";
 import { requireAdminRole } from "@/lib/admin-auth";
 
@@ -11,22 +12,27 @@ export async function GET(req: Request, ctx: Ctx) {
     const forbidden = requireAdminRole(auth.role);
     if (forbidden) return forbidden;
 
-    const { id } = await ctx.params;
-    const students = await prisma.student.findMany({
-        where: { instructorId: id },
-        orderBy: { createdAt: "desc" },
-        include: { lead: { select: { fullName: true, phone: true, status: true } }, course: { select: { code: true } } },
-    });
+    try {
+        const { id } = await ctx.params;
+        const students = await prisma.student.findMany({
+            where: { instructorId: id },
+            orderBy: { createdAt: "desc" },
+            include: { lead: { select: { fullName: true, phone: true, status: true } }, course: { select: { code: true } } },
+        });
 
-    return NextResponse.json({
-        items: students.map((s) => ({
-            id: s.id,
-            fullName: s.lead.fullName,
-            phone: s.lead.phone,
-            leadStatus: s.lead.status,
-            studyStatus: s.studyStatus,
-            courseCode: s.course?.code || null,
-            createdAt: s.createdAt,
-        })),
-    });
+        return NextResponse.json({
+            items: students.map((s) => ({
+                id: s.id,
+                fullName: s.lead.fullName,
+                phone: s.lead.phone,
+                leadStatus: s.lead.status,
+                studyStatus: s.studyStatus,
+                courseCode: s.course?.code || null,
+                createdAt: s.createdAt,
+            })),
+        });
+    } catch (err) {
+        console.error("[instructor.students.GET]", err);
+        return jsonError(500, "INTERNAL_ERROR", "Lỗi khi tải danh sách học viên");
+    }
 }

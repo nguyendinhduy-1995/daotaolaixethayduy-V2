@@ -1,20 +1,18 @@
 /**
- * analytics-tracker-landing.js — Landing Page Tracker
- * Tracks: page views, clicks, scroll, session + landing-specific:
- * - section_view, cta_click, phone_click, form_focus, form_submit,
- *   pricing_view, tools_click, zalo_click
+ * analytics-tracker-landing.js — Landing Page Tracker v3
+ * Full rewrite for accuracy + UTM + error tracking + perf metrics
  */
 (function () {
     'use strict';
 
     var API_URL = '/api/public/analytics';
     var SITE = 'landing';
-    var BATCH_INTERVAL = 10000;
+    var BATCH_INTERVAL = 8000;
     var queue = [];
     var sessionId = '';
     var pageEnteredAt = Date.now();
     var currentPage = '/';
-    var lastTrackedPath = '';
+    var utmParams = {};
 
     function getSessionId() {
         var sid = sessionStorage.getItem('_td_sid');
@@ -23,6 +21,28 @@
             sessionStorage.setItem('_td_sid', sid);
         }
         return sid;
+    }
+
+    // ── UTM ─────────────────────────────────────────────────────
+    function parseUtm() {
+        try {
+            var params = new URLSearchParams(window.location.search);
+            ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'].forEach(function (k) {
+                var v = params.get(k);
+                if (v) utmParams[k] = v;
+            });
+            if (Object.keys(utmParams).length > 0) {
+                sessionStorage.setItem('_td_utm', JSON.stringify(utmParams));
+            } else {
+                var saved = sessionStorage.getItem('_td_utm');
+                if (saved) try { utmParams = JSON.parse(saved); } catch (e) { }
+            }
+            // Also check fbclid, gclid
+            var fbclid = params.get('fbclid');
+            var gclid = params.get('gclid');
+            if (fbclid) utmParams.fbclid = fbclid;
+            if (gclid) utmParams.gclid = gclid;
+        } catch (e) { }
     }
 
     function buildEvent(eventType, extra) {
@@ -37,6 +57,9 @@
             ts: new Date().toISOString()
         };
         if (extra) evt.payload = extra;
+        if (Object.keys(utmParams).length > 0) {
+            evt.payload = Object.assign({}, evt.payload || {}, { utm: utmParams });
+        }
         return evt;
     }
 
@@ -69,81 +92,64 @@
         }
     }
 
-    function trackPageView(pageName) {
-        var now = Date.now();
-        var durationSec = Math.round((now - pageEnteredAt) / 1000);
-        if (durationSec > 0 && currentPage) {
-            pushEvent('page_duration', { page: currentPage, duration: durationSec });
-        }
-        currentPage = pageName || '/';
-        pageEnteredAt = now;
+    function trackPageView() {
+        currentPage = window.location.pathname || '/';
         pushEvent('page_view');
     }
 
-    function pollNavigation() {
-        var path = window.location.pathname;
-        if (path !== lastTrackedPath) {
-            lastTrackedPath = path;
-            trackPageView(path);
-        }
-    }
-
-    // ── Section visibility tracking ───────────────────────────
+    // ── Section Visibility (IntersectionObserver) ────────────────
     function hookSections() {
-        var sections = ['hero', 'pricing', 'roadmap', 'tools', 'dang-ky'];
-        var viewedSections = {};
-
+        var sections = document.querySelectorAll('section[id], [data-section]');
+        if (sections.length === 0) return;
+        var seen = {};
         var observer = new IntersectionObserver(function (entries) {
             entries.forEach(function (entry) {
-                if (entry.isIntersecting && !viewedSections[entry.target.id]) {
-                    viewedSections[entry.target.id] = true;
-                    pushEvent('section_view', { section: entry.target.id });
-
-                    if (entry.target.id === 'pricing') pushEvent('pricing_view', {});
-                    if (entry.target.id === 'dang-ky') pushEvent('form_view', {});
+                if (entry.isIntersecting) {
+                    var id = entry.target.id || entry.target.dataset.section || 'unnamed';
+                    if (!seen[id]) {
+                        seen[id] = true;
+                        pushEvent('section_view', { section: id });
+                    }
                 }
             });
         }, { threshold: 0.3 });
-
-        // Wait for DOM to settle then observe
-        setTimeout(function () {
-            sections.forEach(function (id) {
-                var el = document.getElementById(id);
-                if (el) observer.observe(el);
-            });
-        }, 1000);
+        sections.forEach(function (s) { observer.observe(s); });
     }
 
-    // ── Click tracking with intent detection ──────────────────
-    function hookClicks() {
+    // ── CTA clicks ──────────────────────────────────────────────
+    function hookCTA() {
         document.addEventListener('click', function (e) {
             var target = e.target;
             for (var i = 0; i < 5 && target && target !== document.body; i++) {
                 var tagName = target.tagName ? target.tagName.toLowerCase() : '';
+                var href = target.getAttribute('href') || '';
+                var text = target.textContent ? target.textContent.trim().slice(0, 50) : '';
+                var id = target.id || '';
+                var cls = target.className ? String(target.className).slice(0, 60) : '';
 
-                // Phone number clicks
-                if (tagName === 'a' && target.href && target.href.indexOf('tel:') === 0) {
-                    pushEvent('phone_click', { phone: target.href.replace('tel:', '') });
+                // Phone click
+                if (href.indexOf('tel:') === 0) {
+                    pushEvent('phone_click', { href: href, label: text });
+                    flush();
                     break;
                 }
-
-                // Zalo clicks
-                if (tagName === 'a' && target.href && target.href.indexOf('zalo') >= 0) {
-                    pushEvent('zalo_click', { href: target.href.slice(0, 200) });
+                // Zalo click
+                if (href.indexOf('zalo.me') > -1 || href.indexOf('zalo') > -1 || cls.indexOf('zalo') > -1) {
+                    pushEvent('zalo_click', { href: href, label: text });
+                    flush();
                     break;
                 }
-
-                // CTA buttons (đăng ký, liên hệ, etc.)
+                // CTA button (primary buttons, register, contact etc.)
                 if (tagName === 'button' || tagName === 'a') {
-                    var label = target.textContent ? target.textContent.trim().slice(0, 50) : '';
-                    var id = target.id || '';
-                    var lowerLabel = label.toLowerCase();
-
-                    if (lowerLabel.indexOf('đăng ký') >= 0 || lowerLabel.indexOf('dang ky') >= 0 || lowerLabel.indexOf('liên hệ') >= 0) {
-                        pushEvent('cta_click', { label: label, id: id });
+                    var isCTA = cls.indexOf('cta') > -1 || cls.indexOf('primary') > -1 ||
+                        cls.indexOf('register') > -1 || cls.indexOf('dang-ky') > -1 ||
+                        text.match(/đăng ký|liên hệ|gọi ngay|tư vấn|register|contact/i);
+                    if (isCTA) {
+                        pushEvent('cta_click', { id: id, label: text, class: cls });
+                        break;
                     }
-
-                    pushEvent('click', { tag: tagName, id: id, label: label });
+                    // Regular click
+                    pushEvent('click', { tag: tagName, id: id, label: text, class: cls });
                     break;
                 }
                 target = target.parentElement;
@@ -151,29 +157,66 @@
         }, true);
     }
 
-    // ── Form interaction tracking ─────────────────────────────
+    // ── Form tracking ───────────────────────────────────────────
     function hookForms() {
-        // Focus on form fields
-        document.addEventListener('focusin', function (e) {
+        // Track form views via IntersectionObserver
+        var forms = document.querySelectorAll('form');
+        if (forms.length > 0) {
+            var formSeen = {};
+            var formObserver = new IntersectionObserver(function (entries) {
+                entries.forEach(function (entry) {
+                    if (entry.isIntersecting) {
+                        var fid = entry.target.id || 'form-' + Array.from(document.querySelectorAll('form')).indexOf(entry.target);
+                        if (!formSeen[fid]) {
+                            formSeen[fid] = true;
+                            pushEvent('form_view', { formId: fid });
+                        }
+                    }
+                });
+            }, { threshold: 0.5 });
+            forms.forEach(function (f) { formObserver.observe(f); });
+        }
+
+        // Track form focus
+        var focused = {};
+        document.addEventListener('focus', function (e) {
             var target = e.target;
-            if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT')) {
+            if (target && target.tagName && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT')) {
                 var form = target.closest('form');
-                if (form) {
-                    pushEvent('form_focus', { field: target.name || target.id || target.type, formId: form.id || '' });
+                var fid = form ? (form.id || 'form-0') : 'no-form';
+                if (!focused[fid]) {
+                    focused[fid] = true;
+                    pushEvent('form_focus', { formId: fid, field: target.name || target.type });
                 }
             }
         }, true);
 
-        // Form submit
+        // Track form submit
         document.addEventListener('submit', function (e) {
             var form = e.target;
-            if (form && form.tagName === 'FORM') {
-                pushEvent('form_submit', { formId: form.id || '', action: (form.action || '').slice(0, 200) });
-            }
+            var fid = form.id || 'form-0';
+            pushEvent('form_submit', { formId: fid });
+            flush();
         }, true);
     }
 
-    // ── Scroll depth ──────────────────────────────────────────
+    // ── Pricing section view ────────────────────────────────────
+    function hookPricing() {
+        var el = document.getElementById('pricing') || document.getElementById('bang-gia') || document.querySelector('[data-section="pricing"]');
+        if (!el) return;
+        var seen = false;
+        var obs = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+                if (entry.isIntersecting && !seen) {
+                    seen = true;
+                    pushEvent('pricing_view', { section: el.id || 'pricing' });
+                }
+            });
+        }, { threshold: 0.3 });
+        obs.observe(el);
+    }
+
+    // ── Scroll depth ────────────────────────────────────────────
     function hookScroll() {
         var reported = {};
         window.addEventListener('scroll', function () {
@@ -186,6 +229,53 @@
         }, { passive: true });
     }
 
+    // ── Error Tracking ──────────────────────────────────────────
+    function hookErrors() {
+        window.addEventListener('error', function (e) {
+            pushEvent('js_error', {
+                message: (e.message || '').slice(0, 200),
+                file: (e.filename || '').split('/').pop(),
+                line: e.lineno,
+                col: e.colno
+            });
+        });
+        window.addEventListener('unhandledrejection', function (e) {
+            pushEvent('js_error', {
+                message: ('Promise: ' + String(e.reason || '')).slice(0, 200),
+                type: 'unhandledrejection'
+            });
+        });
+    }
+
+    // ── Performance ─────────────────────────────────────────────
+    function trackPerformance() {
+        try {
+            if (!window.performance || !window.performance.getEntriesByType) return;
+            var nav = performance.getEntriesByType('navigation')[0];
+            if (nav) {
+                pushEvent('perf', {
+                    dns: Math.round(nav.domainLookupEnd - nav.domainLookupStart),
+                    tcp: Math.round(nav.connectEnd - nav.connectStart),
+                    ttfb: Math.round(nav.responseStart - nav.requestStart),
+                    domReady: Math.round(nav.domContentLoadedEventEnd - nav.startTime),
+                    load: Math.round(nav.loadEventEnd - nav.startTime),
+                    type: nav.type
+                });
+            }
+            if (window.PerformanceObserver) {
+                try {
+                    new PerformanceObserver(function (list) {
+                        var entries = list.getEntries();
+                        if (entries.length > 0) {
+                            var lcp = entries[entries.length - 1];
+                            pushEvent('perf_lcp', { value: Math.round(lcp.startTime), element: (lcp.element ? lcp.element.tagName : '') });
+                        }
+                    }).observe({ type: 'largest-contentful-paint', buffered: true });
+                } catch (e) { }
+            }
+        } catch (e) { }
+    }
+
     function trackSessionEnd() {
         var totalDuration = Math.round((Date.now() - parseInt(sessionStorage.getItem('_td_start') || Date.now())) / 1000);
         pushEvent('session_end', { totalDuration: totalDuration });
@@ -194,14 +284,16 @@
 
     function init() {
         sessionId = getSessionId();
+        parseUtm();
         if (!sessionStorage.getItem('_td_start')) sessionStorage.setItem('_td_start', String(Date.now()));
-        lastTrackedPath = window.location.pathname;
-        trackPageView(lastTrackedPath);
-        hookClicks();
+        trackPageView();
+        hookCTA();
         hookForms();
         hookSections();
+        hookPricing();
         hookScroll();
-        setInterval(pollNavigation, 500);
+        hookErrors();
+        setTimeout(trackPerformance, 3000);
         setInterval(flush, BATCH_INTERVAL);
         document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') trackSessionEnd(); });
         window.addEventListener('beforeunload', function () { trackSessionEnd(); });

@@ -198,7 +198,24 @@ export const ROUTE_PERMISSION_RULES: RoutePermissionRule[] = [
   { method: "DELETE", pattern: /^\/api\/admin\/tracking-codes\/[^/]+$/, module: "admin_tracking", action: "DELETE" },
 
   { method: "GET", pattern: /^\/api\/analytics\/dashboard$/, module: "overview", action: "VIEW" },
+  { method: "GET", pattern: /^\/api\/analytics\/export$/, module: "overview", action: "VIEW" },
+  { method: "GET", pattern: /^\/api\/analytics\/retention$/, module: "overview", action: "VIEW" },
   { method: "POST", pattern: /^\/api\/analytics\/ai-report$/, module: "overview", action: "VIEW" },
+  // Phase 2: AI Power
+  { method: "POST", pattern: /^\/api\/analytics\/ai-chat$/, module: "overview", action: "VIEW" },
+  { method: "GET", pattern: /^\/api\/analytics\/auto-insights$/, module: "overview", action: "VIEW" },
+  { method: "POST", pattern: /^\/api\/analytics\/auto-insights$/, module: "overview", action: "VIEW" },
+  // Phase 3: Advanced Analytics
+  { method: "GET", pattern: /^\/api\/analytics\/cohort$/, module: "overview", action: "VIEW" },
+  { method: "GET", pattern: /^\/api\/analytics\/geo$/, module: "overview", action: "VIEW" },
+  { method: "GET", pattern: /^\/api\/analytics\/attribution$/, module: "overview", action: "VIEW" },
+  { method: "GET", pattern: /^\/api\/analytics\/realtime$/, module: "overview", action: "VIEW" },
+  // Phase 4: Nice-to-have
+  { method: "GET", pattern: /^\/api\/analytics\/goals$/, module: "overview", action: "VIEW" },
+  { method: "POST", pattern: /^\/api\/analytics\/goals$/, module: "overview", action: "VIEW" },
+  { method: "DELETE", pattern: /^\/api\/analytics\/goals$/, module: "overview", action: "VIEW" },
+  { method: "GET", pattern: /^\/api\/analytics\/email-report$/, module: "overview", action: "VIEW" },
+  { method: "POST", pattern: /^\/api\/analytics\/email-report$/, module: "overview", action: "VIEW" },
   { method: "GET", pattern: /^\/api\/admin\/meta\/logs$/, module: "overview", action: "VIEW" },
   { method: "POST", pattern: /^\/api\/admin\/meta\/test$/, module: "overview", action: "VIEW" },
 ];

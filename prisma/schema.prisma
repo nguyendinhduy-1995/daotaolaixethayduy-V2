@@ -1384,6 +1384,7 @@ model SiteAnalyticsEvent {
   payload     Json?    // extra data: { buttonId, scrollDepth, videoId, ... }
   ip          String?
   country     String?
+  region      String?  // province/city for VN, region for others
   createdAt   DateTime @default(now())
 
   @@index([site, createdAt])
@@ -1401,5 +1402,54 @@ model MetaCapiLog {
   ip         String?
   createdAt  DateTime @default(now())
 
+  @@index([createdAt])
+}
+
+model AnalyticsAiInsight {
+  id        String   @id @default(cuid())
+  date      String   // "2026-02-22"
+  type      String   // "daily_report" | "anomaly" | "weekly_summary"
+  site      String?  // "mophong" | "taplai" | "landing" | null (all)
+  title     String   // short headline
+  content   String   @db.Text // markdown AI analysis
+  metrics   Json?    // snapshot of key metrics
+  severity  String?  // "info" | "warning" | "critical"
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([date])
+  @@index([type, createdAt])
+}
+
+model AnalyticsGoal {
+  id        String   @id @default(cuid())
+  name      String   // "Daily Traffic", "Weekly Conversions"
+  metric    String   // "page_views" | "sessions" | "conversions" | "exam_starts" | "form_submits"
+  target    Int      // target value
+  period    String   // "daily" | "weekly" | "monthly"
+  site      String?  // "mophong" | "taplai" | "landing" | null (all)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active])
+}
+
+// ── Audit Trail ──
+model AuditLog {
+  id         String   @id @default(cuid())
+  action     String   // "CREATE" | "UPDATE" | "DELETE" | "LOGIN" | "EXPORT" | "ASSIGN"
+  entity     String   // "lead" | "receipt" | "student" | "schedule" | "instructor" | "user"
+  entityId   String?  // ID of the affected record
+  userId     String?  // who performed the action
+  userEmail  String?  // cached for display
+  summary    String?  // human-readable Vietnamese description
+  before     Json?    // snapshot before change (for UPDATEs)
+  after      Json?    // snapshot after change
+  ip         String?  // request IP
+  createdAt  DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([userId, createdAt])
   @@index([createdAt])
 }

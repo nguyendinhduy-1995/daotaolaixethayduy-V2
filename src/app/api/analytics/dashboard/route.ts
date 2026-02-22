@@ -11,24 +11,25 @@ export async function GET(req: Request) {
 
     const url = new URL(req.url);
     const date = url.searchParams.get("date") || new Date().toISOString().slice(0, 10);
+    const range = parseInt(url.searchParams.get("range") || "1"); // 1, 7, 30
     const siteFilter = url.searchParams.get("site"); // mophong | taplai | landing | null
 
-    const dayStart = new Date(`${date}T00:00:00+07:00`);
     const dayEnd = new Date(`${date}T23:59:59.999+07:00`);
+    const dayStart = range > 1
+        ? (() => { const d = new Date(`${date}T00:00:00+07:00`); d.setDate(d.getDate() - range + 1); return d; })()
+        : new Date(`${date}T00:00:00+07:00`);
 
-    // Also get yesterday for comparison
-    const yesterday = new Date(dayStart);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayEnd = new Date(yesterday);
-    yesterdayEnd.setHours(23, 59, 59, 999);
+    // Also get previous period for comparison
+    const prevEnd = new Date(dayStart); prevEnd.setMilliseconds(-1);
+    const prevStart = new Date(prevEnd); prevStart.setDate(prevStart.getDate() - range + 1); prevStart.setHours(0, 0, 0, 0);
 
     // Build base where clause with optional site filter
     const baseWhere = siteFilter
         ? { createdAt: { gte: dayStart, lte: dayEnd }, site: siteFilter }
         : { createdAt: { gte: dayStart, lte: dayEnd } };
     const yesterdayWhere = siteFilter
-        ? { createdAt: { gte: yesterday, lte: yesterdayEnd }, site: siteFilter }
-        : { createdAt: { gte: yesterday, lte: yesterdayEnd } };
+        ? { createdAt: { gte: prevStart, lte: prevEnd }, site: siteFilter }
+        : { createdAt: { gte: prevStart, lte: prevEnd } };
 
     try {
         // ── All events for today ──────────────────────────────
@@ -224,9 +225,24 @@ export async function GET(req: Request) {
         if (returningUsers > newUsers && realUsers > 5) insights.push(`🔄 Nhiều người quay lại (${returningUsers}/${realUsers}) — app có giá trị! Cần thêm nội dung mới.`);
         if (peakHour >= 19 && peakHour <= 22) insights.push(`🌙 Cao điểm ${peakHour}h — user học buổi tối. Cân nhắc push notification/nhắc nhở lúc 19h.`);
         if (peakHour >= 6 && peakHour <= 8) insights.push(`🌅 Cao điểm ${peakHour}h sáng — user học sớm trước khi đi làm/học.`);
-        if (landingFunnel.visitors > 0 && conversionRate < 5) insights.push(`🔻 Tỷ lệ chuyển đổi landing chỉ ${conversionRate}% — cần tối ưu form đăng ký và CTA.`);
-        if (conversionRate >= 10) insights.push(`🎯 Tỷ lệ chuyển đổi landing ${conversionRate}% — rất tốt!`);
-        if ((eventBreakdown.exam_start ?? 0) > 0 && (eventBreakdown.exam_finish ?? 0) === 0) insights.push(`⚠️ Có ${eventBreakdown.exam_start} lần bắt đầu thi nhưng không ai hoàn thành — kiểm tra UX thi.`);
+        if (landingFunnel.visitors > 0 && conversionRate < 5 && (siteFilter === "landing" || !siteFilter)) insights.push(`🔻 Tỷ lệ chuyển đổi landing chỉ ${conversionRate}% — cần tối ưu form đăng ký và CTA.`);
+        if (conversionRate >= 10 && (siteFilter === "landing" || !siteFilter)) insights.push(`🎯 Tỷ lệ chuyển đổi landing ${conversionRate}% — rất tốt!`);
+        // Site-aware exam insights
+        if (!siteFilter) {
+            // On "Tất cả" tab: break down exam_start by site
+            const mophongExamStarts = allEvents.filter(e => e.site === "mophong" && e.eventType === "exam_start").length;
+            const mophongExamFinishes = allEvents.filter(e => e.site === "mophong" && e.eventType === "exam_finish").length;
+            const taplaiExamStarts = allEvents.filter(e => e.site === "taplai" && e.eventType === "exam_start").length;
+            const taplaiExamFinishes = allEvents.filter(e => e.site === "taplai" && e.eventType === "exam_finish").length;
+            if (mophongExamStarts > 0 && mophongExamFinishes === 0) insights.push(`⚠️ Mô Phỏng: ${mophongExamStarts} lần bắt đầu thi nhưng không ai hoàn thành — kiểm tra UX thi.`);
+            if (taplaiExamStarts > 0 && taplaiExamFinishes === 0) insights.push(`⚠️ Lý Thuyết: ${taplaiExamStarts} lần bắt đầu thi nhưng không ai hoàn thành — kiểm tra UX thi.`);
+            if (mophongExamStarts > 0 && mophongExamFinishes > 0) insights.push(`✅ Mô Phỏng: ${mophongExamFinishes}/${mophongExamStarts} lượt hoàn thành thi (${Math.round(mophongExamFinishes / mophongExamStarts * 100)}%).`);
+            if (taplaiExamStarts > 0 && taplaiExamFinishes > 0) insights.push(`✅ Lý Thuyết: ${taplaiExamFinishes}/${taplaiExamStarts} lượt hoàn thành thi (${Math.round(taplaiExamFinishes / taplaiExamStarts * 100)}%).`);
+        } else {
+            const siteName = siteFilter === "mophong" ? "Mô Phỏng" : siteFilter === "taplai" ? "Lý Thuyết" : "Landing";
+            if ((eventBreakdown.exam_start ?? 0) > 0 && (eventBreakdown.exam_finish ?? 0) === 0) insights.push(`⚠️ ${siteName}: ${eventBreakdown.exam_start} lần bắt đầu thi nhưng không ai hoàn thành — kiểm tra UX thi.`);
+            if ((eventBreakdown.exam_start ?? 0) > 0 && (eventBreakdown.exam_finish ?? 0) > 0) insights.push(`✅ ${siteName}: ${eventBreakdown.exam_finish}/${eventBreakdown.exam_start} lượt hoàn thành thi (${Math.round((eventBreakdown.exam_finish ?? 0) / (eventBreakdown.exam_start ?? 1) * 100)}%).`);
+        }
         if (viewsChange < -30 && yesterdayPageViews > 10) insights.push(`📉 Lượt xem giảm ${Math.abs(viewsChange)}% so với hôm qua — kiểm tra nguồn traffic.`);
         if (viewsChange > 50 && yesterdayPageViews > 5) insights.push(`📈 Lượt xem tăng ${viewsChange}% so với hôm qua!`);
 
@@ -302,8 +318,120 @@ export async function GET(req: Request) {
             };
         }
 
+        // ── 20. Daily trend (for multi-day range) ────────────
+        const dailyTrend: { date: string; views: number; sessions: number; users: number }[] = [];
+        if (range > 1) {
+            const dayMap: Record<string, { views: number; sessions: Set<string>; ips: Set<string> }> = {};
+            allEvents.forEach(e => {
+                const d = new Date(e.createdAt.getTime() + 7 * 3600 * 1000).toISOString().slice(0, 10);
+                if (!dayMap[d]) dayMap[d] = { views: 0, sessions: new Set(), ips: new Set() };
+                if (e.eventType === "page_view") dayMap[d].views++;
+                dayMap[d].sessions.add(e.sessionId);
+                if (e.ip) dayMap[d].ips.add(e.ip);
+            });
+            for (let i = 0; i < range; i++) {
+                const d = new Date(dayStart);
+                d.setDate(d.getDate() + i);
+                const key = d.toISOString().slice(0, 10);
+                const dm = dayMap[key];
+                dailyTrend.push({
+                    date: key,
+                    views: dm ? dm.views : 0,
+                    sessions: dm ? dm.sessions.size : 0,
+                    users: dm ? (dm.ips.size || dm.sessions.size) : 0,
+                });
+            }
+        }
+
+        // ── 21. Performance metrics ──────────────────────────────
+        type PerfPayload = { ttfb?: number; domReady?: number; load?: number };
+        const perfEvents = allEvents.filter(e => e.eventType === "perf");
+        const avgPerf = perfEvents.length > 0 ? {
+            ttfb: Math.round(perfEvents.reduce((s, e) => s + ((e.payload as PerfPayload)?.ttfb || 0), 0) / perfEvents.length),
+            domReady: Math.round(perfEvents.reduce((s, e) => s + ((e.payload as PerfPayload)?.domReady || 0), 0) / perfEvents.length),
+            load: Math.round(perfEvents.reduce((s, e) => s + ((e.payload as PerfPayload)?.load || 0), 0) / perfEvents.length),
+            samples: perfEvents.length,
+        } : null;
+
+        // ── 22. Error count ───────────────────────────────────────
+        const errorCount = allEvents.filter(e => e.eventType === "js_error").length;
+
+        // ── 23. UTM breakdown ─────────────────────────────────────
+        type UtmPayload = { utm?: { utm_source?: string; utm_medium?: string; utm_campaign?: string } };
+        const utmSources: Record<string, number> = {};
+        allEvents.filter(e => e.eventType === "page_view").forEach(e => {
+            const utm = (e.payload as UtmPayload)?.utm;
+            if (utm?.utm_source) {
+                const key = `${utm.utm_source}/${utm.utm_medium || "(none)"}`;
+                utmSources[key] = (utmSources[key] || 0) + 1;
+            }
+        });
+        const topUtmSources = Object.entries(utmSources).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([source, count]) => ({ source, count }));
+
+        // ── 24. Active users (sessions in last 5 min) ─────────────
+        const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
+        const activeUsers = new Set(allEvents.filter(e => e.createdAt >= fiveMinAgo).map(e => e.sessionId)).size;
+
+        // ── 25. User Flows (top session journeys) ────────────────
+        const sessionJourneys: Record<string, string[]> = {};
+        allEvents.filter(e => e.eventType === "page_view")
+            .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+            .forEach(e => {
+                if (!sessionJourneys[e.sessionId]) sessionJourneys[e.sessionId] = [];
+                const pages = sessionJourneys[e.sessionId];
+                if (pages[pages.length - 1] !== e.page) pages.push(e.page);
+            });
+        const flowCounts: Record<string, number> = {};
+        Object.values(sessionJourneys).forEach(pages => {
+            const key = pages.slice(0, 6).join(" → ");
+            if (key) flowCounts[key] = (flowCounts[key] || 0) + 1;
+        });
+        const topUserFlows = Object.entries(flowCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 8)
+            .map(([flow, count]) => ({ flow, count, steps: flow.split(" → ").length }));
+
+        // ── 26. Drop-off analysis (where users leave) ────────────
+        const stepDropoff: Record<string, { total: number; exits: number }> = {};
+        Object.values(sessionJourneys).forEach(pages => {
+            pages.forEach((page, i) => {
+                if (!stepDropoff[page]) stepDropoff[page] = { total: 0, exits: 0 };
+                stepDropoff[page].total++;
+                if (i === pages.length - 1) stepDropoff[page].exits++;
+            });
+        });
+        const dropoffRates = Object.entries(stepDropoff)
+            .map(([page, { total, exits }]) => ({
+                page, total, exits,
+                dropoffRate: total > 0 ? Math.round((exits / total) * 100) : 0,
+            }))
+            .filter(d => d.total >= 2)
+            .sort((a, b) => b.dropoffRate - a.dropoffRate)
+            .slice(0, 5);
+
+        // ── 27. Time-on-page per page ────────────────────────────
+        type DurPayload = { duration?: number };
+        const pageTimings: Record<string, { total: number; count: number }> = {};
+        allEvents.filter(e => e.eventType === "page_duration").forEach(e => {
+            const dur = (e.payload as DurPayload)?.duration;
+            if (dur && dur > 0 && dur < 3600) { // cap at 1 hour
+                if (!pageTimings[e.page]) pageTimings[e.page] = { total: 0, count: 0 };
+                pageTimings[e.page].total += dur;
+                pageTimings[e.page].count++;
+            }
+        });
+        const timeOnPage = Object.entries(pageTimings)
+            .map(([page, { total, count }]) => ({
+                page,
+                avgSeconds: Math.round(total / count),
+                samples: count,
+            }))
+            .sort((a, b) => b.samples - a.samples)
+            .slice(0, 10);
+
         return NextResponse.json({
             date,
+            range,
             siteFilter: siteFilter || "all",
             // Core metrics
             totalPageViews,
@@ -332,11 +460,21 @@ export async function GET(req: Request) {
             // User journey
             topEntryPages,
             topExitPages,
+            topUserFlows,
+            dropoffRates,
             // Landing funnel
             landingFunnel,
             conversionRate,
             // Site-specific
             siteSpecificStats,
+            // v3 additions
+            dailyTrend,
+            avgPerf,
+            errorCount,
+            topUtmSources,
+            activeUsers,
+            // v4 additions
+            timeOnPage,
             // Actionable
             insights,
         });
