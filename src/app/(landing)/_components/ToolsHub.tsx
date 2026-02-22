@@ -91,7 +91,7 @@ const CONG_CU: AppCard[] = [
         icon: "🖥️",
         cta: "MỞ ỨNG DỤNG",
         isPublic: true,
-        href: "https://taplai.thayduydaotaolaixe.com",
+        href: "https://mophong.thayduydaotaolaixe.com/",
     },
     {
         title: "Lịch Học",
