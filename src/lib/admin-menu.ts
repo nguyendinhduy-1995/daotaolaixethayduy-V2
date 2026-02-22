@@ -67,6 +67,14 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     icon: "🔔",
   },
   {
+    key: "analytics",
+    label: "Phân tích truy cập",
+    href: "/admin/analytics",
+    group: "Tổng quan",
+    keywords: ["analytics", "phan tich", "truy cap", "traffic", "website", "người dùng"],
+    icon: "📈",
+  },
+  {
     key: "leads",
     label: "Khách hàng",
     href: "/leads",

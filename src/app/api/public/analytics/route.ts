@@ -89,10 +89,15 @@ export async function POST(req: Request) {
             await prisma.siteAnalyticsEvent.createMany({ data: records });
         }
 
-        return NextResponse.json({ ok: true, count: records.length });
+        return NextResponse.json({ ok: true, count: records.length }, {
+            headers: { "Access-Control-Allow-Origin": "*" },
+        });
     } catch (err) {
         console.error("[analytics.POST]", err);
-        return NextResponse.json({ ok: false, error: "Internal error" }, { status: 500 });
+        return NextResponse.json({ ok: false, error: "Internal error" }, {
+            status: 500,
+            headers: { "Access-Control-Allow-Origin": "*" },
+        });
     }
 }
 
