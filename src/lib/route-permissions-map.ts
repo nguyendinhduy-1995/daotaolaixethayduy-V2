@@ -22,6 +22,8 @@ export const PUBLIC_API_ROUTES: Array<{ method?: string; pattern: RegExp }> = [
   { method: "GET", pattern: /^\/api\/tracking-codes$/ },
   { method: "POST", pattern: /^\/api\/public\/analytics$/ },
   { method: "OPTIONS", pattern: /^\/api\/public\/analytics$/ },
+  { method: "POST", pattern: /^\/api\/meta\/capi$/ },
+  { method: "OPTIONS", pattern: /^\/api\/meta\/capi$/ },
 ];
 
 export const SECRET_AUTH_ROUTES: Array<{ method?: string; pattern: RegExp }> = [
@@ -197,6 +199,8 @@ export const ROUTE_PERMISSION_RULES: RoutePermissionRule[] = [
 
   { method: "GET", pattern: /^\/api\/analytics\/dashboard$/, module: "overview", action: "VIEW" },
   { method: "POST", pattern: /^\/api\/analytics\/ai-report$/, module: "overview", action: "VIEW" },
+  { method: "GET", pattern: /^\/api\/admin\/meta\/logs$/, module: "overview", action: "VIEW" },
+  { method: "POST", pattern: /^\/api\/admin\/meta\/test$/, module: "overview", action: "VIEW" },
 ];
 
 function matchesAllowlist(

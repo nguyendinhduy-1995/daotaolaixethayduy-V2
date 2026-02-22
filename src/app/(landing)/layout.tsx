@@ -44,6 +44,40 @@ export default function LandingLayout({
                 fbq('init', '1352480913314806');
                 fbq('track', 'PageView');
             `}</Script>
+            {/* _fbc cookie from fbclid + ViewContent event */}
+            <Script id="meta-fbc-viewcontent" strategy="afterInteractive">{`
+                (function(){
+                    // Set _fbc cookie if fbclid present
+                    try {
+                        var url = new URL(window.location.href);
+                        var fbclid = url.searchParams.get('fbclid');
+                        if (fbclid && !document.cookie.match(/(^|;\\s*)_fbc=/)) {
+                            var fbc = 'fb.1.' + Date.now() + '.' + fbclid;
+                            var exp = new Date(Date.now() + 90*24*60*60*1000).toUTCString();
+                            document.cookie = '_fbc=' + fbc + '; path=/; expires=' + exp + '; SameSite=Lax';
+                        }
+                    } catch(e) {}
+                    // Fire ViewContent for CAPI dedup
+                    var eid = (crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now()+'-'+Math.random().toString(36).slice(2,10);
+                    if (typeof fbq !== 'undefined') fbq('track', 'ViewContent', {content_name: document.title}, {eventID: eid});
+                    fetch('/api/meta/capi', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({event_name:'ViewContent',event_id:eid,event_source_url:window.location.href}), keepalive:true}).catch(function(){});
+                })();
+            `}</Script>
+            {/* Contact event for tel/zalo clicks */}
+            <Script id="meta-contact-events" strategy="afterInteractive">{`
+                document.addEventListener('click', function(e) {
+                    var a = e.target.closest && e.target.closest('a[href]');
+                    if (!a) return;
+                    var href = a.getAttribute('href') || '';
+                    var isTel = href.startsWith('tel:');
+                    var isZalo = href.includes('zalo');
+                    if (!isTel && !isZalo) return;
+                    var eid = (crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now()+'-'+Math.random().toString(36).slice(2,10);
+                    var contactType = isTel ? 'phone' : 'zalo';
+                    if (typeof fbq !== 'undefined') fbq('track', 'Contact', {content_name: contactType, content_category: 'landing'}, {eventID: eid});
+                    fetch('/api/meta/capi', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({event_name:'Contact',event_id:eid,event_source_url:window.location.href,custom_data:{content_name:contactType}}), keepalive:true}).catch(function(){});
+                });
+            `}</Script>
             <noscript>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img height="1" width="1" style={{ display: "none" }}

@@ -354,4 +354,12 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     keywords: ["tracking", "gtag", "pixel", "analytics", "ga4", "meta", "tiktok"],
     icon: "📡",
   },
+  {
+    key: "admin-meta-capi",
+    label: "Meta Pixel & CAPI",
+    href: "/admin/integrations/meta",
+    group: "Quản trị",
+    keywords: ["meta", "pixel", "facebook", "capi", "conversion", "ads"],
+    icon: "📊",
+  },
 ];

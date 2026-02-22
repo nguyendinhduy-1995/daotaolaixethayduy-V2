@@ -1390,3 +1390,16 @@ model SiteAnalyticsEvent {
   @@index([sessionId])
   @@index([eventType, createdAt])
 }
+
+model MetaCapiLog {
+  id         String   @id @default(cuid())
+  eventName  String
+  eventId    String
+  ok         Boolean
+  fbtraceId  String?
+  errorMsg   String?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+}

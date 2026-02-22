@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { RevealSection, HOTLINE, HOTLINE_TEL, PROVINCES, LICENSE_TYPES } from "./LandingStyles";
+import { trackMetaEvent } from "@/lib/meta-pixel";
 
 export default function LeadForm() {
     const [fullName, setFullName] = useState("");
@@ -30,6 +31,16 @@ export default function LeadForm() {
                 return;
             }
             setSubmitted(true);
+            // Meta: Lead event on form submit
+            trackMetaEvent("Lead", {
+                content_name: "LeadForm",
+                content_category: licenseType,
+            }, { phone });
+            // Meta: CompleteRegistration on success
+            trackMetaEvent("CompleteRegistration", {
+                content_name: "LeadForm",
+                status: "success",
+            }, { phone });
         } catch (err) {
             console.error("[LeadForm] network error", err);
             setError("Lỗi kết nối. Vui lòng thử lại.");

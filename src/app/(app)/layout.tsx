@@ -44,6 +44,7 @@ function guessPageTitle(pathname: string) {
     { test: (p) => p.startsWith("/admin/automation-monitor"), title: "Giám sát luồng tự động", subtitle: "Theo dõi job, lỗi và nhật ký chạy trong ngày" },
     { test: (p) => p.startsWith("/api-hub"), title: "API Hub", subtitle: "Tra cứu API và cách đấu nối nhanh" },
     { test: (p) => p.startsWith("/admin/analytics"), title: "Phân tích truy cập", subtitle: "Theo dõi người dùng, lượt xem và chuyển đổi" },
+    { test: (p) => p.startsWith("/admin/integrations/meta"), title: "Meta Pixel & CAPI", subtitle: "Quản lý Facebook Pixel và Conversions API" },
     { test: (p) => p.startsWith("/admin"), title: "Quản trị", subtitle: "Thiết lập và vận hành hệ thống" },
   ];
   return map.find((item) => item.test(pathname)) || { title: APP_SHORT, subtitle: APP_DESCRIPTION };
