@@ -11,6 +11,7 @@ export async function GET(req: Request) {
 
     const url = new URL(req.url);
     const date = url.searchParams.get("date") || new Date().toISOString().slice(0, 10);
+    const siteFilter = url.searchParams.get("site"); // mophong | taplai | landing | null
 
     const dayStart = new Date(`${date}T00:00:00+07:00`);
     const dayEnd = new Date(`${date}T23:59:59.999+07:00`);
@@ -21,19 +22,27 @@ export async function GET(req: Request) {
     const yesterdayEnd = new Date(yesterday);
     yesterdayEnd.setHours(23, 59, 59, 999);
 
+    // Build base where clause with optional site filter
+    const baseWhere = siteFilter
+        ? { createdAt: { gte: dayStart, lte: dayEnd }, site: siteFilter }
+        : { createdAt: { gte: dayStart, lte: dayEnd } };
+    const yesterdayWhere = siteFilter
+        ? { createdAt: { gte: yesterday, lte: yesterdayEnd }, site: siteFilter }
+        : { createdAt: { gte: yesterday, lte: yesterdayEnd } };
+
     try {
         // ── All events for today ──────────────────────────────
         const allEvents = await prisma.siteAnalyticsEvent.findMany({
-            where: { createdAt: { gte: dayStart, lte: dayEnd } },
+            where: baseWhere,
             select: { eventType: true, page: true, site: true, sessionId: true, userAgent: true, createdAt: true, duration: true, referrer: true, screenWidth: true, ip: true, payload: true },
         });
 
         // ── Yesterday events for comparison ───────────────────
         const yesterdayPageViews = await prisma.siteAnalyticsEvent.count({
-            where: { eventType: "page_view", createdAt: { gte: yesterday, lte: yesterdayEnd } },
+            where: { ...yesterdayWhere, eventType: "page_view" },
         });
         const yesterdaySessions = await prisma.siteAnalyticsEvent.findMany({
-            where: { createdAt: { gte: yesterday, lte: yesterdayEnd } },
+            where: yesterdayWhere,
             select: { sessionId: true },
             distinct: ["sessionId"],
         });
@@ -54,11 +63,11 @@ export async function GET(req: Request) {
         // Check which IPs/sessions appeared before today
         const returningIPs = new Set<string>();
         if (uniqueIPs.size > 0) {
+            const prevWhere = siteFilter
+                ? { createdAt: { lt: dayStart } as const, ip: { in: Array.from(uniqueIPs).filter(Boolean) as string[] }, site: siteFilter }
+                : { createdAt: { lt: dayStart } as const, ip: { in: Array.from(uniqueIPs).filter(Boolean) as string[] } };
             const previousEvents = await prisma.siteAnalyticsEvent.findMany({
-                where: {
-                    createdAt: { lt: dayStart },
-                    ip: { in: Array.from(uniqueIPs).filter(Boolean) as string[] },
-                },
+                where: prevWhere,
                 select: { ip: true },
                 distinct: ["ip"],
             });
@@ -221,8 +230,81 @@ export async function GET(req: Request) {
         if (viewsChange < -30 && yesterdayPageViews > 10) insights.push(`📉 Lượt xem giảm ${Math.abs(viewsChange)}% so với hôm qua — kiểm tra nguồn traffic.`);
         if (viewsChange > 50 && yesterdayPageViews > 5) insights.push(`📈 Lượt xem tăng ${viewsChange}% so với hôm qua!`);
 
+        // ── 19. Site-specific stats ────────────────────────────
+        type PayloadObj = Record<string, unknown>;
+        const siteSpecificStats: Record<string, unknown> = {};
+        if (siteFilter === "mophong" || !siteFilter) {
+            const mEvents = siteFilter ? allEvents : allEvents.filter(e => e.site === "mophong");
+            const scenarioViews: Record<string, number> = {};
+            const videoPlays: Record<string, number> = {};
+            let examStarts = 0, examFinishes = 0, totalBrakes = 0;
+            mEvents.forEach(e => {
+                const p = e.payload as PayloadObj | null;
+                if (e.eventType === "scenario_view" && p?.scenario) {
+                    const k = String(p.scenario); scenarioViews[k] = (scenarioViews[k] || 0) + 1;
+                }
+                if (e.eventType === "video_play" && p?.video) {
+                    const k = String(p.video); videoPlays[k] = (videoPlays[k] || 0) + 1;
+                }
+                if (e.eventType === "exam_start") examStarts++;
+                if (e.eventType === "exam_finish") examFinishes++;
+                if (e.eventType === "scenario_brake") totalBrakes++;
+            });
+            siteSpecificStats.mophong = {
+                topScenarios: Object.entries(scenarioViews).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([name, count]) => ({ name, count })),
+                topVideos: Object.entries(videoPlays).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([name, count]) => ({ name, count })),
+                examStarts, examFinishes,
+                examCompletionRate: examStarts > 0 ? Math.round((examFinishes / examStarts) * 100) : 0,
+                totalBrakes,
+            };
+        }
+        if (siteFilter === "taplai" || !siteFilter) {
+            const tEvents = siteFilter ? allEvents : allEvents.filter(e => e.site === "taplai");
+            const topicViews: Record<string, number> = {};
+            const searchQueries: Record<string, number> = {};
+            let totalAnswers = 0, correctAnswers = 0, dailyPractices = 0, wrongReviews = 0;
+            tEvents.forEach(e => {
+                const p = e.payload as PayloadObj | null;
+                if (e.eventType === "topic_view" && p?.topic) {
+                    const k = String(p.topic); topicViews[k] = (topicViews[k] || 0) + 1;
+                }
+                if (e.eventType === "search_query" && p?.query) {
+                    const k = String(p.query); searchQueries[k] = (searchQueries[k] || 0) + 1;
+                }
+                if (e.eventType === "question_answer") {
+                    totalAnswers++;
+                    if (p?.correct) correctAnswers++;
+                }
+                if (e.eventType === "daily_practice") dailyPractices++;
+                if (e.eventType === "wrong_review") wrongReviews++;
+            });
+            siteSpecificStats.taplai = {
+                topTopics: Object.entries(topicViews).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([name, count]) => ({ name, count })),
+                topSearches: Object.entries(searchQueries).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([name, count]) => ({ name, count })),
+                totalAnswers, correctAnswers,
+                correctRate: totalAnswers > 0 ? Math.round((correctAnswers / totalAnswers) * 100) : 0,
+                dailyPractices, wrongReviews,
+            };
+        }
+        if (siteFilter === "landing" || !siteFilter) {
+            const lEvents = siteFilter ? allEvents : allEvents.filter(e => e.site === "landing");
+            const sectionViews: Record<string, number> = {};
+            lEvents.forEach(e => {
+                const p = e.payload as PayloadObj | null;
+                if (e.eventType === "section_view" && p?.section) {
+                    const k = String(p.section); sectionViews[k] = (sectionViews[k] || 0) + 1;
+                }
+            });
+            siteSpecificStats.landing = {
+                topSections: Object.entries(sectionViews).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([name, count]) => ({ name, count })),
+                funnelDetail: landingFunnel,
+                conversionRate,
+            };
+        }
+
         return NextResponse.json({
             date,
+            siteFilter: siteFilter || "all",
             // Core metrics
             totalPageViews,
             uniqueSessions,
@@ -253,6 +335,8 @@ export async function GET(req: Request) {
             // Landing funnel
             landingFunnel,
             conversionRate,
+            // Site-specific
+            siteSpecificStats,
             // Actionable
             insights,
         });
