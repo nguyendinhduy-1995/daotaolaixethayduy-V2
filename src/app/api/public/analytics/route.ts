@@ -1,6 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+const ALLOWED_ORIGINS = [
+    "https://mophong.thayduydaotaolaixe.com",
+    "https://taplai.thayduydaotaolaixe.com",
+    "https://thayduydaotaolaixe.com",
+    "http://localhost:3000",
+    "http://localhost:3001",
+];
+
+function getCorsOrigin(req: Request): string {
+    const origin = req.headers.get("origin") || "";
+    return ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+}
+
 const VALID_SITES = ["mophong", "taplai", "landing"];
 const VALID_EVENT_TYPES = [
     // Common
@@ -90,23 +103,23 @@ export async function POST(req: Request) {
         }
 
         return NextResponse.json({ ok: true, count: records.length }, {
-            headers: { "Access-Control-Allow-Origin": "*" },
+            headers: { "Access-Control-Allow-Origin": getCorsOrigin(req) },
         });
     } catch (err) {
         console.error("[analytics.POST]", err);
         return NextResponse.json({ ok: false, error: "Internal error" }, {
             status: 500,
-            headers: { "Access-Control-Allow-Origin": "*" },
+            headers: { "Access-Control-Allow-Origin": getCorsOrigin(req) },
         });
     }
 }
 
 // CORS headers for cross-origin tracker requests
-export async function OPTIONS() {
+export async function OPTIONS(req: Request) {
     return new NextResponse(null, {
         status: 204,
         headers: {
-            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Origin": getCorsOrigin(req),
             "Access-Control-Allow-Methods": "POST, OPTIONS",
             "Access-Control-Allow-Headers": "Content-Type",
             "Access-Control-Max-Age": "86400",
