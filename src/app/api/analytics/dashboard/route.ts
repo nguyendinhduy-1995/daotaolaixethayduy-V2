@@ -240,11 +240,11 @@ export async function GET(req: Request) {
             let examStarts = 0, examFinishes = 0, totalBrakes = 0;
             mEvents.forEach(e => {
                 const p = e.payload as PayloadObj | null;
-                if (e.eventType === "scenario_view" && p?.scenario) {
-                    const k = String(p.scenario); scenarioViews[k] = (scenarioViews[k] || 0) + 1;
+                if (e.eventType === "scenario_view" && p) {
+                    const k = String(p.title || p.scenarioId || p.scenario || "unknown"); scenarioViews[k] = (scenarioViews[k] || 0) + 1;
                 }
-                if (e.eventType === "video_play" && p?.video) {
-                    const k = String(p.video); videoPlays[k] = (videoPlays[k] || 0) + 1;
+                if (e.eventType === "video_play" && p) {
+                    const k = String(p.src || p.video || "unknown"); videoPlays[k] = (videoPlays[k] || 0) + 1;
                 }
                 if (e.eventType === "exam_start") examStarts++;
                 if (e.eventType === "exam_finish") examFinishes++;
@@ -268,8 +268,8 @@ export async function GET(req: Request) {
                 if (e.eventType === "topic_view" && p?.topic) {
                     const k = String(p.topic); topicViews[k] = (topicViews[k] || 0) + 1;
                 }
-                if (e.eventType === "search_query" && p?.query) {
-                    const k = String(p.query); searchQueries[k] = (searchQueries[k] || 0) + 1;
+                if (e.eventType === "search_query" && p) {
+                    const k = String(p.query || p.path || "unknown"); searchQueries[k] = (searchQueries[k] || 0) + 1;
                 }
                 if (e.eventType === "question_answer") {
                     totalAnswers++;

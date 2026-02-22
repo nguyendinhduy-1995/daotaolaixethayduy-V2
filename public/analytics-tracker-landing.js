@@ -44,14 +44,28 @@
         queue.push(buildEvent(eventType, extra));
     }
 
+    function doFetch(body) {
+        try {
+            fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain' },
+                body: body,
+                keepalive: true,
+                credentials: 'omit',
+                mode: 'cors'
+            }).catch(function () { });
+        } catch (e) { }
+    }
+
     function flush() {
         if (queue.length === 0) return;
         var batch = queue.splice(0, queue.length);
         var body = JSON.stringify({ events: batch });
         if (navigator.sendBeacon) {
-            navigator.sendBeacon(API_URL, new Blob([body], { type: 'application/json' }));
+            var sent = navigator.sendBeacon(API_URL, new Blob([body], { type: 'text/plain' }));
+            if (!sent) doFetch(body);
         } else {
-            try { fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body, keepalive: true }).catch(function () { }); } catch (e) { }
+            doFetch(body);
         }
     }
 
