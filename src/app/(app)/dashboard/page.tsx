@@ -282,6 +282,48 @@ export default function DashboardPage() {
   const [aiSummary, setAiSummary] = useState<AiSummaryResponse | null>(null);
   const [staleCount, setStaleCount] = useState(0);
 
+  // ── Analytics state ──────────────────────────────────────
+  type AnalyticsDashboardData = {
+    totalPageViews: number;
+    uniqueSessions: number;
+    realUsers: number;
+    newUsers: number;
+    returningUsers: number;
+    avgDuration: number;
+    avgPagesPerSession: number;
+    bounceRate: number;
+    engagementRate: number;
+    viewsChange: number;
+    sessionsChange: number;
+    yesterdayPageViews: number;
+    yesterdaySessions: number;
+    topPages: Array<{ page: string; count: number; pct: number }>;
+    eventBreakdown: Record<string, number>;
+    deviceBreakdown: { mobile: number; desktop: number; mobilePercent: number };
+    screenSizes: Record<string, number>;
+    hourlyTraffic: number[];
+    peakHour: number;
+    siteBreakdown: Record<string, number>;
+    topReferrers: Array<{ source: string; count: number }>;
+    topEntryPages: Array<{ page: string; count: number }>;
+    topExitPages: Array<{ page: string; count: number }>;
+    landingFunnel: {
+      visitors: number;
+      pricingViewed: number;
+      ctaClicks: number;
+      formViewed: number;
+      formFocused: number;
+      formSubmitted: number;
+      phoneCalls: number;
+      zaloClicks: number;
+    };
+    conversionRate: number;
+    insights: string[];
+  };
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsDashboardData | null>(null);
+  const [aiReport, setAiReport] = useState<string | null>(null);
+  const [aiReportLoading, setAiReportLoading] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [autoRefresh, setAutoRefresh] = useState(false);
@@ -402,6 +444,13 @@ export default function DashboardPage() {
       setAiSuggestions(Array.isArray(aiData.items) ? aiData.items.slice(0, 2) : []);
       setAiSummary(aiSummaryData);
       setStaleCount(staleData?.total ?? 0);
+
+      // Load analytics data (admin only)
+      if (isAdminRole(me.user.role)) {
+        fetchJson<AnalyticsDashboardData>(`/api/analytics/dashboard?date=${today}`, { token })
+          .then((data) => setAnalyticsData(data))
+          .catch(() => setAnalyticsData(null));
+      }
 
       if (isAdminRole(me.user.role)) {
         const unassigned = await loadUnassignedCount(today, token);
@@ -689,10 +738,10 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-2.5">
                       <span
                         className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-white text-xs font-bold shadow-sm ${item.scoreColor === "RED"
-                            ? "bg-gradient-to-br from-rose-500 to-red-600"
-                            : item.scoreColor === "YELLOW"
-                              ? "bg-gradient-to-br from-amber-500 to-orange-600"
-                              : "bg-gradient-to-br from-emerald-500 to-green-600"
+                          ? "bg-gradient-to-br from-rose-500 to-red-600"
+                          : item.scoreColor === "YELLOW"
+                            ? "bg-gradient-to-br from-amber-500 to-orange-600"
+                            : "bg-gradient-to-br from-emerald-500 to-green-600"
                           }`}
                       >
                         {item.scoreColor === "RED" ? "!" : item.scoreColor === "YELLOW" ? "?" : "✓"}
@@ -788,6 +837,308 @@ export default function DashboardPage() {
             </div>
           ) : null}
         </div>
+
+        {/* ── Phân tích truy cập website (Admin only) ──── */}
+        {isAdmin && analyticsData ? (
+          <div className="animate-fadeInUp delay-5 rounded-2xl border border-zinc-200/60 bg-white p-5 shadow-sm space-y-4">
+            <SectionHeader icon="📈" gradient="from-teal-500 to-cyan-600" title="Phân tích truy cập website" badge={<Badge text="Analytics" tone="primary" />} />
+
+            {/* ── Actionable Insights (top priority) ──── */}
+            {analyticsData.insights.length > 0 ? (
+              <div className="rounded-xl border border-indigo-200/60 bg-gradient-to-r from-indigo-50 to-violet-50 p-3.5">
+                <p className="text-xs font-bold uppercase tracking-wide text-indigo-600 mb-2">💡 Gợi ý hành động</p>
+                <div className="space-y-1.5">
+                  {analyticsData.insights.map((insight, i) => (
+                    <p key={i} className="text-sm text-zinc-700 leading-snug">{insight}</p>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {/* ── Overview Cards (6 metrics) ──────────── */}
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+              {[
+                { icon: "👤", label: "Người dùng thật", value: analyticsData.realUsers, sub: `🆕 ${analyticsData.newUsers} · 🔄 ${analyticsData.returningUsers}`, color: "blue" },
+                { icon: "👁️", label: "Lượt xem trang", value: analyticsData.totalPageViews, sub: `${analyticsData.viewsChange >= 0 ? "📈" : "📉"} ${analyticsData.viewsChange >= 0 ? "+" : ""}${analyticsData.viewsChange}% vs hôm qua`, color: "indigo" },
+                { icon: "📊", label: "Phiên truy cập", value: analyticsData.uniqueSessions, sub: `${analyticsData.sessionsChange >= 0 ? "📈" : "📉"} ${analyticsData.sessionsChange >= 0 ? "+" : ""}${analyticsData.sessionsChange}% vs hôm qua`, color: "violet" },
+                { icon: "⏱️", label: "Thời gian TB", value: analyticsData.avgDuration > 60 ? `${Math.floor(analyticsData.avgDuration / 60)}p${analyticsData.avgDuration % 60}s` : `${analyticsData.avgDuration}s`, sub: `${analyticsData.avgPagesPerSession} trang/phiên`, color: "amber" },
+                { icon: "🎯", label: "Tỷ lệ tương tác", value: `${analyticsData.engagementRate}%`, sub: `Bounce: ${analyticsData.bounceRate}%`, color: "emerald" },
+                { icon: "📱", label: "Mobile", value: `${analyticsData.deviceBreakdown.mobilePercent}%`, sub: `📱${analyticsData.deviceBreakdown.mobile} 💻${analyticsData.deviceBreakdown.desktop}`, color: "cyan" },
+              ].map((card) => (
+                <div key={card.label} className={`rounded-xl border border-${card.color}-200/60 bg-gradient-to-br from-${card.color}-50 to-${card.color}-100/30 p-3 transition-all duration-300 hover:shadow-md`}>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="text-sm">{card.icon}</span>
+                    <p className="text-[10px] uppercase tracking-wide text-zinc-400">{card.label}</p>
+                  </div>
+                  <p className="text-xl font-bold text-zinc-800">{card.value}</p>
+                  <p className="text-[10px] text-zinc-500 mt-0.5">{card.sub}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* ── Landing Funnel & Conversion ─────────── */}
+            {analyticsData.landingFunnel.visitors > 0 ? (
+              <div className="rounded-xl border border-amber-200/60 bg-gradient-to-br from-amber-50 to-orange-50 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs font-bold uppercase tracking-wide text-amber-700">🌐 Phễu chuyển đổi Landing Page</p>
+                  <span className={`text-sm font-bold ${analyticsData.conversionRate >= 10 ? "text-green-600" : analyticsData.conversionRate >= 5 ? "text-amber-600" : "text-red-500"}`}>
+                    {analyticsData.conversionRate}% chuyển đổi
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  {[
+                    { label: "Truy cập", value: analyticsData.landingFunnel.visitors, icon: "👁️", pct: 100 },
+                    { label: "Xem bảng giá", value: analyticsData.landingFunnel.pricingViewed, icon: "💰", pct: analyticsData.landingFunnel.visitors > 0 ? Math.round((analyticsData.landingFunnel.pricingViewed / analyticsData.landingFunnel.visitors) * 100) : 0 },
+                    { label: "Nhấn CTA", value: analyticsData.landingFunnel.ctaClicks, icon: "🔔", pct: analyticsData.landingFunnel.visitors > 0 ? Math.round((analyticsData.landingFunnel.ctaClicks / analyticsData.landingFunnel.visitors) * 100) : 0 },
+                    { label: "Mở form đăng ký", value: analyticsData.landingFunnel.formViewed, icon: "📋", pct: analyticsData.landingFunnel.visitors > 0 ? Math.round((analyticsData.landingFunnel.formViewed / analyticsData.landingFunnel.visitors) * 100) : 0 },
+                    { label: "Bắt đầu điền form", value: analyticsData.landingFunnel.formFocused, icon: "✍️", pct: analyticsData.landingFunnel.visitors > 0 ? Math.round((analyticsData.landingFunnel.formFocused / analyticsData.landingFunnel.visitors) * 100) : 0 },
+                    { label: "Gửi form thành công", value: analyticsData.landingFunnel.formSubmitted, icon: "✅", pct: analyticsData.landingFunnel.visitors > 0 ? Math.round((analyticsData.landingFunnel.formSubmitted / analyticsData.landingFunnel.visitors) * 100) : 0 },
+                    { label: "Gọi điện", value: analyticsData.landingFunnel.phoneCalls, icon: "📞", pct: analyticsData.landingFunnel.visitors > 0 ? Math.round((analyticsData.landingFunnel.phoneCalls / analyticsData.landingFunnel.visitors) * 100) : 0 },
+                    { label: "Nhắn Zalo", value: analyticsData.landingFunnel.zaloClicks, icon: "💬", pct: analyticsData.landingFunnel.visitors > 0 ? Math.round((analyticsData.landingFunnel.zaloClicks / analyticsData.landingFunnel.visitors) * 100) : 0 },
+                  ].filter(s => s.value > 0 || s.label === "Truy cập").map((step) => (
+                    <div key={step.label} className="flex items-center gap-2">
+                      <span className="text-sm w-5">{step.icon}</span>
+                      <span className="text-xs text-zinc-600 w-32">{step.label}</span>
+                      <div className="flex-1 h-3 bg-white/60 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500 transition-all duration-700" style={{ width: `${step.pct}%` }} />
+                      </div>
+                      <span className="text-xs font-bold text-amber-700 w-8 text-right">{step.value}</span>
+                      <span className="text-[10px] text-zinc-400 w-9 text-right">{step.pct}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {/* ── Site Breakdown + Hourly Chart ────────── */}
+            <div className="grid gap-2.5 lg:grid-cols-2">
+              {/* Site breakdown */}
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-2">Lượt xem theo site</p>
+                <div className="space-y-1.5">
+                  {Object.entries(analyticsData.siteBreakdown).sort((a, b) => b[1] - a[1]).map(([site, count]) => {
+                    const maxCount = Math.max(...Object.values(analyticsData.siteBreakdown), 1);
+                    const pct = Math.round((count / maxCount) * 100);
+                    const siteNames: Record<string, string> = { mophong: "🚗 Mô Phỏng", taplai: "📚 Lý Thuyết", landing: "🌐 Landing" };
+                    const colors: Record<string, string> = { mophong: "bg-blue-500", taplai: "bg-violet-500", landing: "bg-amber-500" };
+                    return (
+                      <div key={site} className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-zinc-600 w-24">{siteNames[site] || site}</span>
+                        <div className="flex-1 h-4 bg-zinc-100 rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full transition-all duration-700 ${colors[site] || "bg-zinc-400"}`} style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-xs font-bold text-zinc-700 w-10 text-right">{count}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Hourly traffic */}
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-2">Lượt xem theo giờ <span className="text-teal-600">(cao điểm: {analyticsData.peakHour}h)</span></p>
+                <div className="flex items-end gap-0.5 h-20">
+                  {analyticsData.hourlyTraffic.map((count, hour) => {
+                    const maxH = Math.max(...analyticsData.hourlyTraffic, 1);
+                    const hPct = Math.max(2, Math.round((count / maxH) * 100));
+                    const isPeak = hour === analyticsData.peakHour;
+                    return (
+                      <div key={hour} className="flex-1 group relative">
+                        <div
+                          className={`w-full rounded-t transition-all duration-500 cursor-pointer ${isPeak ? "bg-gradient-to-t from-orange-500 to-amber-400" : "bg-gradient-to-t from-cyan-500 to-teal-400 hover:from-cyan-600"}`}
+                          style={{ height: `${hPct}%` }}
+                          title={`${hour}h: ${count} lượt xem`}
+                        />
+                        {hour % 4 === 0 ? <span className="text-[9px] text-zinc-400 block text-center mt-0.5">{hour}h</span> : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* ── User Journey: Entry & Exit Pages ───── */}
+            <div className="grid gap-2.5 lg:grid-cols-2">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-2">🚪 Trang vào đầu tiên</p>
+                <div className="space-y-1">
+                  {analyticsData.topEntryPages.map((p, i) => (
+                    <div key={p.page} className="flex items-center gap-2 text-xs">
+                      <span className="text-zinc-400 w-4 text-right">{i + 1}.</span>
+                      <span className="flex-1 text-zinc-700 font-medium truncate">{p.page}</span>
+                      <span className="font-bold text-teal-600">{p.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-2">🚶 Trang thoát cuối</p>
+                <div className="space-y-1">
+                  {analyticsData.topExitPages.map((p, i) => (
+                    <div key={p.page} className="flex items-center gap-2 text-xs">
+                      <span className="text-zinc-400 w-4 text-right">{i + 1}.</span>
+                      <span className="flex-1 text-zinc-700 font-medium truncate">{p.page}</span>
+                      <span className="font-bold text-rose-500">{p.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* ── Top Pages with % ────────────────────── */}
+            {analyticsData.topPages.length > 0 ? (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-2">📊 Top trang truy cập</p>
+                <div className="space-y-1">
+                  {analyticsData.topPages.map((p, i) => (
+                    <div key={p.page} className="flex items-center gap-2 text-xs">
+                      <span className="text-zinc-400 w-4 text-right">{i + 1}.</span>
+                      <span className="flex-1 text-zinc-700 font-medium truncate">{p.page}</span>
+                      <div className="w-16 h-2 bg-zinc-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-cyan-400 rounded-full" style={{ width: `${p.pct}%` }} />
+                      </div>
+                      <span className="font-bold text-cyan-600 w-8 text-right">{p.count}</span>
+                      <span className="text-zinc-400 w-8 text-right">{p.pct}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {/* ── Screen Sizes + Referrers ────────────── */}
+            <div className="grid gap-2.5 lg:grid-cols-2">
+              {Object.keys(analyticsData.screenSizes).length > 0 ? (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-2">📐 Kích thước màn hình</p>
+                  <div className="space-y-1">
+                    {Object.entries(analyticsData.screenSizes).sort((a, b) => b[1] - a[1]).map(([label, count]) => (
+                      <div key={label} className="flex items-center justify-between text-xs">
+                        <span className="text-zinc-600">{label}</span>
+                        <span className="font-bold text-zinc-700">{count} phiên</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {analyticsData.topReferrers.length > 0 ? (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-2">🔗 Nguồn truy cập</p>
+                  <div className="space-y-1">
+                    {analyticsData.topReferrers.map((r) => (
+                      <div key={r.source} className="flex items-center justify-between text-xs">
+                        <span className="text-zinc-600 truncate">{r.source}</span>
+                        <span className="font-bold text-violet-600">{r.count} lượt</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            {/* ── App-specific metrics ──────────────────── */}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-2">Chỉ số theo ứng dụng</p>
+              <div className="grid gap-2.5 sm:grid-cols-3">
+                {(analyticsData.siteBreakdown.mophong ?? 0) > 0 ? (
+                  <div className="rounded-xl border border-blue-200/60 bg-gradient-to-br from-blue-50 to-sky-50 p-3">
+                    <p className="text-xs font-bold text-blue-700 mb-2">🚗 Mô Phỏng</p>
+                    <div className="space-y-1 text-xs text-zinc-600">
+                      {[
+                        ["🎬 Xem tình huống", analyticsData.eventBreakdown.scenario_view],
+                        ["🛑 Nhấn phanh", analyticsData.eventBreakdown.scenario_brake],
+                        ["📝 Thi thử", analyticsData.eventBreakdown.exam_start],
+                        ["✅ Hoàn thành thi", analyticsData.eventBreakdown.exam_finish],
+                        ["▶️ Xem video", analyticsData.eventBreakdown.video_play],
+                      ].filter((row) => Number(row[1] ?? 0) > 0).map((row) => (
+                        <div key={String(row[0])} className="flex justify-between"><span>{row[0]}</span><span className="font-bold text-blue-600">{row[1] ?? 0}</span></div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                {(analyticsData.siteBreakdown.taplai ?? 0) > 0 ? (
+                  <div className="rounded-xl border border-violet-200/60 bg-gradient-to-br from-violet-50 to-purple-50 p-3">
+                    <p className="text-xs font-bold text-violet-700 mb-2">📚 Học Lý Thuyết</p>
+                    <div className="space-y-1 text-xs text-zinc-600">
+                      {[
+                        ["📖 Xem chủ đề", analyticsData.eventBreakdown.topic_view],
+                        ["✍️ Trả lời câu hỏi", analyticsData.eventBreakdown.question_answer],
+                        ["📅 Luyện tập hàng ngày", analyticsData.eventBreakdown.daily_practice],
+                        ["📓 Sổ tay sai", analyticsData.eventBreakdown.wrong_review],
+                        ["🔍 Tìm kiếm", analyticsData.eventBreakdown.search_query],
+                      ].filter((row) => Number(row[1] ?? 0) > 0).map((row) => (
+                        <div key={String(row[0])} className="flex justify-between"><span>{row[0]}</span><span className="font-bold text-violet-600">{row[1] ?? 0}</span></div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                {(analyticsData.siteBreakdown.landing ?? 0) > 0 ? (
+                  <div className="rounded-xl border border-amber-200/60 bg-gradient-to-br from-amber-50 to-orange-50 p-3">
+                    <p className="text-xs font-bold text-amber-700 mb-2">🌐 Landing Page</p>
+                    <div className="space-y-1 text-xs text-zinc-600">
+                      {[
+                        ["👁️ Section viewed", analyticsData.eventBreakdown.section_view],
+                        ["💰 Xem bảng giá", analyticsData.eventBreakdown.pricing_view],
+                        ["🔔 CTA click", analyticsData.eventBreakdown.cta_click],
+                        ["📞 Gọi điện", analyticsData.eventBreakdown.phone_click],
+                        ["💬 Zalo", analyticsData.eventBreakdown.zalo_click],
+                        ["📝 Form gửi", analyticsData.eventBreakdown.form_submit],
+                      ].filter((row) => Number(row[1] ?? 0) > 0).map((row) => (
+                        <div key={String(row[0])} className="flex justify-between"><span>{row[0]}</span><span className="font-bold text-amber-600">{row[1] ?? 0}</span></div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            {/* ── AI Analysis ──────────────────────────── */}
+            <div className="rounded-xl border border-violet-200/60 bg-gradient-to-br from-violet-50 via-white to-indigo-50 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 text-white text-sm shadow-sm">🤖</div>
+                  <p className="text-sm font-bold text-zinc-700">AI Phân tích hành vi</p>
+                </div>
+                <button
+                  type="button"
+                  disabled={aiReportLoading}
+                  className="rounded-lg border border-violet-200 bg-white px-3 py-1.5 text-xs font-medium text-violet-700 hover:bg-violet-50 transition-colors disabled:opacity-50"
+                  onClick={async () => {
+                    const token = getToken();
+                    if (!token) return;
+                    setAiReportLoading(true);
+                    setAiReport(null);
+                    try {
+                      const res = await fetchJson<{ analysis: string }>(
+                        `/api/analytics/ai-report?date=${today}`,
+                        { token, method: "POST" }
+                      );
+                      setAiReport(res.analysis);
+                    } catch {
+                      setAiReport("Không thể tạo báo cáo AI. Vui lòng thử lại sau.");
+                    } finally {
+                      setAiReportLoading(false);
+                    }
+                  }}
+                >
+                  {aiReportLoading ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Spinner /> Đang phân tích...
+                    </span>
+                  ) : (
+                    "🔍 Phân tích AI"
+                  )}
+                </button>
+              </div>
+              {aiReport ? (
+                <div className="prose prose-sm max-w-none text-zinc-700 whitespace-pre-wrap text-sm leading-relaxed">
+                  {aiReport}
+                </div>
+              ) : (
+                <p className="text-xs text-zinc-400">Nhấn nút &quot;Phân tích AI&quot; để AI tự động phân tích hành vi người dùng và đưa ra gợi ý chi tiết.</p>
+              )}
+            </div>
+          </div>
+        ) : null}
 
         {/* ── Drilldown Modal ────────────────────────────── */}
         <Modal

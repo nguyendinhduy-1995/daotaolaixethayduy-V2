@@ -1368,3 +1368,25 @@ model AppEventLog {
 
   @@index([studentId, occurredAt])
 }
+
+// ── Site Analytics (client-side tracker events) ──
+
+model SiteAnalyticsEvent {
+  id          String   @id @default(cuid())
+  site        String   // "mophong" | "taplai" | "landing"
+  sessionId   String   // generated client-side per session
+  eventType   String   // "page_view" | "click" | "scroll" | "video_play" | "exam_start" | "session_end"
+  page        String   // e.g. "/", "/practice", "/exam"
+  referrer    String?
+  userAgent   String?
+  screenWidth Int?
+  duration    Int?     // seconds on page (sent on unload/visibility change)
+  payload     Json?    // extra data: { buttonId, scrollDepth, videoId, ... }
+  ip          String?
+  country     String?
+  createdAt   DateTime @default(now())
+
+  @@index([site, createdAt])
+  @@index([sessionId])
+  @@index([eventType, createdAt])
+}

@@ -63,6 +63,9 @@ export default function LandingLayout({
                 gtag('config', 'G-Y66W00G0HS');
             `}</Script>
 
+            {/* Analytics Tracker — Thầy Duy internal */}
+            <Script src="/analytics-tracker-landing.js" strategy="afterInteractive" />
+
             <TrackingScripts site="LANDING" />
             {children}
             <TrackingScriptsBottom site="LANDING" />
