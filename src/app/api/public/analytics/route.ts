@@ -46,7 +46,9 @@ type AnalyticsEvent = {
 
 export async function POST(req: Request) {
     try {
-        const body = (await req.json()) as
+        // Parse body - support both application/json and text/plain (used by sendBeacon to avoid CORS preflight)
+        const rawText = await req.text();
+        const body = JSON.parse(rawText) as
             | { events: AnalyticsEvent[] }
             | AnalyticsEvent;
 
