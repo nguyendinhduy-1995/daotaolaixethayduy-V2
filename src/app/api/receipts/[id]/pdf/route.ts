@@ -67,14 +67,28 @@ function numberToVietnameseWords(n: number): string {
   return parts.join(" ").trim() + " đồng";
 }
 
+type ReceiptWithRelations = {
+  id: string;
+  amount: number;
+  method: string;
+  note: string | null;
+  receivedAt: Date;
+  createdAt: Date;
+  student: {
+    lead: { fullName: string; phone: string | null; province: string | null; licenseType: string | null };
+    course: { code: string } | null;
+  };
+  branch: { name: string; code: string } | null;
+  createdBy: { name: string | null; email: string } | null;
+};
+
 export async function GET(req: Request, ctx: Ctx) {
   const { error } = requireRouteAuth(req);
   if (error) return error;
 
   try {
     const { id } = await ctx.params;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const receipt: any = await prisma.receipt.findUnique({
+    const receipt = await prisma.receipt.findUnique({
       where: { id },
       include: {
         student: {
@@ -86,7 +100,7 @@ export async function GET(req: Request, ctx: Ctx) {
         branch: { select: { name: true, code: true } },
         createdBy: { select: { name: true, email: true } },
       },
-    });
+    }) as ReceiptWithRelations | null;
 
     if (!receipt) return jsonError(404, "NOT_FOUND", "Không tìm thấy biên lai");
 
