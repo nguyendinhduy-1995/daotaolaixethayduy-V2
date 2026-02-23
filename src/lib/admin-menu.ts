@@ -267,6 +267,14 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     icon: "🔐",
   },
   {
+    key: "admin-settings",
+    label: "Cài đặt tính năng",
+    href: "/admin/settings",
+    group: "Quản trị",
+    keywords: ["cai dat", "settings", "feature", "tinh nang", "bat tat"],
+    icon: "⚙️",
+  },
+  {
     key: "admin-guide",
     label: "Hướng dẫn vận hành",
     href: "/admin/guide",

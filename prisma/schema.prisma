@@ -816,6 +816,7 @@ model Branch {
   code      String?  @unique
   isActive  Boolean  @default(true)
   commissionPerPaid50 Int?
+  provinces String[] @default([])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -840,6 +841,14 @@ model Branch {
   goalSettings GoalSetting[]
   aiSuggestions AiSuggestion[]
   outboundJobs OutboundJob[]
+}
+
+model FeatureSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  enabled   Boolean  @default(false)
+  config    Json?
+  updatedAt DateTime @updatedAt
 }
 
 model KpiTarget {

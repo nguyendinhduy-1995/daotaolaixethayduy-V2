@@ -189,6 +189,7 @@ export default function LeadsPage() {
   const [canManageOwner, setCanManageOwner] = useState(false);
   const [isTelesales, setIsTelesales] = useState(false);
   const [canCreateLead, setCanCreateLead] = useState(false);
+  const [canDeleteLead, setCanDeleteLead] = useState(false);
   const [owners, setOwners] = useState<UserOption[]>([]);
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -220,6 +221,18 @@ export default function LeadsPage() {
   const [assignSaving, setAssignSaving] = useState(false);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [mobileActionLead, setMobileActionLead] = useState<Lead | null>(null);
+
+  // Edit lead state
+  const [editOpen, setEditOpen] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editForm, setEditForm] = useState({ fullName: "", phone: "", province: "", licenseType: "", source: "", channel: "", note: "" });
+  const [editLeadId, setEditLeadId] = useState("");
+
+  // Delete lead state
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteSaving, setDeleteSaving] = useState(false);
+  const [deleteLeadId, setDeleteLeadId] = useState("");
+  const [deleteLeadName, setDeleteLeadName] = useState("");
 
   const query = useMemo(() => {
     const params = new URLSearchParams();
@@ -269,11 +282,13 @@ export default function LeadsPage() {
         setCanManageOwner(isAdminRole(data.user.role));
         setIsTelesales(isTelesalesRole(data.user.role));
         setCanCreateLead(hasUiPermission(data.user.permissions, "leads", "CREATE"));
+        setCanDeleteLead(isAdminRole(data.user.role) && hasUiPermission(data.user.permissions, "leads", "DELETE"));
       })
       .catch(() => {
         setCanManageOwner(false);
         setIsTelesales(false);
         setCanCreateLead(false);
+        setCanDeleteLead(false);
       });
   }, []);
 
@@ -447,6 +462,81 @@ export default function LeadsPage() {
       if (!handleAuthError(err)) setError(formatError(err));
     } finally {
       setAssignSaving(false);
+    }
+  }
+
+  function openEditLead(lead: Lead) {
+    setEditLeadId(lead.id);
+    setEditForm({
+      fullName: lead.fullName || "",
+      phone: lead.phone || "",
+      province: lead.province || "",
+      licenseType: lead.licenseType || "",
+      source: lead.source || "",
+      channel: lead.channel || "",
+      note: lead.note || "",
+    });
+    setEditOpen(true);
+  }
+
+  async function saveEditLead() {
+    if (!editLeadId) return;
+    const token = getToken();
+    if (!token) return;
+    setEditSaving(true);
+    setError("");
+    try {
+      await fetchJson(`/api/leads/${editLeadId}`, {
+        method: "PATCH",
+        token,
+        body: {
+          fullName: editForm.fullName.trim() || null,
+          phone: editForm.phone.replace(/\D/g, "") || null,
+          province: editForm.province.trim() || null,
+          licenseType: editForm.licenseType.trim() || null,
+          source: editForm.source.trim() || null,
+          channel: editForm.channel.trim() || null,
+          note: editForm.note.trim() || null,
+        },
+      });
+      setEditOpen(false);
+      toast.success("Đã cập nhật khách hàng.");
+      await loadLeads();
+      if (detailLead?.id === editLeadId) openDetail(editLeadId);
+    } catch (e) {
+      const err = e as ApiClientError;
+      if (!handleAuthError(err)) setError(formatError(err));
+    } finally {
+      setEditSaving(false);
+    }
+  }
+
+  function openDeleteLead(lead: Lead) {
+    setDeleteLeadId(lead.id);
+    setDeleteLeadName(lead.fullName || lead.phone || lead.id);
+    setDeleteOpen(true);
+  }
+
+  async function confirmDeleteLead() {
+    if (!deleteLeadId) return;
+    const token = getToken();
+    if (!token) return;
+    setDeleteSaving(true);
+    setError("");
+    try {
+      await fetchJson(`/api/leads/${deleteLeadId}`, { method: "DELETE", token });
+      setDeleteOpen(false);
+      setDetailOpen(false);
+      toast.success("Đã xóa khách hàng.");
+      await loadLeads();
+    } catch (e) {
+      const err = e as ApiClientError;
+      if (!handleAuthError(err)) {
+        setError(formatError(err));
+        toast.error(formatError(err));
+      }
+    } finally {
+      setDeleteSaving(false);
     }
   }
 
@@ -867,6 +957,30 @@ export default function LeadsPage() {
               className="w-full justify-start"
               onClick={() => {
                 if (!mobileActionLead) return;
+                openEditLead(mobileActionLead);
+                setMobileActionLead(null);
+              }}
+            >
+              ✏️ Sửa thông tin
+            </Button>
+            {canDeleteLead ? (
+              <Button
+                variant="secondary"
+                className="w-full justify-start !text-red-600"
+                onClick={() => {
+                  if (!mobileActionLead) return;
+                  openDeleteLead(mobileActionLead);
+                  setMobileActionLead(null);
+                }}
+              >
+                🗑️ Xóa khách hàng
+              </Button>
+            ) : null}
+            <Button
+              variant="secondary"
+              className="w-full justify-start"
+              onClick={() => {
+                if (!mobileActionLead) return;
                 setEventLeadId(mobileActionLead.id);
                 setEventOpen(true);
                 setMobileActionLead(null);
@@ -1018,7 +1132,24 @@ export default function LeadsPage() {
                 </div>
               </div>
 
-              <div className="flex justify-end">
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    openEditLead(detailLead);
+                  }}
+                >
+                  ✏️ Sửa
+                </Button>
+                {canDeleteLead ? (
+                  <Button
+                    variant="secondary"
+                    className="!text-red-600 !border-red-200 hover:!bg-red-50"
+                    onClick={() => openDeleteLead(detailLead)}
+                  >
+                    🗑️ Xóa
+                  </Button>
+                ) : null}
                 <Button
                   className="!bg-gradient-to-r !from-blue-600 !to-cyan-600 !text-white !shadow-md"
                   onClick={() => {
@@ -1085,6 +1216,83 @@ export default function LeadsPage() {
               <Button onClick={submitAssignOwner} disabled={assignSaving}>
                 {assignSaving ? "Đang lưu..." : "Lưu"}
               </Button>
+            </div>
+          </div>
+        </Modal>
+
+        {/* Edit Lead Modal */}
+        <Modal
+          open={editOpen}
+          title="Sửa khách hàng"
+          onClose={() => setEditOpen(false)}
+          footer={
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setEditOpen(false)}>Huỷ</Button>
+              <Button onClick={saveEditLead} disabled={editSaving}>
+                {editSaving ? "Đang lưu..." : "Lưu thay đổi"}
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-600">Họ và tên</label>
+              <Input value={editForm.fullName} onChange={(e) => setEditForm((s) => ({ ...s, fullName: e.target.value }))} />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-600">Số điện thoại</label>
+              <Input value={editForm.phone} inputMode="tel" onChange={(e) => setEditForm((s) => ({ ...s, phone: e.target.value }))} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-zinc-600">Tỉnh thành</label>
+                <Input value={editForm.province} onChange={(e) => setEditForm((s) => ({ ...s, province: e.target.value }))} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-zinc-600">Hạng bằng</label>
+                <Input value={editForm.licenseType} onChange={(e) => setEditForm((s) => ({ ...s, licenseType: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-zinc-600">Nguồn</label>
+                <Input value={editForm.source} onChange={(e) => setEditForm((s) => ({ ...s, source: e.target.value }))} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-zinc-600">Kênh</label>
+                <Input value={editForm.channel} onChange={(e) => setEditForm((s) => ({ ...s, channel: e.target.value }))} />
+              </div>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-600">Ghi chú</label>
+              <Input value={editForm.note} onChange={(e) => setEditForm((s) => ({ ...s, note: e.target.value }))} />
+            </div>
+          </div>
+        </Modal>
+
+        {/* Delete Confirmation Modal */}
+        <Modal
+          open={deleteOpen}
+          title="Xác nhận xóa khách hàng"
+          onClose={() => setDeleteOpen(false)}
+          footer={
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setDeleteOpen(false)}>Huỷ</Button>
+              <Button
+                className="!bg-red-600 !text-white hover:!bg-red-700"
+                onClick={confirmDeleteLead}
+                disabled={deleteSaving}
+              >
+                {deleteSaving ? "Đang xóa..." : "Xóa"}
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-3">
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              ⚠️ Bạn chắc chắn muốn xóa khách hàng <strong>{deleteLeadName}</strong>?
+              <br />
+              Hành động này không thể hoàn tác. Tất cả sự kiện và tin nhắn liên quan sẽ bị xóa.
             </div>
           </div>
         </Modal>

@@ -49,6 +49,7 @@ export async function PATCH(req: Request, context: RouteContext) {
         ...(body.code !== undefined ? { code: code || null } : {}),
         ...(body.isActive !== undefined ? { isActive: Boolean(body.isActive) } : {}),
         ...(body.commissionPerPaid50 !== undefined ? { commissionPerPaid50: nextCommission } : {}),
+        ...(Array.isArray(body.provinces) ? { provinces: body.provinces.map((p: unknown) => String(p).trim()).filter(Boolean) } : {}),
       },
     });
 

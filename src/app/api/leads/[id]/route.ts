@@ -153,3 +153,38 @@ export async function PATCH(req: Request, context: RouteContext) {
     return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
   }
 }
+
+export async function DELETE(req: Request, context: RouteContext) {
+  const authResult = await requirePermissionRouteAuth(req, { module: "leads", action: "DELETE" });
+  if (authResult.error) return authResult.error;
+  const auth = authResult.auth;
+
+  // Only admins can delete leads
+  if (!isAdminRole(auth.role)) {
+    return jsonError(403, "AUTH_FORBIDDEN", "Chỉ admin mới có quyền xóa khách hàng");
+  }
+
+  try {
+    const { id } = await Promise.resolve(context.params);
+
+    const lead = await prisma.lead.findUnique({
+      where: { id },
+      include: { student: { select: { id: true } } },
+    });
+
+    if (!lead) {
+      return jsonError(404, "NOT_FOUND", API_ERROR_VI.notFoundLead);
+    }
+
+    if (lead.student) {
+      return jsonError(400, "VALIDATION_ERROR", "Không thể xóa khách hàng đã chuyển thành học viên. Hãy xóa học viên trước.");
+    }
+
+    await prisma.lead.delete({ where: { id } });
+
+    return NextResponse.json({ ok: true, message: "Đã xóa khách hàng thành công" });
+  } catch (err) {
+    console.error("[leads.[id].DELETE]", err);
+    return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
+  }
+}

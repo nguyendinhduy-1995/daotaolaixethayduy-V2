@@ -116,6 +116,10 @@ export const ROUTE_PERMISSION_RULES: RoutePermissionRule[] = [
   { method: "GET", pattern: /^\/api\/leads\/stale$/, module: "leads", action: "VIEW" },
   { method: "GET", pattern: /^\/api\/leads\/export$/, module: "leads", action: "VIEW" },
   { method: "POST", pattern: /^\/api\/leads\/bulk-assign$/, module: "leads", action: "ASSIGN" },
+  { method: "DELETE", pattern: /^\/api\/leads\/[^/]+$/, module: "leads", action: "DELETE" },
+
+  { method: "GET", pattern: /^\/api\/admin\/settings$/, module: "admin_automation_admin", action: "VIEW" },
+  { method: "POST", pattern: /^\/api\/admin\/settings$/, module: "admin_automation_admin", action: "UPDATE" },
 
   { method: "GET", pattern: /^\/api\/receipts$/, module: "receipts", action: "VIEW" },
   { method: "POST", pattern: /^\/api\/receipts$/, module: "receipts", action: "CREATE" },
