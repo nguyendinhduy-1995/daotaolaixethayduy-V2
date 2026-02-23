@@ -118,6 +118,7 @@ export const ROUTE_PERMISSION_RULES: RoutePermissionRule[] = [
   { method: "POST", pattern: /^\/api\/receipts$/, module: "receipts", action: "CREATE" },
   { method: "GET", pattern: /^\/api\/receipts\/summary$/, module: "receipts", action: "VIEW" },
   { method: "GET", pattern: /^\/api\/receipts\/[^/]+$/, module: "receipts", action: "VIEW" },
+  { method: "GET", pattern: /^\/api\/receipts\/[^/]+\/pdf$/, module: "receipts", action: "VIEW" },
   { method: "PATCH", pattern: /^\/api\/receipts\/[^/]+$/, module: "receipts", action: "UPDATE" },
 
   { method: "GET", pattern: /^\/api\/schedule$/, module: "schedule", action: "VIEW" },
