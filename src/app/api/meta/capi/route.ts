@@ -31,6 +31,9 @@ type CapiInput = {
     event_source_url: string;
     email?: string;
     phone?: string;
+    fbp?: string;
+    fbc?: string;
+    external_id?: string;
     custom_data?: Record<string, unknown>;
 };
 
@@ -44,7 +47,7 @@ export async function POST(req: Request) {
 
     try {
         const body = (await req.json()) as CapiInput;
-        const { event_name, event_id, event_source_url, email, phone, custom_data } = body;
+        const { event_name, event_id, event_source_url, email, phone, fbp: bodyFbp, fbc: bodyFbc, external_id, custom_data } = body;
 
         if (!event_name || !event_id) {
             return NextResponse.json({ ok: false, error: "Missing event_name or event_id" }, {
@@ -57,8 +60,9 @@ export async function POST(req: Request) {
         const forwarded = req.headers.get("x-forwarded-for");
         const clientIp = forwarded ? forwarded.split(",")[0].trim() : null;
         const clientUa = req.headers.get("user-agent") || null;
-        const fbp = getCookieValue(req, "_fbp");
-        const fbc = getCookieValue(req, "_fbc");
+        // Prefer body fbp/fbc (sent by browser helper), fallback to cookies
+        const fbp = bodyFbp || getCookieValue(req, "_fbp");
+        const fbc = bodyFbc || getCookieValue(req, "_fbc");
 
         // Build user_data with hashed PII
         const userData: Record<string, unknown> = {
@@ -67,6 +71,7 @@ export async function POST(req: Request) {
         };
         if (fbp) userData.fbp = fbp;
         if (fbc) userData.fbc = fbc;
+        if (external_id) userData.external_id = [sha256(external_id)];
         if (email) userData.em = [sha256(email.trim().toLowerCase())];
         if (phone) userData.ph = [sha256(normalizePhone(phone))];
 

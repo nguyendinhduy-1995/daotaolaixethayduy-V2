@@ -49,6 +49,33 @@ export default function LandingLayout({
                 fbq('track', 'PageView');
             `}</Script>
             {/* _fbc cookie from fbclid + ViewContent event */}
+            <Script id="meta-capi-helpers" strategy="afterInteractive">{`
+                window.__metaCapiHelpers = {
+                    getCookie: function(name) {
+                        var m = document.cookie.match(new RegExp('(?:^|;\\\\s*)' + name + '=([^;]*)'));
+                        return m ? decodeURIComponent(m[1]) : null;
+                    },
+                    genId: function() {
+                        return (crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now()+'-'+Math.random().toString(36).slice(2,10);
+                    },
+                    getExternalId: function() {
+                        var id = localStorage.getItem('_meta_ext_id');
+                        if (!id) { id = this.genId(); localStorage.setItem('_meta_ext_id', id); }
+                        return id;
+                    },
+                    sendEvent: function(eventName, customData) {
+                        var eid = this.genId();
+                        var fbp = this.getCookie('_fbp');
+                        var fbc = this.getCookie('_fbc');
+                        var extId = this.getExternalId();
+                        if (typeof fbq !== 'undefined') fbq('track', eventName, customData || {}, {eventID: eid});
+                        var payload = {event_name:eventName, event_id:eid, event_source_url:window.location.href, fbp:fbp, fbc:fbc, external_id:extId};
+                        if (customData) payload.custom_data = customData;
+                        fetch('/api/meta/capi', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload), keepalive:true}).catch(function(){});
+                        return eid;
+                    }
+                };
+            `}</Script>
             <Script id="meta-fbc-viewcontent" strategy="afterInteractive">{`
                 (function(){
                     // Set _fbc cookie if fbclid present
@@ -62,9 +89,7 @@ export default function LandingLayout({
                         }
                     } catch(e) {}
                     // Fire ViewContent for CAPI dedup
-                    var eid = (crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now()+'-'+Math.random().toString(36).slice(2,10);
-                    if (typeof fbq !== 'undefined') fbq('track', 'ViewContent', {content_name: document.title}, {eventID: eid});
-                    fetch('/api/meta/capi', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({event_name:'ViewContent',event_id:eid,event_source_url:window.location.href}), keepalive:true}).catch(function(){});
+                    window.__metaCapiHelpers.sendEvent('ViewContent', {content_name: document.title});
                 })();
             `}</Script>
             {/* Contact event for tel/zalo clicks */}
@@ -76,10 +101,8 @@ export default function LandingLayout({
                     var isTel = href.startsWith('tel:');
                     var isZalo = href.includes('zalo');
                     if (!isTel && !isZalo) return;
-                    var eid = (crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now()+'-'+Math.random().toString(36).slice(2,10);
                     var contactType = isTel ? 'phone' : 'zalo';
-                    if (typeof fbq !== 'undefined') fbq('track', 'Contact', {content_name: contactType, content_category: 'landing'}, {eventID: eid});
-                    fetch('/api/meta/capi', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({event_name:'Contact',event_id:eid,event_source_url:window.location.href,custom_data:{content_name:contactType}}), keepalive:true}).catch(function(){});
+                    window.__metaCapiHelpers.sendEvent('Contact', {content_name: contactType, content_category: 'landing'});
                 });
             `}</Script>
             <noscript>
