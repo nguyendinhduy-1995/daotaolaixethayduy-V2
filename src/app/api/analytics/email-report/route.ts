@@ -123,13 +123,35 @@ ${goalsReport}
             },
         });
 
-        // TODO: Actually send email via Resend/SendGrid when configured
-        // if (process.env.RESEND_API_KEY) { ... }
+        // Send email to all admin users
+        const { sendEmail, markdownToHtml } = await import("@/lib/email");
+        const adminUsers = await prisma.user.findMany({
+            where: { role: "admin", isActive: true },
+            select: { email: true },
+        });
+        const recipients = adminUsers.map(u => u.email).filter(Boolean);
+
+        let emailResult = { success: false, preview: true } as { success: boolean; preview?: boolean; id?: string; error?: string };
+        if (recipients.length > 0) {
+            emailResult = await sendEmail({
+                to: recipients,
+                subject: `📊 CRM Daily Digest — ${dateStr}`,
+                html: markdownToHtml(report),
+                text: report,
+            });
+        }
 
         return NextResponse.json({
             ok: true,
             date: dateStr,
             summary: { pageViews, sessions, users, conversions, errors },
+            email: {
+                sent: emailResult.success && !emailResult.preview,
+                preview: emailResult.preview || false,
+                recipients: recipients.length,
+                id: emailResult.id,
+                error: emailResult.error,
+            },
             report,
         });
     } catch (err) {
