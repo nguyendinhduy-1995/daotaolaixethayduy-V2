@@ -51,6 +51,7 @@ const PUBLIC_API_PATHS = [
     "/api/auth/refresh",
     "/api/auth/logout",
     "/api/student/auth",
+    "/api/student/chatbot",
     "/api/public/",
     "/api/health",
     "/api/docs",

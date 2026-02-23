@@ -24,6 +24,9 @@ export const PUBLIC_API_ROUTES: Array<{ method?: string; pattern: RegExp }> = [
   { method: "OPTIONS", pattern: /^\/api\/public\/analytics$/ },
   { method: "POST", pattern: /^\/api\/meta\/capi$/ },
   { method: "OPTIONS", pattern: /^\/api\/meta\/capi$/ },
+  // Student chatbot (public, handles own optional auth)
+  { method: "POST", pattern: /^\/api\/student\/chatbot$/ },
+  { method: "POST", pattern: /^\/api\/public\/chatbot$/ },
 ];
 
 export const SECRET_AUTH_ROUTES: Array<{ method?: string; pattern: RegExp }> = [
