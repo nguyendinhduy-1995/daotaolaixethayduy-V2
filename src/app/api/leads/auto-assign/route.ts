@@ -41,11 +41,11 @@ function buildLeadWhere(filters: Record<string, unknown>) {
     ...(createdFrom || createdTo ? { createdAt: createdAtFilter } : {}),
     ...(q
       ? {
-          OR: [
-            { fullName: { contains: q, mode: "insensitive" as const } },
-            { phone: { contains: q, mode: "insensitive" as const } },
-          ],
-        }
+        OR: [
+          { fullName: { contains: q, mode: "insensitive" as const } },
+          { phone: { contains: q, mode: "insensitive" as const } },
+        ],
+      }
       : {}),
   } satisfies Prisma.LeadWhereInput;
 }
@@ -69,8 +69,9 @@ export async function POST(req: Request) {
       return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
 
+    // Include all roles that can receive lead assignments
     const telesales = await prisma.user.findMany({
-      where: { role: "telesales", isActive: true },
+      where: { role: { in: ["telesales", "manager", "direct_page"] }, isActive: true },
       select: { id: true },
       orderBy: { createdAt: "asc" },
     });

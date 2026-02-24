@@ -86,6 +86,7 @@ for (const mod of ALL_MODULES) {
 const GROUPS = [
     { name: "Nhân viên", description: "Quyền cơ bản cho nhân viên telesales / direct_page", permissions: STAFF_PERMISSIONS },
     { name: "Trưởng phòng", description: "Quyền quản lý: lead, học viên, khoá học, lịch, KPI, HR cơ bản, chi phí", permissions: MANAGER_PERMISSIONS },
+    { name: "Trưởng phòng kiêm Telesales", description: "Quyền trưởng phòng + trực tiếp làm telesales (quản lý + bán hàng)", permissions: MANAGER_PERMISSIONS },
     { name: "Quản trị", description: "Full quyền – admin hệ thống", permissions: ADMIN_PERMISSIONS },
 ];
 

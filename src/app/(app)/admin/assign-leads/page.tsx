@@ -143,8 +143,10 @@ export default function AdminAssignLeadsPage() {
     const token = getToken();
     if (!token) return;
     try {
-      const data = await fetchJson<UsersResponse>("/api/users?page=1&pageSize=100&role=telesales&isActive=true", { token });
-      setOwners(data.items.filter((item) => item.role === "telesales" && item.isActive));
+      // Load all active staff who can be assigned leads (telesales + managers)
+      const data = await fetchJson<UsersResponse>("/api/users?page=1&pageSize=200&isActive=true", { token });
+      const assignableRoles = ["telesales", "manager", "direct_page"];
+      setOwners(data.items.filter((item) => assignableRoles.includes(item.role) && item.isActive));
     } catch {
       setOwners([]);
     }
