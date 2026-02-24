@@ -47,8 +47,10 @@ export default function AdminSettingsPage() {
     const [settings, setSettings] = useState<FeatureSetting[]>([]);
     const [branches, setBranches] = useState<BranchItem[]>([]);
     const [editBranch, setEditBranch] = useState<BranchItem | null>(null);
-    const [provincesInput, setProvincesInput] = useState("");
+    const [selectedProvinces, setSelectedProvinces] = useState<string[]>([]);
     const [branchSaving, setBranchSaving] = useState(false);
+    const [deletingBranch, setDeletingBranch] = useState<string | null>(null);
+    const [tuitionProvinces, setTuitionProvinces] = useState<string[]>([]);
 
     useEffect(() => {
         fetchMe()
@@ -78,13 +80,23 @@ export default function AdminSettingsPage() {
         }
     }, []);
 
+    const loadTuitionProvinces = useCallback(async () => {
+        try {
+            const data = await fetchJson<{ items: { province: string }[] }>("/api/public/tuition-plans");
+            const uniqueProvinces = [...new Set((data.items || []).map((p) => p.province))].sort();
+            setTuitionProvinces(uniqueProvinces);
+        } catch {
+            setTuitionProvinces([]);
+        }
+    }, []);
+
     useEffect(() => {
         if (!allowed) return;
         setLoading(true);
-        Promise.all([loadSettings(), loadBranches()])
+        Promise.all([loadSettings(), loadBranches(), loadTuitionProvinces()])
             .catch((e) => setError(`Lỗi tải dữ liệu: ${parseApiError(e as ApiClientError)}`))
             .finally(() => setLoading(false));
-    }, [allowed, loadSettings, loadBranches]);
+    }, [allowed, loadSettings, loadBranches, loadTuitionProvinces]);
 
     async function toggleFeature(key: string, enabled: boolean) {
         const token = getToken();
@@ -112,7 +124,13 @@ export default function AdminSettingsPage() {
 
     function openBranchEdit(branch: BranchItem) {
         setEditBranch(branch);
-        setProvincesInput((branch.provinces || []).join(", "));
+        setSelectedProvinces(branch.provinces || []);
+    }
+
+    function toggleProvince(province: string) {
+        setSelectedProvinces((prev) =>
+            prev.includes(province) ? prev.filter((p) => p !== province) : [...prev, province]
+        );
     }
 
     async function saveBranchProvinces() {
@@ -122,14 +140,10 @@ export default function AdminSettingsPage() {
         setBranchSaving(true);
         setError("");
         try {
-            const provinces = provincesInput
-                .split(",")
-                .map((p) => p.trim())
-                .filter(Boolean);
             await fetchJson(`/api/admin/branches/${editBranch.id}`, {
                 method: "PATCH",
                 token,
-                body: { provinces },
+                body: { provinces: selectedProvinces },
             });
             toast.success("Đã lưu tỉnh thành cho chi nhánh.");
             setEditBranch(null);
@@ -138,6 +152,27 @@ export default function AdminSettingsPage() {
             setError(parseApiError(e as ApiClientError));
         } finally {
             setBranchSaving(false);
+        }
+    }
+
+    async function deleteBranch(branch: BranchItem) {
+        if (!confirm(`Bạn chắc chắn muốn xóa chi nhánh "${branch.name}"?\nThao tác này không thể hoàn tác.`)) return;
+        const token = getToken();
+        if (!token) return;
+        setDeletingBranch(branch.id);
+        setError("");
+        try {
+            await fetchJson(`/api/admin/branches/${branch.id}`, {
+                method: "DELETE",
+                token,
+            });
+            toast.success(`Đã xóa chi nhánh "${branch.name}".`);
+            await loadBranches();
+        } catch (e) {
+            const err = e as ApiClientError;
+            toast.error(err.message || "Không thể xóa chi nhánh.");
+        } finally {
+            setDeletingBranch(null);
         }
     }
 
@@ -163,7 +198,7 @@ export default function AdminSettingsPage() {
                     <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 text-2xl backdrop-blur-sm">⚙️</div>
                     <div className="flex-1">
                         <h2 className="text-lg font-bold">Cài đặt tính năng</h2>
-                        <p className="text-sm text-white/80">Bật/tắt các tính năng nâng cao của hệ thống</p>
+                        <p className="text-sm text-white/80">Bật/tắt tính năng nâng cao, thiết lập phân data chi nhánh</p>
                     </div>
                 </div>
             </div>
@@ -219,26 +254,48 @@ export default function AdminSettingsPage() {
                     <div className="p-4">
                         <h3 className="flex items-center gap-2 text-sm font-bold text-zinc-900">
                             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-100 text-sm">🏢</span>
-                            Mapping chi nhánh → tỉnh thành
+                            Quản lý chi nhánh → Tỉnh thành
                         </h3>
                         <p className="mt-1 text-xs text-zinc-500">
-                            Thiết lập tỉnh thành cho mỗi chi nhánh để auto-assign hoạt động chính xác.
+                            Chọn tỉnh thành (từ bảng giá) cho mỗi chi nhánh. Admin có thể xóa chi nhánh không dùng.
                         </p>
 
                         <div className="mt-3 space-y-2">
                             {branches.map((branch) => (
-                                <div key={branch.id} className="flex items-center gap-3 rounded-xl border border-zinc-100 bg-zinc-50/50 p-3">
-                                    <div className="flex-1">
-                                        <p className="text-sm font-medium text-zinc-900">{branch.name}</p>
-                                        <p className="text-xs text-zinc-500">
-                                            {branch.provinces && branch.provinces.length > 0
-                                                ? branch.provinces.join(", ")
-                                                : "Chưa thiết lập tỉnh thành"}
-                                        </p>
+                                <div key={branch.id} className="rounded-xl border border-zinc-100 bg-zinc-50/50 p-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2">
+                                                <p className="text-sm font-medium text-zinc-900">{branch.name}</p>
+                                                {branch.code && (
+                                                    <span className="rounded bg-zinc-200 px-1.5 py-0.5 text-[10px] font-mono text-zinc-600">{branch.code}</span>
+                                                )}
+                                                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${branch.isActive ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-600"}`}>
+                                                    {branch.isActive ? "Active" : "Inactive"}
+                                                </span>
+                                            </div>
+                                            <div className="mt-1 flex flex-wrap gap-1">
+                                                {branch.provinces && branch.provinces.length > 0
+                                                    ? branch.provinces.map((p) => (
+                                                        <span key={p} className="rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-medium text-blue-700">{p}</span>
+                                                    ))
+                                                    : <span className="text-xs text-zinc-400 italic">Chưa thiết lập tỉnh thành</span>}
+                                            </div>
+                                        </div>
+                                        <div className="flex shrink-0 gap-1.5">
+                                            <Button variant="secondary" className="!text-xs !px-2.5" onClick={() => openBranchEdit(branch)}>
+                                                ✏️ Sửa
+                                            </Button>
+                                            <button
+                                                type="button"
+                                                disabled={deletingBranch === branch.id}
+                                                onClick={() => deleteBranch(branch)}
+                                                className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-100 disabled:opacity-50"
+                                            >
+                                                {deletingBranch === branch.id ? "…" : "🗑️ Xóa"}
+                                            </button>
+                                        </div>
                                     </div>
-                                    <Button variant="secondary" className="!text-xs" onClick={() => openBranchEdit(branch)}>
-                                        Sửa
-                                    </Button>
                                 </div>
                             ))}
                             {branches.length === 0 ? (
@@ -249,19 +306,44 @@ export default function AdminSettingsPage() {
                 </div>
             )}
 
-            {/* Edit Branch Provinces Modal */}
+            {/* Edit Branch Provinces Modal – Checkbox picker from TuitionPlan provinces */}
             {editBranch && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-                    <div className="mx-4 w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
-                        <h3 className="text-base font-bold text-zinc-900">Sửa tỉnh thành: {editBranch.name}</h3>
-                        <p className="mt-1 text-xs text-zinc-500">Nhập danh sách tỉnh, cách nhau bằng dấu phẩy. Ví dụ: TPHCM, Hồ Chí Minh, Bình Dương</p>
-                        <textarea
-                            className="mt-3 w-full rounded-xl border border-zinc-300 bg-white p-3 text-sm text-zinc-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-                            rows={3}
-                            value={provincesInput}
-                            onChange={(e) => setProvincesInput(e.target.value)}
-                        />
-                        <div className="mt-3 flex justify-end gap-2">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={() => setEditBranch(null)}>
+                    <div className="mx-4 w-full max-w-md rounded-2xl bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="text-base font-bold text-zinc-900">Chọn tỉnh: {editBranch.name}</h3>
+                        <p className="mt-1 text-xs text-zinc-500">Chọn tỉnh thành từ bảng giá cho chi nhánh này</p>
+
+                        {tuitionProvinces.length > 0 ? (
+                            <div className="mt-3 grid grid-cols-2 gap-2">
+                                {tuitionProvinces.map((province) => {
+                                    const isSelected = selectedProvinces.includes(province);
+                                    return (
+                                        <button
+                                            key={province}
+                                            type="button"
+                                            onClick={() => toggleProvince(province)}
+                                            className={`rounded-xl border px-3 py-2 text-left text-sm font-medium transition ${isSelected
+                                                    ? "border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-500/30"
+                                                    : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50"
+                                                }`}
+                                        >
+                                            <span className="mr-1.5">{isSelected ? "✅" : "⬜"}</span>
+                                            {province}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <p className="mt-3 text-sm text-zinc-400">Chưa có tỉnh nào trong bảng giá. Vui lòng thêm bảng giá trước.</p>
+                        )}
+
+                        {selectedProvinces.length > 0 && (
+                            <p className="mt-2 text-xs text-zinc-500">
+                                Đã chọn: <span className="font-medium text-blue-600">{selectedProvinces.join(", ")}</span>
+                            </p>
+                        )}
+
+                        <div className="mt-4 flex justify-end gap-2">
                             <Button variant="secondary" onClick={() => setEditBranch(null)}>Huỷ</Button>
                             <Button onClick={saveBranchProvinces} disabled={branchSaving}>
                                 {branchSaving ? "Đang lưu..." : "Lưu"}

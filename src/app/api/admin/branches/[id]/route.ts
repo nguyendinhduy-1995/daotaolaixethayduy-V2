@@ -61,3 +61,28 @@ export async function PATCH(req: Request, context: RouteContext) {
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }
 }
+
+export async function DELETE(req: Request, context: RouteContext) {
+  const auth = await requireMappedRoutePermissionAuth(req);
+  if (auth.error) return auth.error;
+  const adminError = requireAdminRole(auth.auth.role);
+  if (adminError) return adminError;
+
+  try {
+    const { id } = await Promise.resolve(context.params);
+    const branch = await prisma.branch.findUnique({
+      where: { id },
+      select: { id: true, name: true, _count: { select: { users: true } } },
+    });
+    if (!branch) return jsonError(404, "NOT_FOUND", "Chi nhánh không tồn tại");
+
+    if (branch._count.users > 0) {
+      return jsonError(400, "VALIDATION_ERROR", `Không thể xóa – chi nhánh "${branch.name}" còn ${branch._count.users} nhân viên. Hãy chuyển nhân viên trước.`);
+    }
+
+    await prisma.branch.delete({ where: { id } });
+    return NextResponse.json({ ok: true, deleted: id });
+  } catch {
+    return jsonError(500, "INTERNAL_ERROR", "Lỗi hệ thống khi xóa chi nhánh");
+  }
+}

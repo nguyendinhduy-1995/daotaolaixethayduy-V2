@@ -1,7 +1,7 @@
 /**
  * Seed 3 default permission groups:
  *   1. Nhân viên (Staff)
- *   2. Trưởng chi nhánh (Branch Manager)
+ *   2. Trưởng phòng (Department Manager)
  *   3. Quản trị (Admin)
  *
  * Run: npx tsx scripts/seed-permission-groups.ts
@@ -18,7 +18,8 @@ type ActionKey = "VIEW" | "CREATE" | "UPDATE" | "FEEDBACK" | "EDIT" | "DELETE" |
 
 const ALL_ACTIONS: ActionKey[] = ["VIEW", "CREATE", "UPDATE", "FEEDBACK", "EDIT", "DELETE", "EXPORT", "ASSIGN", "RUN", "INGEST"];
 
-// Nhân viên: basic lead + view-only for common pages
+// ─── Nhân viên (Staff / Telesales) ───────────────────────────
+// Chỉ xem và thao tác cơ bản với lead, xem lịch, biên lai, thông báo
 const STAFF_PERMISSIONS: Record<ModuleKey, ActionKey[]> = {
     overview: ["VIEW"],
     leads: ["VIEW", "CREATE", "UPDATE"],
@@ -26,34 +27,44 @@ const STAFF_PERMISSIONS: Record<ModuleKey, ActionKey[]> = {
     kpi_daily: ["VIEW"],
     goals: ["VIEW"],
     schedule: ["VIEW"],
-    receipts: ["VIEW"],
+    receipts: ["VIEW", "CREATE"],
     notifications: ["VIEW", "UPDATE"],
     my_payroll: ["VIEW"],
     outbound_jobs: ["VIEW"],
     messaging: ["VIEW"],
 };
 
-// Trưởng chi nhánh: staff + management
+// ─── Trưởng phòng (Department Manager) ───────────────────────
+// Staff + quản lý lead nâng cao, học viên, khoá học, lịch học,
+// biên lai, KPI, HR cơ bản, chi phí, báo cáo marketing
 const MANAGER_PERMISSIONS: Record<ModuleKey, ActionKey[]> = {
-    ...STAFF_PERMISSIONS,
+    overview: ["VIEW"],
     leads: ["VIEW", "CREATE", "UPDATE", "DELETE", "EXPORT", "ASSIGN"],
+    leads_board: ["VIEW"],
     students: ["VIEW", "CREATE", "UPDATE"],
     courses: ["VIEW", "CREATE", "UPDATE"],
     schedule: ["VIEW", "CREATE", "UPDATE"],
     receipts: ["VIEW", "CREATE", "UPDATE"],
     kpi_daily: ["VIEW"],
-    kpi_targets: ["VIEW"],
+    kpi_targets: ["VIEW", "EDIT"],
     goals: ["VIEW", "EDIT"],
+    ai_suggestions: ["VIEW", "CREATE", "FEEDBACK"],
     notifications: ["VIEW", "CREATE", "UPDATE"],
     outbound_jobs: ["VIEW", "CREATE"],
     messaging: ["VIEW", "CREATE"],
-    hr_attendance: ["VIEW", "CREATE"],
-    hr_kpi: ["VIEW"],
-    expenses: ["VIEW"],
+    my_payroll: ["VIEW"],
+    hr_attendance: ["VIEW", "CREATE", "UPDATE"],
+    hr_kpi: ["VIEW", "CREATE"],
+    expenses: ["VIEW", "EDIT"],
+    insights: ["VIEW"],
     automation_logs: ["VIEW"],
+    marketing_meta_ads: ["VIEW"],
+    admin_branches: ["VIEW"],
+    admin_tuition: ["VIEW"],
 };
 
-// Quản trị: full access to everything
+// ─── Quản trị (Admin) ────────────────────────────────────────
+// Full access tất cả modules
 const ALL_MODULES: ModuleKey[] = [
     "overview", "leads", "leads_board", "kpi_daily", "kpi_targets", "goals",
     "ai_kpi_coach", "ai_suggestions", "students", "courses", "schedule",
@@ -74,7 +85,7 @@ for (const mod of ALL_MODULES) {
 
 const GROUPS = [
     { name: "Nhân viên", description: "Quyền cơ bản cho nhân viên telesales / direct_page", permissions: STAFF_PERMISSIONS },
-    { name: "Trưởng chi nhánh", description: "Quyền quản lý chi nhánh, lead, học viên", permissions: MANAGER_PERMISSIONS },
+    { name: "Trưởng phòng", description: "Quyền quản lý: lead, học viên, khoá học, lịch, KPI, HR cơ bản, chi phí", permissions: MANAGER_PERMISSIONS },
     { name: "Quản trị", description: "Full quyền – admin hệ thống", permissions: ADMIN_PERMISSIONS },
 ];
 
