@@ -43,12 +43,16 @@ function trackSiteEvent(eventType: string, extra?: Record<string, unknown>) {
 export default function LeadForm() {
     const [fullName, setFullName] = useState("");
     const [phone, setPhone] = useState("");
-    const [province, setProvince] = useState("TPHCM");
-    const [licenseType, setLicenseType] = useState("B2");
+    const [province, setProvince] = useState("");
+    const [licenseType, setLicenseType] = useState("");
 
     const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
     const [errorMsg, setErrorMsg] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Track user interactions with dropdowns
+    const [provinceChanged, setProvinceChanged] = useState(false);
+    const [licenseChanged, setLicenseChanged] = useState(false);
 
     // Track which events we already fired
     const firedEvents = useRef({ start: false, complete: false, submitted: new Set<string>() });
@@ -129,32 +133,35 @@ export default function LeadForm() {
         }
     }, [isSubmitting]);
 
-    // ── Auto-submit check with debounce ──
-    const tryAutoSubmit = useCallback((name: string, ph: string) => {
+    // ── Auto-submit: triggers when province AND licenseType are selected ──
+    const tryAutoSubmit = useCallback(() => {
         if (debounceTimer.current) clearTimeout(debounceTimer.current);
 
-        if (!isValidName(name) || !isValidPhone(ph)) return;
+        // All 4 fields must be valid AND user must have actively selected province + license
+        if (!isValidName(fullName) || !isValidPhone(phone)) return;
+        if (!provinceChanged || !licenseChanged) return;
+        if (!province || !licenseType) return;
 
         // Fire "complete" analytics event once
         if (!firedEvents.current.complete) {
             firedEvents.current.complete = true;
-            trackSiteEvent("lead_form_complete", { phone: normalizePhone(ph) });
+            trackSiteEvent("lead_form_complete", { phone: normalizePhone(phone) });
         }
 
-        // Debounce 1000ms after user stops typing
+        // Debounce 800ms after user selects dropdown
         debounceTimer.current = setTimeout(() => {
-            doSubmit(name, ph, province, licenseType);
-        }, 1000);
-    }, [doSubmit, province, licenseType]);
+            doSubmit(fullName, phone, province, licenseType);
+        }, 800);
+    }, [doSubmit, fullName, phone, province, licenseType, provinceChanged, licenseChanged]);
 
-    // ── Trigger auto-submit check on input changes ──
+    // ── Trigger auto-submit when province or licenseType changes ──
     useEffect(() => {
         if (status === "success") return;
-        tryAutoSubmit(fullName, phone);
+        tryAutoSubmit();
         return () => {
             if (debounceTimer.current) clearTimeout(debounceTimer.current);
         };
-    }, [fullName, phone, tryAutoSubmit, status]);
+    }, [provinceChanged, licenseChanged, province, licenseType, tryAutoSubmit, status]);
 
     // ── Manual submit (form submit or Enter) ──
     function onManualSubmit(e: React.FormEvent) {
@@ -172,6 +179,16 @@ export default function LeadForm() {
             setErrorMsg("Số điện thoại không hợp lệ. Vui lòng nhập 10 số bắt đầu bằng 0.");
             return;
         }
+        if (!province) {
+            setStatus("error");
+            setErrorMsg("Vui lòng chọn tỉnh / thành phố.");
+            return;
+        }
+        if (!licenseType) {
+            setStatus("error");
+            setErrorMsg("Vui lòng chọn hạng bằng.");
+            return;
+        }
         doSubmit(fullName, phone, province, licenseType);
     }
 
@@ -180,7 +197,7 @@ export default function LeadForm() {
         if (e.key === "Enter") {
             e.preventDefault();
             if (debounceTimer.current) clearTimeout(debounceTimer.current);
-            if (isValidName(fullName) && isValidPhone(phone)) {
+            if (isValidName(fullName) && isValidPhone(phone) && province && licenseType) {
                 doSubmit(fullName, phone, province, licenseType);
             }
         }
@@ -283,9 +300,10 @@ export default function LeadForm() {
                                                 <label className="mb-1 block text-xs font-medium text-slate-600">Tỉnh / Thành</label>
                                                 <select
                                                     value={province}
-                                                    onChange={(e) => setProvince(e.target.value)}
+                                                    onChange={(e) => { setProvince(e.target.value); setProvinceChanged(true); if (status === "error") setStatus("idle"); }}
                                                     className={inputCls}
                                                 >
+                                                    <option value="">-- Chọn tỉnh --</option>
                                                     {PROVINCES.map((p) => <option key={p} value={p}>{p}</option>)}
                                                 </select>
                                             </div>
@@ -293,9 +311,10 @@ export default function LeadForm() {
                                                 <label className="mb-1 block text-xs font-medium text-slate-600">Hạng bằng</label>
                                                 <select
                                                     value={licenseType}
-                                                    onChange={(e) => setLicenseType(e.target.value)}
+                                                    onChange={(e) => { setLicenseType(e.target.value); setLicenseChanged(true); if (status === "error") setStatus("idle"); }}
                                                     className={inputCls}
                                                 >
+                                                    <option value="">-- Chọn hạng --</option>
                                                     {LICENSE_TYPES.map((l) => <option key={l} value={l}>{l}</option>)}
                                                 </select>
                                             </div>
@@ -313,7 +332,7 @@ export default function LeadForm() {
                                         </button>
 
                                         {/* Auto-submit hint */}
-                                        {nameValid && phoneValid && status === "idle" && (
+                                        {nameValid && phoneValid && provinceChanged && licenseChanged && province && licenseType && status === "idle" && (
                                             <p className="text-center text-xs text-emerald-600 animate-pulse">
                                                 ✨ Đang tự động gửi đăng ký cho bạn…
                                             </p>
