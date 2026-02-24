@@ -91,7 +91,7 @@ export async function GET(req: Request) {
     };
     const where = applyScopeToWhere(whereBase, scope, "lead");
 
-    const [items, total] = await Promise.all([
+    const [items, total, statusGroups] = await Promise.all([
       prisma.lead.findMany({
         where,
         orderBy: { [sort]: order },
@@ -102,13 +102,32 @@ export async function GET(req: Request) {
         },
       }),
       prisma.lead.count({ where }),
+      // Count all leads grouped by status (ignoring pagination, but respecting filters + scope)
+      prisma.lead.groupBy({
+        by: ["status"],
+        where: applyScopeToWhere({
+          ...(source ? { source } : {}),
+          ...(channel ? { channel } : {}),
+          ...(licenseType ? { licenseType } : {}),
+          ...(ownerId ? { ownerId } : {}),
+          ...(createdFrom || createdTo ? { createdAt: createdAtFilter } : {}),
+          ...(q ? { OR: [{ fullName: { contains: q, mode: "insensitive" as const } }, { phone: { contains: q, mode: "insensitive" as const } }] } : {}),
+        }, scope, "lead"),
+        _count: { _all: true },
+      }),
     ]);
+
+    const statusCounts: Record<string, number> = {};
+    for (const g of statusGroups) {
+      statusCounts[g.status] = g._count._all;
+    }
 
     return NextResponse.json({
       items,
       page,
       pageSize,
       total,
+      statusCounts,
     });
   } catch (error) {
     if (error instanceof Error && (error.message === "INVALID_DATE" || error.message === "INVALID_PAGINATION")) {

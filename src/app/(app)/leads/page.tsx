@@ -54,6 +54,7 @@ type LeadListResponse = {
   page: number;
   pageSize: number;
   total: number;
+  statusCounts?: Record<string, number>;
 };
 
 type LeadDetailResponse = { lead: Lead };
@@ -159,6 +160,7 @@ export default function LeadsPage() {
   const searchParams = useSearchParams();
   const [items, setItems] = useState<Lead[]>([]);
   const [total, setTotal] = useState(0);
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [sort, setSort] = useState("createdAt");
@@ -264,6 +266,7 @@ export default function LeadsPage() {
       const data = await fetchJson<LeadListResponse>(`/api/leads?${query}`, { token });
       setItems(data.items);
       setTotal(data.total);
+      if (data.statusCounts) setStatusCounts(data.statusCounts);
     } catch (e) {
       const err = e as ApiClientError;
       if (!handleAuthError(err)) setError(formatError(err));
@@ -576,19 +579,19 @@ export default function LeadsPage() {
               </Button>
             ) : null}
           </div>
-          {/* Status summary mini chips */}
+          {/* Status summary mini chips – uses server-side totals */}
           <div className="relative mt-3 flex flex-wrap gap-1.5">
-            {items.length > 0 ? (
-              Object.entries(
-                items.reduce<Record<string, number>>((acc, l) => { acc[l.status] = (acc[l.status] || 0) + 1; return acc; }, {})
-              ).map(([st, cnt]) => {
-                const s = statusStyle(st);
-                return (
-                  <span key={st} className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-xs font-medium text-white backdrop-blur-sm">
-                    {s.icon} {STATUS_LABELS[st] || st}: {cnt}
-                  </span>
-                );
-              })
+            {Object.keys(statusCounts).length > 0 ? (
+              Object.entries(statusCounts)
+                .sort(([a], [b]) => STATUS_OPTIONS.indexOf(a) - STATUS_OPTIONS.indexOf(b))
+                .map(([st, cnt]) => {
+                  const s = statusStyle(st);
+                  return (
+                    <span key={st} className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-xs font-medium text-white backdrop-blur-sm">
+                      {s.icon} {STATUS_LABELS[st] || st}: {cnt}
+                    </span>
+                  );
+                })
             ) : null}
           </div>
         </div>
