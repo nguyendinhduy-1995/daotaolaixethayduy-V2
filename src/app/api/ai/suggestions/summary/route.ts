@@ -21,6 +21,7 @@ export async function GET(req: Request) {
     try {
         const { searchParams } = new URL(req.url);
         const dateParam = searchParams.get("date");
+        const roleParam = searchParams.get("role");
 
         // Default to today in Ho Chi Minh timezone
         const now = new Date();
@@ -34,6 +35,7 @@ export async function GET(req: Request) {
             ...(authResult.auth.role !== "admin" && authResult.auth.role !== "super_admin"
                 ? { ownerId: authResult.auth.sub }
                 : {}),
+            ...(roleParam ? { role: roleParam as Prisma.EnumRoleFilter } : {}),
         };
 
         // Get top suggestion by priority (RED > YELLOW > GREEN)
@@ -77,7 +79,7 @@ export async function GET(req: Request) {
             totalActive,
         });
     } catch (err) {
-    console.error("[ai.suggestions.summary]", err);
+        console.error("[ai.suggestions.summary]", err);
         return jsonError(500, "INTERNAL_ERROR", API_ERROR_VI.internal);
     }
 }

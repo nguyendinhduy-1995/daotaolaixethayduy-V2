@@ -368,7 +368,14 @@ export default function DashboardPage() {
     setError("");
 
     try {
-      const mePromise = fetchMe();
+      // 1. Resolve user first so we can filter AI suggestions by role
+      const me = await fetchMe();
+      setUser(me.user);
+      const userRole = me.user.role;
+      // Admin sees all suggestions; others filter by their role
+      const aiRoleParam = isAdminRole(userRole) ? "" : `&role=${userRole}`;
+
+      // 2. Parallel-fetch everything (now including role-filtered AI)
       const kpiPromise = fetchJson<KpiDaily>(`/api/kpi/daily?date=${today}`, { token });
       const receiptsPromise = fetchJson<ReceiptsSummary>(`/api/receipts/summary?date=${today}`, { token }).catch(
         () => null
@@ -394,18 +401,17 @@ export default function DashboardPage() {
       const expensePromise = fetchJson<ExpenseSummary>(`/api/expenses/summary?month=${today.slice(0, 7)}`, {
         token,
       }).catch(() => null);
-      const aiPromise = fetchJson<{ items: AiSuggestionMini[] }>(`/api/ai/suggestions?date=${today}`, { token }).catch(
+      const aiPromise = fetchJson<{ items: AiSuggestionMini[] }>(`/api/ai/suggestions?date=${today}${aiRoleParam}`, { token }).catch(
         () => ({ items: [] })
       );
-      const aiSummaryPromise = fetchJson<AiSummaryResponse>(`/api/ai/suggestions/summary?date=${today}`, { token }).catch(
+      const aiSummaryPromise = fetchJson<AiSummaryResponse>(`/api/ai/suggestions/summary?date=${today}${aiRoleParam}`, { token }).catch(
         () => null
       );
       const stalePromise = fetchJson<StaleSummary>(`/api/leads/stale?page=1&pageSize=1`, { token }).catch(
         () => null
       );
 
-      const [me, kpiData, receiptData, statusData, logsData, todoNew, todoDoing, expenseData, aiData, aiSummaryData, staleData] = await Promise.all([
-        mePromise,
+      const [kpiData, receiptData, statusData, logsData, todoNew, todoDoing, expenseData, aiData, aiSummaryData, staleData] = await Promise.all([
         kpiPromise,
         receiptsPromise,
         Promise.all(statusPromises),
@@ -418,7 +424,6 @@ export default function DashboardPage() {
         stalePromise,
       ]);
 
-      setUser(me.user);
       setKpi(kpiData);
       setReceiptsSummary(receiptData);
       setLeadsByStatus({
@@ -446,13 +451,13 @@ export default function DashboardPage() {
       setStaleCount(staleData?.total ?? 0);
 
       // Load analytics data (admin only)
-      if (isAdminRole(me.user.role)) {
+      if (isAdminRole(userRole)) {
         fetchJson<AnalyticsDashboardData>(`/api/analytics/dashboard?date=${today}`, { token })
           .then((data) => setAnalyticsData(data))
           .catch(() => setAnalyticsData(null));
       }
 
-      if (isAdminRole(me.user.role)) {
+      if (isAdminRole(userRole)) {
         const unassigned = await loadUnassignedCount(today, token);
         setUnassignedCount(unassigned);
       } else {
