@@ -417,24 +417,25 @@ export default function LeadsPage() {
     }
   }
 
-  async function addEvent() {
-    if (!eventLeadId) return;
+  async function addEvent(leadIdOverride?: string) {
+    const leadId = leadIdOverride || eventLeadId;
+    if (!leadId) return;
     const token = getToken();
     if (!token) return;
     setEventSaving(true);
     try {
       const meta = eventForm.meta.trim() ? JSON.parse(eventForm.meta) : undefined;
-      await fetchJson(`/api/leads/${eventLeadId}/events`, {
+      await fetchJson(`/api/leads/${leadId}/events`, {
         method: "POST",
         token,
         body: { type: eventForm.type, note: eventForm.note || undefined, meta },
       });
-      const currentLeadId = eventLeadId;
       setEventForm({ type: "CALLED", note: "", meta: "" });
       setEventOpen(false);
       setEventLeadId("");
+      toast.success(`Đã thêm sự kiện ${STATUS_LABELS[eventForm.type] || eventForm.type}`);
       await loadLeads();
-      if (detailLead?.id === currentLeadId) openDetail(currentLeadId);
+      if (detailLead?.id === leadId) openDetail(leadId);
     } catch (e) {
       const err = e as ApiClientError;
       if (!handleAuthError(err)) setDetailError(formatError(err));
@@ -1083,7 +1084,7 @@ export default function LeadsPage() {
               <Button variant="secondary" onClick={() => setEventOpen(false)}>
                 Hủy
               </Button>
-              <Button onClick={addEvent} disabled={eventSaving}>
+              <Button onClick={() => addEvent()} disabled={eventSaving}>
                 {eventSaving ? "Đang lưu..." : "Lưu sự kiện"}
               </Button>
             </div>
@@ -1132,8 +1133,29 @@ export default function LeadsPage() {
                   <div><span className="text-zinc-500">Hạng bằng:</span> {detailLead.licenseType || "-"}</div>
                   <div><span className="text-zinc-500">Tỉnh thành:</span> {detailLead.province || "-"}</div>
                   <div><span className="text-zinc-500">Phụ trách:</span> {detailLead.owner?.name || detailLead.owner?.email || "-"}</div>
+                  <div><span className="text-zinc-500">Ngày tạo:</span> {formatDateTimeVi(detailLead.createdAt)}</div>
                 </div>
               </div>
+
+              {/* ── Ghi chú nổi bật ── */}
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-sm">📝</span>
+                  <h3 className="text-sm font-bold text-amber-800">Ghi chú</h3>
+                </div>
+                <p className="text-sm text-amber-900 whitespace-pre-wrap">
+                  {detailLead.note || "Chưa có ghi chú. Nhấn \"Sửa\" để thêm."}
+                </p>
+              </div>
+
+              {/* Tags */}
+              {detailLead.tags && detailLead.tags.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {detailLead.tags.map((tag) => (
+                    <span key={tag} className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-600 border border-zinc-200">#{tag}</span>
+                  ))}
+                </div>
+              ) : null}
 
               <div className="flex flex-wrap justify-end gap-2">
                 <Button
@@ -1153,42 +1175,73 @@ export default function LeadsPage() {
                     🗑️ Xóa
                   </Button>
                 ) : null}
-                <Button
-                  className="!bg-gradient-to-r !from-blue-600 !to-cyan-600 !text-white !shadow-md"
-                  onClick={() => {
-                    setEventLeadId(detailLead.id);
-                    setEventOpen(true);
-                  }}
-                >
-                  + Thêm sự kiện
-                </Button>
               </div>
 
+              {/* ── Thêm sự kiện nhanh (inline) ── */}
+              <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-3">
+                <h3 className="mb-2 flex items-center gap-2 text-sm font-bold text-blue-800">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-cyan-600 text-xs text-white">+</span>
+                  Thêm sự kiện
+                </h3>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                  <div className="flex-1 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    <Select value={eventForm.type} onChange={(e) => setEventForm((s) => ({ ...s, type: e.target.value }))}>
+                      {EVENT_OPTIONS.map((type) => (
+                        <option key={type} value={type}>
+                          {STATUS_LABELS[type] || type}
+                        </option>
+                      ))}
+                    </Select>
+                    <Input
+                      placeholder="Ghi chú sự kiện..."
+                      value={eventForm.note}
+                      className="col-span-1 sm:col-span-2"
+                      onChange={(e) => setEventForm((s) => ({ ...s, note: e.target.value }))}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !eventSaving && detailLead) {
+                          addEvent(detailLead.id);
+                        }
+                      }}
+                    />
+                  </div>
+                  <Button
+                    className="!bg-gradient-to-r !from-blue-600 !to-cyan-600 !text-white shrink-0"
+                    disabled={eventSaving}
+                    onClick={() => addEvent(detailLead.id)}
+                  >
+                    {eventSaving ? "Đang lưu..." : "Lưu"}
+                  </Button>
+                </div>
+              </div>
+
+              {/* ── Nhật ký sự kiện ── */}
               <div>
                 <h3 className="mb-2 flex items-center gap-2 text-sm font-bold text-zinc-900">
                   <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-xs text-white">📋</span>
-                  Nhật ký sự kiện
+                  Nhật ký sự kiện ({detailEvents.length})
                 </h3>
                 {detailEvents.length === 0 ? (
                   <div className="rounded-xl border-2 border-dashed border-zinc-200 p-4 text-center text-sm text-zinc-500">Chưa có sự kiện.</div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
                     {detailEvents.map((event) => {
                       const es = statusStyle(event.type);
+                      const payload = event.payload as Record<string, unknown> | null | undefined;
+                      const eventNote = payload?.note as string | undefined;
                       return (
                         <div key={event.id} className={`overflow-hidden rounded-xl border ${es.border} bg-white shadow-sm`}>
                           <div className={`h-0.5 bg-gradient-to-r ${es.gradient}`} />
-                          <div className="flex items-center justify-between p-3 text-sm">
-                            <span className={`inline-flex items-center gap-1 rounded-full ${es.bg} ${es.text} px-2 py-0.5 text-xs font-bold`}>
-                              {es.icon} {STATUS_LABELS[event.type] || event.type}
-                            </span>
-                            <span className="text-xs text-zinc-500">{formatDateTimeVi(event.createdAt)}</span>
+                          <div className="p-3">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className={`inline-flex items-center gap-1 rounded-full ${es.bg} ${es.text} px-2 py-0.5 text-xs font-bold`}>
+                                {es.icon} {STATUS_LABELS[event.type] || event.type}
+                              </span>
+                              <span className="text-xs text-zinc-500">{formatDateTimeVi(event.createdAt)}</span>
+                            </div>
+                            {eventNote ? (
+                              <p className="mt-1.5 text-sm text-zinc-700 pl-1">💬 {eventNote}</p>
+                            ) : null}
                           </div>
-                          {event.payload ? (
-                            <pre className="border-t border-zinc-100 bg-zinc-50/50 p-2 text-xs text-zinc-700">
-                              {JSON.stringify(event.payload, null, 2)}
-                            </pre>
-                          ) : null}
                         </div>
                       );
                     })}
