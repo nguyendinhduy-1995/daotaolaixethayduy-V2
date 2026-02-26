@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useMemo } from "react";
 import { APP_SHORT } from "@/lib/app-meta";
 import { TrackingScriptsClient } from "@/components/tracking/TrackingScriptsClient";
+import { ZaloGroupPopup } from "@/components/student/ZaloGroupPopup";
 
 /* ─── SVG icons for BottomNav (24×24 outline + filled pairs) ─── */
 function IconHome({ filled }: { filled?: boolean }) {
@@ -160,6 +161,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
         </div>
       </nav>
 
+      <ZaloGroupPopup />
       <TrackingScriptsClient site="STUDENT" />
     </div>
   );
