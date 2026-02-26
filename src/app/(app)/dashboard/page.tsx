@@ -314,8 +314,10 @@ export default function DashboardPage() {
       formViewed: number;
       formFocused: number;
       formSubmitted: number;
+      formClicks: number;
       phoneCalls: number;
       zaloClicks: number;
+      totalLeads: number;
     };
     conversionRate: number;
     insights: string[];
@@ -897,7 +899,7 @@ export default function DashboardPage() {
                     { label: "Nhấn CTA", value: analyticsData.landingFunnel.ctaClicks, icon: "🔔", pct: analyticsData.landingFunnel.visitors > 0 ? Math.round((analyticsData.landingFunnel.ctaClicks / analyticsData.landingFunnel.visitors) * 100) : 0 },
                     { label: "Mở form đăng ký", value: analyticsData.landingFunnel.formViewed, icon: "📋", pct: analyticsData.landingFunnel.visitors > 0 ? Math.round((analyticsData.landingFunnel.formViewed / analyticsData.landingFunnel.visitors) * 100) : 0 },
                     { label: "Bắt đầu điền form", value: analyticsData.landingFunnel.formFocused, icon: "✍️", pct: analyticsData.landingFunnel.visitors > 0 ? Math.round((analyticsData.landingFunnel.formFocused / analyticsData.landingFunnel.visitors) * 100) : 0 },
-                    { label: "Gửi form thành công", value: analyticsData.landingFunnel.formSubmitted, icon: "✅", pct: analyticsData.landingFunnel.visitors > 0 ? Math.round((analyticsData.landingFunnel.formSubmitted / analyticsData.landingFunnel.visitors) * 100) : 0 },
+                    { label: "Leads mới (DB)", value: analyticsData.landingFunnel.formSubmitted, icon: "✅", pct: analyticsData.landingFunnel.visitors > 0 ? Math.round((analyticsData.landingFunnel.formSubmitted / analyticsData.landingFunnel.visitors) * 100) : 0 },
                     { label: "Gọi điện", value: analyticsData.landingFunnel.phoneCalls, icon: "📞", pct: analyticsData.landingFunnel.visitors > 0 ? Math.round((analyticsData.landingFunnel.phoneCalls / analyticsData.landingFunnel.visitors) * 100) : 0 },
                     { label: "Nhắn Zalo", value: analyticsData.landingFunnel.zaloClicks, icon: "💬", pct: analyticsData.landingFunnel.visitors > 0 ? Math.round((analyticsData.landingFunnel.zaloClicks / analyticsData.landingFunnel.visitors) * 100) : 0 },
                   ].filter(s => s.value > 0 || s.label === "Truy cập").map((step) => (
@@ -1086,7 +1088,7 @@ export default function DashboardPage() {
                         ["🔔 CTA click", analyticsData.eventBreakdown.cta_click],
                         ["📞 Gọi điện", analyticsData.eventBreakdown.phone_click],
                         ["💬 Zalo", analyticsData.eventBreakdown.zalo_click],
-                        ["📝 Form gửi", analyticsData.eventBreakdown.form_submit],
+                        ["📝 Form bấm gửi", analyticsData.eventBreakdown.form_submit],
                       ].filter((row) => Number(row[1] ?? 0) > 0).map((row) => (
                         <div key={String(row[0])} className="flex justify-between"><span>{row[0]}</span><span className="font-bold text-amber-600">{row[1] ?? 0}</span></div>
                       ))}

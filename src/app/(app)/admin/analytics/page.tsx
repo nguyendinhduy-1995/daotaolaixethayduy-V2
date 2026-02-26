@@ -45,7 +45,8 @@ type AnalyticsData = {
     landingFunnel: {
         visitors: number; pricingViewed: number; ctaClicks: number;
         formViewed: number; formFocused: number; formSubmitted: number;
-        phoneCalls: number; zaloClicks: number;
+        formClicks: number; phoneCalls: number; zaloClicks: number;
+        totalLeads: number;
     };
     conversionRate: number;
     siteSpecificStats: {
@@ -589,7 +590,8 @@ export default function AnalyticsPage() {
                                     { l: "🔔 CTA clicks", v: data.landingFunnel.ctaClicks, p: data.landingFunnel.visitors > 0 ? Math.round((data.landingFunnel.ctaClicks / data.landingFunnel.visitors) * 100) : 0 },
                                     { l: "📋 Mở form", v: data.landingFunnel.formViewed, p: data.landingFunnel.visitors > 0 ? Math.round((data.landingFunnel.formViewed / data.landingFunnel.visitors) * 100) : 0 },
                                     { l: "✍️ Điền form", v: data.landingFunnel.formFocused, p: data.landingFunnel.visitors > 0 ? Math.round((data.landingFunnel.formFocused / data.landingFunnel.visitors) * 100) : 0 },
-                                    { l: "✅ Gửi form", v: data.landingFunnel.formSubmitted, p: data.landingFunnel.visitors > 0 ? Math.round((data.landingFunnel.formSubmitted / data.landingFunnel.visitors) * 100) : 0 },
+                                    { l: "🖱️ Bấm gửi form", v: data.landingFunnel.formClicks || 0, p: data.landingFunnel.visitors > 0 ? Math.round(((data.landingFunnel.formClicks || 0) / data.landingFunnel.visitors) * 100) : 0 },
+                                    { l: "✅ Leads mới (DB)", v: data.landingFunnel.formSubmitted, p: data.landingFunnel.visitors > 0 ? Math.round((data.landingFunnel.formSubmitted / data.landingFunnel.visitors) * 100) : 0 },
                                     { l: "📞 Gọi điện", v: data.landingFunnel.phoneCalls, p: data.landingFunnel.visitors > 0 ? Math.round((data.landingFunnel.phoneCalls / data.landingFunnel.visitors) * 100) : 0 },
                                     { l: "💬 Nhắn Zalo", v: data.landingFunnel.zaloClicks, p: data.landingFunnel.visitors > 0 ? Math.round((data.landingFunnel.zaloClicks / data.landingFunnel.visitors) * 100) : 0 },
                                 ].filter(s => s.v > 0 || s.l.includes("Truy cập")).map(s => (

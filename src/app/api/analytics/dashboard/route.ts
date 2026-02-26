@@ -160,15 +160,26 @@ export async function GET(req: Request) {
 
         // ── 14. Landing funnel (landing site only) ───────────
         const landingEvents = allEvents.filter(e => e.site === "landing");
+
+        // Actual leads from Lead table (server-side, accurate)
+        const actualLeadsInPeriod = await prisma.lead.count({
+            where: { createdAt: { gte: dayStart, lte: dayEnd }, source: "landing" },
+        });
+        const totalLeadsAllTime = await prisma.lead.count({
+            where: { source: "landing" },
+        });
+
         const landingFunnel = {
             visitors: new Set(landingEvents.filter(e => e.eventType === "page_view").map(e => e.sessionId)).size,
             pricingViewed: landingEvents.filter(e => e.eventType === "pricing_view").length,
             ctaClicks: landingEvents.filter(e => e.eventType === "cta_click").length,
             formViewed: landingEvents.filter(e => e.eventType === "form_view").length,
             formFocused: landingEvents.filter(e => e.eventType === "form_focus").length,
-            formSubmitted: landingEvents.filter(e => e.eventType === "form_submit").length,
+            formSubmitted: actualLeadsInPeriod, // ← server-side lead count (accurate)
+            formClicks: landingEvents.filter(e => e.eventType === "form_submit").length, // browser-side (for UX analysis)
             phoneCalls: landingEvents.filter(e => e.eventType === "phone_click").length,
             zaloClicks: landingEvents.filter(e => e.eventType === "zalo_click").length,
+            totalLeads: totalLeadsAllTime,
         };
         const conversionRate = landingFunnel.visitors > 0
             ? Math.round(((landingFunnel.formSubmitted + landingFunnel.phoneCalls + landingFunnel.zaloClicks) / landingFunnel.visitors) * 100)
