@@ -236,6 +236,10 @@ export default function LeadsPage() {
   const [deleteLeadId, setDeleteLeadId] = useState("");
   const [deleteLeadName, setDeleteLeadName] = useState("");
 
+  // Uncalled leads
+  const [uncalledLeads, setUncalledLeads] = useState<Lead[]>([]);
+  const [uncalledExpanded, setUncalledExpanded] = useState(true);
+
   const query = useMemo(() => {
     const params = new URLSearchParams();
     params.set("page", String(page));
@@ -263,10 +267,14 @@ export default function LeadsPage() {
     setLoading(true);
     setError("");
     try {
-      const data = await fetchJson<LeadListResponse>(`/api/leads?${query}`, { token });
+      const [data, uncalledData] = await Promise.all([
+        fetchJson<LeadListResponse>(`/api/leads?${query}`, { token }),
+        fetchJson<LeadListResponse>(`/api/leads?page=1&pageSize=20&sort=createdAt&order=desc&status=NEW`, { token }).catch(() => ({ items: [] as Lead[], total: 0 })),
+      ]);
       setItems(data.items);
       setTotal(data.total);
       if (data.statusCounts) setStatusCounts(data.statusCounts);
+      setUncalledLeads(uncalledData.items || []);
     } catch (e) {
       const err = e as ApiClientError;
       if (!handleAuthError(err)) setError(formatError(err));
@@ -596,6 +604,64 @@ export default function LeadsPage() {
             ) : null}
           </div>
         </div>
+
+        {/* ── Chưa gọi card ── */}
+        {uncalledLeads.length > 0 ? (
+          <div className="overflow-hidden rounded-2xl border border-red-200 bg-gradient-to-br from-red-50 via-orange-50 to-amber-50 shadow-sm animate-fadeInUp">
+            <button
+              type="button"
+              onClick={() => setUncalledExpanded((v) => !v)}
+              className="flex w-full items-center justify-between px-4 py-3 text-left"
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-orange-500 text-lg text-white shadow-sm">📞</span>
+                <div>
+                  <p className="text-sm font-bold text-red-800">Chưa gọi ({uncalledLeads.length})</p>
+                  <p className="text-xs text-red-600/70">Khách hàng mới cần liên hệ</p>
+                </div>
+              </div>
+              <span className={`text-red-400 transition-transform duration-200 ${uncalledExpanded ? "rotate-0" : "-rotate-90"}`}>▾</span>
+            </button>
+            {uncalledExpanded ? (
+              <div className="space-y-1.5 px-3 pb-3">
+                {uncalledLeads.slice(0, 5).map((lead) => (
+                  <div
+                    key={lead.id}
+                    className="flex items-center gap-3 rounded-xl border border-red-100 bg-white px-3 py-2.5 shadow-sm transition hover:shadow-md"
+                  >
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-100 text-sm">🆕</div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-zinc-900">{lead.fullName || "Chưa có tên"}</p>
+                      <p className="text-xs font-mono text-zinc-500">{lead.phone || "—"}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      {lead.phone ? (
+                        <a
+                          href={`tel:${lead.phone}`}
+                          className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 px-2.5 py-1 text-[11px] font-bold text-white shadow-sm transition hover:shadow-md active:scale-95"
+                        >
+                          📞 Gọi
+                        </a>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => openDetail(lead.id)}
+                        className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 px-2.5 py-1 text-[11px] font-bold text-white shadow-sm transition hover:shadow-md active:scale-95"
+                      >
+                        👁️ Xem
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {uncalledLeads.length > 5 ? (
+                  <p className="pt-1 text-center text-xs text-red-500/70">
+                    và {uncalledLeads.length - 5} khách nữa...
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
         {error ? <Alert type="error" message={error} /> : null}
         <SuggestedChecklist
