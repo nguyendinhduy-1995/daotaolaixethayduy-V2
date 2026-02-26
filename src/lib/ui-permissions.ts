@@ -11,8 +11,8 @@ export function hasUiPermission(
 
 const UI_ROUTE_MODULE: Array<{ match: (path: string) => boolean; module: ModuleKey }> = [
   { match: (path) => path.startsWith("/dashboard"), module: "overview" },
-  { match: (path) => path === "/leads" || path.startsWith("/leads/"), module: "leads" },
   { match: (path) => path.startsWith("/leads/board"), module: "leads_board" },
+  { match: (path) => path === "/leads" || path.startsWith("/leads/"), module: "leads" },
   { match: (path) => path.startsWith("/kpi/daily"), module: "kpi_daily" },
   { match: (path) => path.startsWith("/kpi/targets"), module: "kpi_targets" },
   { match: (path) => path.startsWith("/goals"), module: "goals" },
@@ -24,6 +24,7 @@ const UI_ROUTE_MODULE: Array<{ match: (path: string) => boolean; module: ModuleK
   { match: (path) => path.startsWith("/notifications"), module: "notifications" },
   { match: (path) => path.startsWith("/outbound"), module: "messaging" },
   { match: (path) => path.startsWith("/me/payroll"), module: "my_payroll" },
+  { match: (path) => path.startsWith("/admin/analytics"), module: "insights" },
   { match: (path) => path.startsWith("/admin/ops"), module: "ops_ai_hr" },
   { match: (path) => path.startsWith("/admin/n8n"), module: "ops_n8n" },
   { match: (path) => path.startsWith("/admin/automation-monitor"), module: "ops_n8n" },
@@ -43,6 +44,10 @@ const UI_ROUTE_MODULE: Array<{ match: (path: string) => boolean; module: ModuleK
   { match: (path) => path.startsWith("/admin/worker"), module: "admin_send_progress" },
   { match: (path) => path.startsWith("/admin/scheduler"), module: "admin_plans" },
   { match: (path) => path.startsWith("/admin/student-content"), module: "admin_student_content" },
+  { match: (path) => path.startsWith("/admin/instructors"), module: "admin_instructors" },
+  { match: (path) => path.startsWith("/admin/settings"), module: "admin_users" },
+  { match: (path) => path.startsWith("/admin/tracking"), module: "admin_tracking" },
+  { match: (path) => path.startsWith("/admin/integrations/meta"), module: "marketing_meta_ads" },
   { match: (path) => path.startsWith("/hr/kpi"), module: "hr_kpi" },
   { match: (path) => path.startsWith("/hr/salary-profiles"), module: "hr_payroll_profiles" },
   { match: (path) => path.startsWith("/hr/attendance"), module: "hr_attendance" },
