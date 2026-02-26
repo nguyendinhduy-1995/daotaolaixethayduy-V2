@@ -759,8 +759,20 @@ export default function LeadsPage() {
                       <p>📅 {formatDateTimeVi(lead.createdAt)}</p>
                     </div>
                     <div className="mt-2 flex items-center gap-2">
-                      <Button variant="secondary" className="flex-1 !text-xs" onClick={() => openDetail(lead.id)}>Chi tiết</Button>
-                      <Button variant="ghost" className="!text-xs" onClick={() => setMobileActionLead(lead)}>⋯</Button>
+                      <button
+                        type="button"
+                        onClick={() => openDetail(lead.id)}
+                        className="flex-1 inline-flex items-center justify-center gap-1 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 px-3 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:shadow-md active:scale-95"
+                      >
+                        👁️ Chi tiết
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMobileActionLead(lead)}
+                        className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-600 transition-all hover:bg-zinc-50 active:scale-95"
+                      >
+                        ⋯
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -801,29 +813,38 @@ export default function LeadsPage() {
                       <div className="text-xs text-zinc-500">{lead.channel || "-"}</div>
                     </td>
                     <td className="px-3 py-2 text-xs text-zinc-600">{formatDateTimeVi(lead.createdAt)}</td>
-                    <td className="space-y-2 px-3 py-2">
-                      <Button variant="secondary" className="w-full" onClick={() => openDetail(lead.id)}>
-                        Mở
-                      </Button>
-                      {canManageOwner ? (
-                        <Button
-                          variant="secondary"
-                          className="w-full"
-                          onClick={() => {
-                            setAssignLead(lead);
-                            setAssignOwnerId(lead.ownerId || "");
-                          }}
+                    <td className="px-3 py-2">
+                      <div className="flex flex-wrap gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => openDetail(lead.id)}
+                          className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:shadow-md hover:from-blue-600 hover:to-cyan-600 active:scale-95"
                         >
-                          Gán telesale
-                        </Button>
-                      ) : null}
-                      <Select value={lead.status} onChange={(e) => setPendingStatus({ id: lead.id, status: e.target.value })}>
-                        {STATUS_OPTIONS.map((status) => (
-                          <option key={status} value={status}>
-                            {STATUS_LABELS[status] || status}
-                          </option>
-                        ))}
-                      </Select>
+                          👁️ Xem
+                        </button>
+                        {canManageOwner ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAssignLead(lead);
+                              setAssignOwnerId(lead.ownerId || "");
+                            }}
+                            className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-violet-500 to-purple-500 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:shadow-md hover:from-violet-600 hover:to-purple-600 active:scale-95"
+                          >
+                            🔀 Gán
+                          </button>
+                        ) : null}
+                        <Select
+                          value={lead.status}
+                          onChange={(e) => setPendingStatus({ id: lead.id, status: e.target.value })}
+                        >
+                          {STATUS_OPTIONS.map((status) => (
+                            <option key={status} value={status}>
+                              {STATUS_LABELS[status] || status}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -940,12 +961,18 @@ export default function LeadsPage() {
         >
           <div className="space-y-2">
             {mobileActionLead ? (
-              <p className="text-xs text-zinc-500">{mobileActionLead.fullName || mobileActionLead.id}</p>
+              <div className="flex items-center gap-2 pb-1">
+                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${statusStyle(mobileActionLead.status).bg} text-sm`}>{statusStyle(mobileActionLead.status).icon}</span>
+                <div>
+                  <p className="text-sm font-bold text-zinc-900">{mobileActionLead.fullName || "Chưa có tên"}</p>
+                  <p className="text-xs text-zinc-500 font-mono">{mobileActionLead.phone || ""}</p>
+                </div>
+              </div>
             ) : null}
             {canManageOwner ? (
-              <Button
-                variant="secondary"
-                className="w-full justify-start"
+              <button
+                type="button"
+                className="w-full flex items-center gap-3 rounded-xl bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200 px-4 py-3 text-sm font-medium text-violet-700 transition-all hover:shadow-md active:scale-[0.98]"
                 onClick={() => {
                   if (!mobileActionLead) return;
                   setAssignLead(mobileActionLead);
@@ -953,36 +980,25 @@ export default function LeadsPage() {
                   setMobileActionLead(null);
                 }}
               >
-                Gán telesale
-              </Button>
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 text-white text-sm">🔀</span>
+                Gán telesale phụ trách
+              </button>
             ) : null}
-            <Button
-              variant="secondary"
-              className="w-full justify-start"
+            <button
+              type="button"
+              className="w-full flex items-center gap-3 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 px-4 py-3 text-sm font-medium text-amber-700 transition-all hover:shadow-md active:scale-[0.98]"
               onClick={() => {
                 if (!mobileActionLead) return;
                 openEditLead(mobileActionLead);
                 setMobileActionLead(null);
               }}
             >
-              ✏️ Sửa thông tin
-            </Button>
-            {canDeleteLead ? (
-              <Button
-                variant="secondary"
-                className="w-full justify-start !text-red-600"
-                onClick={() => {
-                  if (!mobileActionLead) return;
-                  openDeleteLead(mobileActionLead);
-                  setMobileActionLead(null);
-                }}
-              >
-                🗑️ Xóa khách hàng
-              </Button>
-            ) : null}
-            <Button
-              variant="secondary"
-              className="w-full justify-start"
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 text-white text-sm">✏️</span>
+              Sửa thông tin
+            </button>
+            <button
+              type="button"
+              className="w-full flex items-center gap-3 rounded-xl bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 px-4 py-3 text-sm font-medium text-blue-700 transition-all hover:shadow-md active:scale-[0.98]"
               onClick={() => {
                 if (!mobileActionLead) return;
                 setEventLeadId(mobileActionLead.id);
@@ -990,8 +1006,23 @@ export default function LeadsPage() {
                 setMobileActionLead(null);
               }}
             >
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-cyan-600 text-white text-sm">📋</span>
               Thêm sự kiện
-            </Button>
+            </button>
+            {canDeleteLead ? (
+              <button
+                type="button"
+                className="w-full flex items-center gap-3 rounded-xl bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 px-4 py-3 text-sm font-medium text-red-600 transition-all hover:shadow-md active:scale-[0.98]"
+                onClick={() => {
+                  if (!mobileActionLead) return;
+                  openDeleteLead(mobileActionLead);
+                  setMobileActionLead(null);
+                }}
+              >
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-red-500 to-rose-600 text-white text-sm">🗑️</span>
+                Xóa khách hàng
+              </button>
+            ) : null}
             <Select
               value={mobileActionLead?.status || ""}
               onChange={(e) => {
