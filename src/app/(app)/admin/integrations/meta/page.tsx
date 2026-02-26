@@ -138,7 +138,7 @@ export default function MetaIntegrationPage() {
                             <thead><tr className="border-b border-zinc-200 text-zinc-500">
                                 <th className="text-left py-2 pr-3">Thời gian</th>
                                 <th className="text-left py-2 pr-3">Event</th>
-                                <th className="text-left py-2 pr-3">Status</th>
+                                <th className="text-left py-2 pr-3">Trạng thái</th>
                                 <th className="text-left py-2 pr-3">fbtrace_id</th>
                                 <th className="text-left py-2">IP</th>
                             </tr></thead>

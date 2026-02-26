@@ -87,7 +87,7 @@ export default function E2EReportPage() {
                                 <tr className="bg-gray-800 text-gray-300">
                                     <th className="text-left p-3">#</th>
                                     <th className="text-left p-3">Test Name</th>
-                                    <th className="text-left p-3">Status</th>
+                                    <th className="text-left p-3">Trạng thái</th>
                                     <th className="text-right p-3">Duration</th>
                                 </tr>
                             </thead>

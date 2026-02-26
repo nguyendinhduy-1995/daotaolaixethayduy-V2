@@ -101,7 +101,7 @@ export async function resolveScope(user: { sub: string; role: string }): Promise
   });
 
   if (role === "manager") {
-    if (dbUser?.branchId) return { mode: "BRANCH", branchId: dbUser.branchId };
+    if (dbUser?.branchId) return { mode: "BRANCH", branchId: dbUser.branchId, ownerId: user.sub };
     return { mode: "OWNER", ownerId: user.sub };
   }
 
@@ -153,15 +153,15 @@ export function applyScopeToWhere(
   if (scope.mode === "SYSTEM") return where;
 
   if (entityType === "lead") {
-    if (scope.mode === "OWNER" && scope.ownerId) {
-      const ownerWhere: Prisma.LeadWhereInput = { ownerId: scope.ownerId };
-      if (scope.branchId) {
-        return withAnd(where as Prisma.LeadWhereInput, { AND: [ownerWhere, { branchId: scope.branchId }] });
-      }
-      return withAnd(where as Prisma.LeadWhereInput, ownerWhere);
-    }
+    // Manager: sees leads they own OR leads in their branch
     if (scope.mode === "BRANCH" && scope.branchId) {
-      return withAnd(where as Prisma.LeadWhereInput, { branchId: scope.branchId });
+      const orConditions: Prisma.LeadWhereInput[] = [{ branchId: scope.branchId }];
+      if (scope.ownerId) orConditions.push({ ownerId: scope.ownerId });
+      return withAnd(where as Prisma.LeadWhereInput, { OR: orConditions });
+    }
+    // Telesales: sees only leads they own (no branch filter)
+    if (scope.mode === "OWNER" && scope.ownerId) {
+      return withAnd(where as Prisma.LeadWhereInput, { ownerId: scope.ownerId });
     }
     return where;
   }
