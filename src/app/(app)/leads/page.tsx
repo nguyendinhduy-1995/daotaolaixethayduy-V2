@@ -269,7 +269,7 @@ export default function LeadsPage() {
     try {
       const [data, uncalledData] = await Promise.all([
         fetchJson<LeadListResponse>(`/api/leads?${query}`, { token }),
-        fetchJson<LeadListResponse>(`/api/leads?page=1&pageSize=20&sort=createdAt&order=desc&status=NEW`, { token }).catch(() => ({ items: [] as Lead[], total: 0 })),
+        fetchJson<LeadListResponse>(`/api/leads?page=1&pageSize=20&sort=createdAt&order=desc&noCalled=true`, { token }).catch(() => ({ items: [] as Lead[], total: 0 })),
       ]);
       setItems(data.items);
       setTotal(data.total);

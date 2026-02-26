@@ -53,6 +53,7 @@ export async function GET(req: Request) {
     const q = searchParams.get("q")?.trim();
     const createdFrom = searchParams.get("createdFrom");
     const createdTo = searchParams.get("createdTo");
+    const noCalled = searchParams.get("noCalled") === "true";
     const page = parsePagination(searchParams.get("page"), 1);
     const pageSize = parsePagination(searchParams.get("pageSize"), 20, 100);
     const sort = (searchParams.get("sort") ?? "createdAt") as SortField;
@@ -88,6 +89,7 @@ export async function GET(req: Request) {
           ],
         }
         : {}),
+      ...(noCalled ? { events: { none: { type: "CALLED" } } } : {}),
     };
     const where = applyScopeToWhere(whereBase, scope, "lead");
 
