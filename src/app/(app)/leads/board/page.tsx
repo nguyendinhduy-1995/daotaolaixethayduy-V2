@@ -396,69 +396,56 @@ export default function LeadsBoardPage() {
           </div>
         </div>
 
-        <div className="sticky top-[116px] z-20 space-y-2 rounded-[16px] border border-[var(--border)] bg-zinc-100/90 p-2 backdrop-blur md:top-[72px]">
-          <MobileToolbar
-            value={filters.q}
-            onChange={(value) => setFilters((s) => ({ ...s, q: value }))}
-            onOpenFilter={() => setFilterOpen(true)}
-            activeFilterCount={Object.values(filters).filter(Boolean).length}
-            quickActions={
-              <>
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    const today = dateYmdLocal(new Date());
-                    const next = { ...filters, createdFrom: today, createdTo: today };
-                    setFilters(next);
-                    applyFiltersToUrl(next);
-                  }}
-                >
-                  Hôm nay
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    const now = new Date();
-                    const start = new Date(now);
-                    start.setDate(now.getDate() - 6);
-                    const next = { ...filters, createdFrom: dateYmdLocal(start), createdTo: dateYmdLocal(now) };
-                    setFilters(next);
-                    applyFiltersToUrl(next);
-                  }}
-                >
-                  Tuần này
-                </Button>
-              </>
-            }
-          />
-          <div className="surface flex flex-wrap items-center gap-2 px-3 py-2">
-            <Button variant="secondary" onClick={() => setFilterOpen(true)}>
-              Bộ lọc
-            </Button>
-            {filters.q ? <Badge text={`Từ khóa: ${filters.q}`} tone="primary" /> : null}
-            {filters.source ? <Badge text={`Nguồn: ${filters.source}`} tone="accent" /> : null}
-            {filters.channel ? <Badge text={`Kênh: ${filters.channel}`} tone="accent" /> : null}
-            {filters.licenseType ? <Badge text={`Hạng bằng: ${filters.licenseType}`} tone="primary" /> : null}
-            {filters.createdFrom || filters.createdTo ? (
-              <Badge text={`Ngày: ${filters.createdFrom || "..."} - ${filters.createdTo || "..."}`} tone="neutral" />
-            ) : null}
-            <div className="ml-auto flex items-center gap-2">
-              <Button variant="secondary" onClick={() => applyFiltersToUrl(filters)}>
-                Áp dụng
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setFilters(EMPTY_FILTERS);
-                  applyFiltersToUrl(EMPTY_FILTERS);
-                }}
-              >
-                Xóa lọc
-              </Button>
-            </div>
+        {/* ── Compact Filter / Status Tabs ── */}
+        <div className="sticky top-[116px] z-20 space-y-2 rounded-2xl border border-zinc-200 bg-white/95 p-2 shadow-sm backdrop-blur md:top-[72px]">
+          <div className="flex items-center gap-2">
+            <Input
+              value={filters.q}
+              placeholder="🔍 Tìm kiếm..."
+              className="!rounded-xl !text-sm flex-1"
+              onChange={(e) => setFilters((s) => ({ ...s, q: e.target.value }))}
+              onKeyDown={(e) => { if (e.key === "Enter") applyFiltersToUrl(filters); }}
+            />
+            <button
+              type="button"
+              onClick={() => {
+                const today = dateYmdLocal(new Date());
+                const next = { ...filters, createdFrom: today, createdTo: today };
+                setFilters(next);
+                applyFiltersToUrl(next);
+              }}
+              className="shrink-0 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 active:scale-95"
+            >
+              Hôm nay
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterOpen(true)}
+              className="shrink-0 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 active:scale-95"
+            >
+              ⚙️ Lọc
+            </button>
+            <button
+              type="button"
+              onClick={() => { setFilters(EMPTY_FILTERS); applyFiltersToUrl(EMPTY_FILTERS); }}
+              className="shrink-0 rounded-xl px-2 py-2 text-xs text-zinc-400 hover:text-zinc-700 transition"
+            >
+              ✕
+            </button>
           </div>
 
-          <div className="surface flex gap-2 overflow-x-auto p-2 md:hidden">
+          {/* Active filter badges */}
+          {(filters.source || filters.channel || filters.licenseType || filters.createdFrom) ? (
+            <div className="flex flex-wrap gap-1 px-1">
+              {filters.source ? <Badge text={`Nguồn: ${filters.source}`} tone="accent" /> : null}
+              {filters.channel ? <Badge text={`Kênh: ${filters.channel}`} tone="accent" /> : null}
+              {filters.licenseType ? <Badge text={`Bằng: ${filters.licenseType}`} tone="primary" /> : null}
+              {(filters.createdFrom || filters.createdTo) ? <Badge text={`📅 ${filters.createdFrom || "..."} → ${filters.createdTo || "..."}`} tone="neutral" /> : null}
+            </div>
+          ) : null}
+
+          {/* Mobile status tabs */}
+          <div className="flex gap-1.5 overflow-x-auto pb-1 md:hidden">
             {STATUSES.map((status) => {
               const s = getStatusStyle(status);
               const count = (byStatus[status] || []).length;
@@ -467,12 +454,14 @@ export default function LeadsBoardPage() {
                   key={status}
                   type="button"
                   onClick={() => setMobileStatus(status)}
-                  className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-bold transition-all ${mobileStatus === status
-                    ? `bg-gradient-to-r ${s.gradient} text-white shadow-md`
-                    : `border ${s.border} ${s.bg} ${s.text}`
+                  className={`flex items-center gap-1 whitespace-nowrap rounded-xl px-3 py-2 text-xs font-bold transition-all active:scale-95 ${mobileStatus === status
+                      ? `bg-gradient-to-r ${s.gradient} text-white shadow-md shadow-${status === "NEW" ? "blue" : "zinc"}-200`
+                      : `border ${s.border} ${s.bg} ${s.text}`
                     }`}
                 >
-                  {s.icon} {STATUS_LABELS[status] || status} ({count})
+                  {s.icon}
+                  <span>{STATUS_LABELS[status]}</span>
+                  <span className={`ml-0.5 rounded-full ${mobileStatus === status ? "bg-white/30" : "bg-black/5"} px-1.5 py-0.5 text-[10px] font-bold`}>{count}</span>
                 </button>
               );
             })}
@@ -481,45 +470,45 @@ export default function LeadsBoardPage() {
 
         {error ? <Alert type="error" message={error} /> : null}
 
+        {/* ── Board ── */}
         {loading ? (
-          <div className="overflow-x-auto pb-1">
-            <BoardSkeleton />
-          </div>
+          <div className="overflow-x-auto pb-1"><BoardSkeleton /></div>
         ) : (
           <div className="overflow-x-auto pb-1">
-            <div className="flex min-w-max gap-3">
+            <div className="flex min-w-max gap-2.5">
               {STATUSES.map((status, colIdx) => {
                 const items = byStatus[status] || [];
                 const s = getStatusStyle(status);
                 return (
                   <section
                     key={status}
-                    className={`w-[320px] shrink-0 rounded-2xl border border-zinc-200 bg-gradient-to-b ${s.headerGradient} to-zinc-50 p-2 animate-fadeInUp ${mobileStatus === status ? "block" : "hidden md:block"
-                      }`}
-                    style={{ animationDelay: `${colIdx * 80}ms` }}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={() => onDrop(status)}
+                    className={`w-[280px] shrink-0 rounded-2xl border border-zinc-100 bg-zinc-50/80 transition-colors animate-fadeInUp ${mobileStatus === status ? "block" : "hidden md:block"
+                      } ${draggingLead ? "ring-2 ring-transparent hover:ring-blue-300" : ""}`}
+                    style={{ animationDelay: `${colIdx * 60}ms` }}
+                    onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("!bg-blue-50/50"); }}
+                    onDragLeave={(e) => { e.currentTarget.classList.remove("!bg-blue-50/50"); }}
+                    onDrop={(e) => { e.currentTarget.classList.remove("!bg-blue-50/50"); onDrop(status); }}
                   >
                     {/* Column header */}
-                    <div className="sticky top-0 z-10 mb-2 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+                    <div className="sticky top-0 z-10 overflow-hidden rounded-t-2xl border-b border-zinc-100 bg-white">
                       <div className={`h-1 bg-gradient-to-r ${s.gradient}`} />
-                      <div className="flex items-center justify-between px-3 py-2">
+                      <div className="flex items-center justify-between px-3 py-2.5">
                         <div className="flex items-center gap-2">
-                          <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${s.bg} text-sm`}>{s.icon}</span>
-                          <p className="text-sm font-bold text-zinc-900">{STATUS_LABELS[status] || status}</p>
+                          <span className="text-base">{s.icon}</span>
+                          <p className="text-sm font-bold text-zinc-800">{STATUS_LABELS[status]}</p>
                         </div>
-                        <span className={`inline-flex min-w-6 items-center justify-center rounded-full bg-gradient-to-r ${s.gradient} px-2 py-0.5 text-xs font-bold text-white shadow-sm`}>
+                        <span className={`inline-flex min-w-[24px] items-center justify-center rounded-full bg-gradient-to-r ${s.gradient} px-2 py-0.5 text-[11px] font-bold text-white shadow-sm`}>
                           {items.length}
                         </span>
                       </div>
                     </div>
 
-                    <div className="space-y-2">
+                    {/* Cards */}
+                    <div className="space-y-2 p-2">
                       {items.length === 0 ? (
-                        <div className="rounded-xl border-2 border-dashed border-zinc-200 bg-white/50 px-3 py-6 text-center text-xs text-zinc-500">
-                          📭 Chưa có khách trong cột này.
-                          <br />
-                          Kéo thả hoặc điều chỉnh bộ lọc.
+                        <div className="rounded-xl border-2 border-dashed border-zinc-200 bg-white/60 px-3 py-8 text-center">
+                          <p className="text-lg mb-1">📭</p>
+                          <p className="text-xs text-zinc-400">Chưa có khách hàng</p>
                         </div>
                       ) : (
                         items.map((lead, idx) => (
@@ -527,88 +516,68 @@ export default function LeadsBoardPage() {
                             key={lead.id}
                             draggable
                             onDragStart={() => setDraggingLead(lead)}
-                            className="group relative overflow-hidden rounded-xl border border-zinc-200 bg-white text-xs shadow-sm transition-all hover:border-zinc-300 hover:shadow-md animate-fadeInUp"
-                            style={{ animationDelay: `${colIdx * 80 + idx * 50}ms` }}
+                            onDragEnd={() => setDraggingLead(null)}
+                            className="group overflow-hidden rounded-xl border border-zinc-100 bg-white shadow-sm transition-all hover:shadow-md hover:border-zinc-200 cursor-grab active:cursor-grabbing animate-fadeInUp"
+                            style={{ animationDelay: `${colIdx * 60 + idx * 40}ms` }}
                           >
-                            <div className={`absolute inset-y-0 left-0 w-1 bg-gradient-to-b ${s.gradient}`} />
-                            <div className="p-3 pl-4">
-                              <div className="mb-1 flex items-start justify-between gap-2">
-                                <div className="flex items-center gap-2">
-                                  <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${s.bg} text-xs`}>{s.icon}</span>
-                                  <p className="line-clamp-2 text-sm font-bold text-zinc-900">{lead.fullName || "Chưa có tên"}</p>
+                            {/* Color accent */}
+                            <div className={`h-0.5 bg-gradient-to-r ${s.gradient}`} />
+                            <div className="p-2.5">
+                              {/* Name + Phone */}
+                              <div className="flex items-start justify-between gap-2 mb-1.5">
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-bold text-zinc-900">{lead.fullName || "Chưa có tên"}</p>
+                                  <p className="text-xs font-mono text-zinc-500">{lead.phone || "-"}</p>
                                 </div>
-                                <span className={`shrink-0 rounded-full ${s.bg} ${s.text} border ${s.border} px-1.5 py-0.5 text-[10px] font-bold`}>
-                                  {lead.licenseType || "-"}
-                                </span>
+                                {lead.licenseType ? (
+                                  <span className={`shrink-0 rounded-md ${s.bg} ${s.text} px-1.5 py-0.5 text-[10px] font-bold`}>
+                                    {lead.licenseType}
+                                  </span>
+                                ) : null}
                               </div>
 
-                              <p className="font-mono text-sm text-zinc-800">{lead.phone || "-"}</p>
-
-                              <div className="mt-2 grid gap-1 text-zinc-500">
-                                <p>📡 {lead.source || "-"} · {lead.channel || "-"}</p>
-                                <p>👤 {lead.owner?.name || lead.owner?.email || "-"}</p>
-                                <p>📞 {lead.lastContactAt ? formatDateTimeVi(lead.lastContactAt) : "-"}</p>
+                              {/* Owner + Date */}
+                              <div className="flex items-center gap-2 text-[11px] text-zinc-400 mb-2">
+                                <span>👤 {lead.owner?.name || "-"}</span>
+                                <span className="text-zinc-200">·</span>
+                                <span>{formatDateTimeVi(lead.createdAt)}</span>
                               </div>
 
-                              <div className="mt-3 space-y-2">
-                                <Select
-                                  value={lead.status}
-                                  onChange={(e) => changeStatus(lead.id, lead.status, e.target.value)}
-                                  disabled={updatingId === lead.id}
+                              {/* Quick actions */}
+                              <div className="flex items-center gap-1.5">
+                                <Link
+                                  href={`/leads/${lead.id}`}
+                                  className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 px-2 py-1 text-[11px] font-semibold text-white shadow-sm transition hover:shadow-md active:scale-95"
                                 >
-                                  {STATUSES.map((st) => (
-                                    <option key={st} value={st}>
-                                      {STATUS_LABELS[st] || st}
-                                    </option>
-                                  ))}
-                                </Select>
-
-                                <div className="flex items-center justify-between gap-2">
-                                  <Link
-                                    href={`/leads/${lead.id}`}
-                                    className={`inline-flex items-center gap-1 rounded-lg border ${s.border} ${s.bg} px-2.5 py-1.5 text-xs font-bold ${s.text} transition hover:shadow-sm`}
+                                  👁️ Xem
+                                </Link>
+                                {canManageOwner ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => { setAssignLead(lead); setAssignOwnerId(lead.ownerId || ""); }}
+                                    className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-violet-500 to-purple-500 px-2 py-1 text-[11px] font-semibold text-white shadow-sm transition hover:shadow-md active:scale-95"
                                   >
-                                    Chi tiết
-                                  </Link>
-
-                                  <details className="relative">
-                                    <summary className="list-none cursor-pointer rounded-lg border border-zinc-200 px-2 py-1 text-sm text-zinc-600 hover:bg-zinc-50">
-                                      ⋯
-                                    </summary>
-                                    <div className="absolute right-0 z-20 mt-1 w-40 rounded-xl border border-zinc-200 bg-white p-1 shadow-lg">
-                                      {canManageOwner ? (
-                                        <button
-                                          type="button"
-                                          className="block w-full rounded-lg px-2 py-1.5 text-left text-xs text-zinc-700 hover:bg-zinc-100"
-                                          onClick={() => {
-                                            setAssignLead(lead);
-                                            setAssignOwnerId(lead.ownerId || "");
-                                          }}
-                                        >
-                                          👤 Gán telesale
-                                        </button>
-                                      ) : null}
-                                      <button
-                                        type="button"
-                                        className="block w-full rounded-lg px-2 py-1.5 text-left text-xs text-zinc-700 hover:bg-zinc-100"
-                                        onClick={() => {
-                                          setEventLeadId(lead.id);
-                                          setEventOpen(true);
-                                        }}
-                                      >
-                                        ➕ Thêm sự kiện
-                                      </button>
-                                      <Link
-                                        href={`/leads/${lead.id}`}
-                                        className="block w-full rounded-lg px-2 py-1.5 text-left text-xs text-zinc-700 hover:bg-zinc-100"
-                                      >
-                                        🔍 Mở chi tiết
-                                      </Link>
-                                    </div>
-                                  </details>
+                                    🔀 Gán
+                                  </button>
+                                ) : null}
+                                <button
+                                  type="button"
+                                  onClick={() => { setEventLeadId(lead.id); setEventOpen(true); }}
+                                  className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 px-2 py-1 text-[11px] font-semibold text-white shadow-sm transition hover:shadow-md active:scale-95"
+                                >
+                                  📋 SK
+                                </button>
+                                <div className="ml-auto">
+                                  <Select
+                                    value={lead.status}
+                                    onChange={(e) => changeStatus(lead.id, lead.status, e.target.value)}
+                                    disabled={updatingId === lead.id}
+                                  >
+                                    {STATUSES.map((st) => (
+                                      <option key={st} value={st}>{STATUS_LABELS[st]}</option>
+                                    ))}
+                                  </Select>
                                 </div>
-
-                                <p className="text-[11px] text-zinc-400">Tạo: {formatDateTimeVi(lead.createdAt)}</p>
                               </div>
                             </div>
                           </article>
