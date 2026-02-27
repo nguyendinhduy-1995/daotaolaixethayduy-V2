@@ -82,7 +82,7 @@ export async function GET(req: Request) {
                     id: staff.id,
                     name: staff.name,
                     role: staff.role,
-                    branch: branchMap[staff.branchId] ?? "—",
+                    branch: staff.branchId ? (branchMap[staff.branchId] ?? "—") : "—",
                     totalOwned,
                     receivedToday,
                     calledToday,
