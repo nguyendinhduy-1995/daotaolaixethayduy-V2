@@ -217,46 +217,45 @@ export default function VeteranLandingPage() {
 
             {/* ═══════ HEADER ═══════ */}
             <header className="fixed top-0 left-0 right-0 z-50 border-b border-emerald-800/60 bg-emerald-950/80 shadow-lg backdrop-blur-xl">
-                <div className="mx-auto flex max-w-[1040px] items-center justify-between px-4 py-2.5">
-
+                <div className="mx-auto flex max-w-[1040px] items-center justify-between px-3 sm:px-4 py-2">
 
                     {/* Learning buttons */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                         <a
                             href="https://taplai.thayduydaotaolaixe.com/"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="rounded-lg border border-emerald-600/50 bg-emerald-800/40 px-3 py-1.5 text-[11px] font-semibold text-emerald-100 transition hover:bg-emerald-700/50 active:scale-[0.97]"
+                            className="rounded-lg border border-emerald-600/50 bg-emerald-800/40 px-2 sm:px-3 py-1.5 text-[10px] sm:text-[11px] font-semibold text-emerald-100 transition hover:bg-emerald-700/50 active:scale-[0.97]"
                         >
-                            📖 Học lý thuyết
+                            📖 Lý thuyết
                         </a>
                         <a
                             href="https://mophong.thayduydaotaolaixe.com/"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="rounded-lg border border-emerald-600/50 bg-emerald-800/40 px-3 py-1.5 text-[11px] font-semibold text-emerald-100 transition hover:bg-emerald-700/50 active:scale-[0.97]"
+                            className="rounded-lg border border-emerald-600/50 bg-emerald-800/40 px-2 sm:px-3 py-1.5 text-[10px] sm:text-[11px] font-semibold text-emerald-100 transition hover:bg-emerald-700/50 active:scale-[0.97]"
                         >
-                            🖥️ Học mô phỏng
+                            🖥️ Mô phỏng
                         </a>
                     </div>
 
                     <a
                         href={HOTLINE_TEL}
-                        className="flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 transition hover:bg-amber-500/20"
+                        className="flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 sm:px-3 py-1.5 transition hover:bg-amber-500/20"
                     >
                         <span className="text-sm">📞</span>
                         <span className="flex flex-col leading-none">
-                            <span className="text-xs font-bold text-amber-300">
+                            <span className="text-[11px] sm:text-xs font-bold text-amber-300">
                                 <span className="hidden sm:inline">Hotline: </span>{HOTLINE}
                             </span>
-                            <span className="text-[10px] text-amber-400/70">Gọi ngay</span>
+                            <span className="text-[9px] sm:text-[10px] text-amber-400/70">Gọi ngay</span>
                         </span>
                     </a>
                 </div>
             </header>
 
             {/* ═══════ HERO ═══════ */}
-            <section className="relative overflow-hidden pt-[52px]">
+            <section className="relative overflow-hidden pt-[44px] sm:pt-[52px]">
                 <div
                     className="absolute inset-0"
                     style={{
@@ -269,47 +268,47 @@ export default function VeteranLandingPage() {
                 <div className="absolute bottom-20 left-[20%] text-2xl star-2 pointer-events-none select-none">⭐</div>
                 <div className="absolute bottom-10 right-[10%] text-3xl star-1 pointer-events-none select-none">🪖</div>
 
-                <div className="relative mx-auto max-w-[1040px] px-4 py-14 md:py-24 text-center">
+                <div className="relative mx-auto max-w-[1040px] px-3 sm:px-4 py-10 sm:py-14 md:py-24 text-center">
                     {/* Badge */}
-                    <div className="ld-fade-up inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-4 py-1.5 badge-glow mb-6">
-                        <span className="text-lg">🎖️</span>
-                        <span className="text-xs font-bold tracking-wider text-amber-300 uppercase">Chương trình ưu đãi bộ đội xuất ngũ</span>
+                    <div className="ld-fade-up inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-3 sm:px-4 py-1 sm:py-1.5 badge-glow mb-4 sm:mb-6">
+                        <span className="text-base sm:text-lg">🎖️</span>
+                        <span className="text-[10px] sm:text-xs font-bold tracking-wider text-amber-300 uppercase">Ưu đãi bộ đội xuất ngũ</span>
                     </div>
 
-                    <h1 className="ld-fade-up ld-d1 text-[32px] md:text-[46px] font-bold leading-tight tracking-tight">
+                    <h1 className="ld-fade-up ld-d1 text-[26px] sm:text-[32px] md:text-[46px] font-bold leading-tight tracking-tight">
                         Miễn Phí{" "}
-                        <span className="shine-text text-[36px] md:text-[52px]">100%</span>
+                        <span className="shine-text text-[30px] sm:text-[36px] md:text-[52px]">100%</span>
                         <br />
                         <span className="text-emerald-300">Học Phí Lái Xe</span>
                     </h1>
 
-                    <p className="ld-fade-up ld-d2 mt-4 text-base md:text-lg text-emerald-200/80 max-w-xl mx-auto">
+                    <p className="ld-fade-up ld-d2 mt-3 sm:mt-4 text-sm sm:text-base md:text-lg text-emerald-200/80 max-w-xl mx-auto px-2">
                         Tri ân anh em bộ đội xuất ngũ — Đăng ký học lái xe <strong className="text-amber-300">hạng B</strong> hoặc <strong className="text-amber-300">hạng C1</strong> hoàn toàn miễn phí tại Thầy Duy.
                     </p>
 
                     {/* License cards */}
-                    <div className="ld-fade-up ld-d3 mt-8 flex flex-wrap justify-center gap-4">
+                    <div className="ld-fade-up ld-d3 mt-5 sm:mt-8 flex flex-wrap justify-center gap-2.5 sm:gap-4">
                         {VETERAN_LICENSE_TYPES.map((lt) => (
                             <div
                                 key={lt.value}
-                                className="relative overflow-hidden rounded-2xl border border-amber-400/30 bg-gradient-to-br from-amber-500/15 to-emerald-800/30 px-6 py-4 backdrop-blur-sm transition hover:border-amber-400/50 hover:scale-[1.02]"
+                                className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-amber-400/30 bg-gradient-to-br from-amber-500/15 to-emerald-800/30 px-4 sm:px-6 py-3 sm:py-4 backdrop-blur-sm transition hover:border-amber-400/50 hover:scale-[1.02] flex-1 min-w-[140px] max-w-[220px]"
                             >
-                                <div className="text-sm font-semibold text-emerald-100">{lt.label}</div>
-                                <div className="mt-1 text-lg font-black text-amber-400">{lt.price}</div>
+                                <div className="text-xs sm:text-sm font-semibold text-emerald-100">{lt.label}</div>
+                                <div className="mt-0.5 sm:mt-1 text-base sm:text-lg font-black text-amber-400">{lt.price}</div>
                             </div>
                         ))}
                     </div>
 
-                    <div className="ld-fade-up ld-d4 mt-8 flex flex-wrap justify-center gap-3">
+                    <div className="ld-fade-up ld-d4 mt-5 sm:mt-8 flex flex-wrap justify-center gap-2.5 sm:gap-3">
                         <button
                             onClick={scrollToForm}
-                            className="ld-pulse inline-flex items-center gap-2 rounded-xl bg-amber-500 px-7 py-3.5 text-sm font-bold text-white shadow-lg shadow-amber-500/30 transition hover:bg-amber-400 active:scale-[0.97]"
+                            className="ld-pulse inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 sm:px-7 py-3 sm:py-3.5 text-sm font-bold text-white shadow-lg shadow-amber-500/30 transition hover:bg-amber-400 active:scale-[0.97]"
                         >
                             🪖 ĐĂNG KÝ NGAY
                         </button>
                         <a
                             href={HOTLINE_TEL}
-                            className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-800/30 px-6 py-3.5 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-800/50 active:scale-[0.97]"
+                            className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-800/30 px-5 sm:px-6 py-3 sm:py-3.5 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-800/50 active:scale-[0.97]"
                         >
                             📞 GỌI TƯ VẤN
                         </a>
@@ -322,29 +321,29 @@ export default function VeteranLandingPage() {
             </section>
 
             {/* ═══════ BENEFITS ═══════ */}
-            <section className="bg-[#022c22] py-12 md:py-16">
-                <div className="mx-auto max-w-[1040px] px-4">
+            <section className="bg-[#022c22] py-8 sm:py-12 md:py-16">
+                <div className="mx-auto max-w-[1040px] px-3 sm:px-4">
                     <RevealSection>
                         {(visible) => (
                             <div className={visible ? "ld-fade-up" : "opacity-0"}>
-                                <h2 className="text-center text-xl md:text-2xl font-bold text-emerald-50">
+                                <h2 className="text-center text-lg sm:text-xl md:text-2xl font-bold text-emerald-50">
                                     🎖️ Quyền Lợi Dành Cho Anh Em
                                 </h2>
-                                <p className="mt-2 text-center text-sm text-emerald-300/70">
+                                <p className="mt-1.5 sm:mt-2 text-center text-xs sm:text-sm text-emerald-300/70">
                                     Chương trình tri ân đặc biệt — không phụ thu, không điều kiện ràng buộc
                                 </p>
 
-                                <div className="mt-8 grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                                <div className="mt-5 sm:mt-8 grid grid-cols-1 min-[400px]:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4">
                                     {BENEFITS.map((b, i) => (
                                         <div
                                             key={b.title}
-                                            className={`rounded-2xl border border-emerald-700/40 bg-emerald-900/40 p-5 backdrop-blur-sm transition hover:border-emerald-600/50 hover:bg-emerald-900/60 ${visible ? `ld-fade-up ld-d${i + 1}` : "opacity-0"}`}
+                                            className={`rounded-xl sm:rounded-2xl border border-emerald-700/40 bg-emerald-900/40 p-3.5 sm:p-5 backdrop-blur-sm transition hover:border-emerald-600/50 hover:bg-emerald-900/60 ${visible ? `ld-fade-up ld-d${i + 1}` : "opacity-0"}`}
                                         >
-                                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-800/60 text-xl">
+                                            <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg sm:rounded-xl bg-emerald-800/60 text-lg sm:text-xl">
                                                 {b.icon}
                                             </div>
-                                            <h3 className="mt-3 text-sm font-bold text-emerald-50">{b.title}</h3>
-                                            <p className="mt-1 text-xs text-emerald-300/70 leading-relaxed">{b.desc}</p>
+                                            <h3 className="mt-2 sm:mt-3 text-sm font-bold text-emerald-50">{b.title}</h3>
+                                            <p className="mt-0.5 sm:mt-1 text-[11px] sm:text-xs text-emerald-300/70 leading-relaxed">{b.desc}</p>
                                         </div>
                                     ))}
                                 </div>
@@ -355,19 +354,19 @@ export default function VeteranLandingPage() {
             </section>
 
             {/* ═══════ FORM ĐĂNG KÝ ═══════ */}
-            <section ref={formRef} className="bg-[#022c22] py-12 md:py-16" id="dang-ky">
-                <div className="mx-auto max-w-[1040px] px-4">
+            <section ref={formRef} className="bg-[#022c22] py-8 sm:py-12 md:py-16" id="dang-ky">
+                <div className="mx-auto max-w-[1040px] px-3 sm:px-4">
                     <RevealSection>
                         {(visible) => (
                             <div className={visible ? "ld-fade-up" : "opacity-0"}>
-                                <h2 className="text-center text-xl md:text-2xl font-bold text-emerald-50">
+                                <h2 className="text-center text-lg sm:text-xl md:text-2xl font-bold text-emerald-50">
                                     📋 Đăng Ký Nhận Ưu Đãi
                                 </h2>
-                                <p className="mt-2 text-center text-sm text-emerald-300/70">
+                                <p className="mt-1.5 sm:mt-2 text-center text-xs sm:text-sm text-emerald-300/70">
                                     Để lại thông tin, Thầy Duy liên hệ xác nhận trong 15 phút
                                 </p>
 
-                                <div className="mx-auto mt-8 max-w-md">
+                                <div className="mx-auto mt-5 sm:mt-8 max-w-md">
                                     {status === "success" ? (
                                         <div className="rounded-2xl border border-emerald-500/40 bg-emerald-900/60 p-6 text-center shadow-lg backdrop-blur-sm animate-fadeInUp">
                                             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-700/50 text-3xl float">
@@ -387,11 +386,11 @@ export default function VeteranLandingPage() {
                                             </a>
                                         </div>
                                     ) : (
-                                        <div className="rounded-2xl border border-emerald-700/40 bg-emerald-900/40 p-6 shadow-lg backdrop-blur-sm">
+                                        <div className="rounded-xl sm:rounded-2xl border border-emerald-700/40 bg-emerald-900/40 p-4 sm:p-6 shadow-lg backdrop-blur-sm">
                                             {/* Promo badge */}
-                                            <div className="mb-5 flex items-center justify-center gap-2 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-2.5">
-                                                <span className="text-lg">🪖</span>
-                                                <span className="text-sm font-bold text-amber-300">Bộ đội xuất ngũ — Miễn phí 100% học phí</span>
+                                            <div className="mb-4 sm:mb-5 flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 sm:px-4 py-2 sm:py-2.5">
+                                                <span className="text-base sm:text-lg">🪖</span>
+                                                <span className="text-xs sm:text-sm font-bold text-amber-300">Bộ đội xuất ngũ — Miễn phí 100%</span>
                                             </div>
 
                                             {status === "submitting" && (
@@ -504,18 +503,18 @@ export default function VeteranLandingPage() {
             </section>
 
             {/* ═══════ FOOTER CTA ═══════ */}
-            <section className="border-t border-emerald-800/50 bg-emerald-950 py-10">
-                <div className="mx-auto max-w-[1040px] px-4 text-center">
-                    <p className="text-sm text-emerald-300/60">
+            <section className="border-t border-emerald-800/50 bg-emerald-950 py-8 sm:py-10 pb-24 sm:pb-10">
+                <div className="mx-auto max-w-[1040px] px-3 sm:px-4 text-center">
+                    <p className="text-xs sm:text-sm text-emerald-300/60">
                         Liên hệ ngay để được tư vấn chi tiết
                     </p>
                     <a
                         href={HOTLINE_TEL}
-                        className="mt-3 inline-flex items-center gap-2 rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold text-white transition hover:bg-amber-400"
+                        className="mt-3 inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 sm:px-6 py-2.5 sm:py-3 text-sm font-bold text-white transition hover:bg-amber-400"
                     >
                         📞 Hotline: {HOTLINE}
                     </a>
-                    <p className="mt-6 text-xs text-emerald-400/40">
+                    <p className="mt-4 sm:mt-6 text-[10px] sm:text-xs text-emerald-400/40">
                         © {new Date().getFullYear()} Đào Tạo Lái Xe Thầy Duy. Mọi quyền được bảo lưu.
                     </p>
                 </div>
