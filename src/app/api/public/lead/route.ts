@@ -23,6 +23,7 @@ export async function POST(req: Request) {
         const phone = typeof body.phone === "string" ? body.phone.replace(/\s+/g, "").trim() : "";
         const province = typeof body.province === "string" ? body.province.trim() : "";
         const licenseType = typeof body.licenseType === "string" ? body.licenseType.trim().toUpperCase() : "";
+        const tags = Array.isArray(body.tags) ? body.tags.filter((t: unknown) => typeof t === "string") as string[] : [];
 
         // Honeypot: if hidden field present, silently ignore (anti-spam)
         if (body._hp) {
@@ -47,6 +48,7 @@ export async function POST(req: Request) {
                     ...(fullName && !existing.fullName ? { fullName } : {}),
                     ...(province && !existing.province ? { province } : {}),
                     ...(licenseType && !existing.licenseType ? { licenseType } : {}),
+                    ...(tags.length > 0 ? { tags: { set: [...new Set([...existing.tags, ...tags])] } } : {}),
                 },
             });
             return NextResponse.json({ ok: true, message: "Đã ghi nhận thông tin. Chúng tôi sẽ liên hệ bạn sớm!" });
@@ -130,6 +132,7 @@ export async function POST(req: Request) {
                 status: "HAS_PHONE",
                 branchId,
                 ownerId,
+                ...(tags.length > 0 ? { tags } : {}),
             },
         });
 
