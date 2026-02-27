@@ -52,9 +52,18 @@ export default function VeteranLandingPage() {
     const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
     const [errorMsg, setErrorMsg] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [landingEnabled, setLandingEnabled] = useState<boolean | null>(null);
     const firedEvents = useRef({ start: false, complete: false, submitted: new Set<string>() });
     const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const formRef = useRef<HTMLDivElement>(null);
+
+    // Check if landing is enabled
+    useEffect(() => {
+        fetch("/api/public/landing-status?key=bo-doi-xuat-ngu")
+            .then((r) => r.json())
+            .then((d) => setLandingEnabled(d.enabled !== false))
+            .catch(() => setLandingEnabled(true));
+    }, []);
 
     function onFirstFocus() {
         if (!firedEvents.current.start) {
@@ -156,6 +165,39 @@ export default function VeteranLandingPage() {
 
     const inputCls =
         "h-12 w-full rounded-xl border border-emerald-700/30 bg-emerald-950/50 px-4 text-sm text-emerald-50 placeholder:text-emerald-400/50 transition-all focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/30 backdrop-blur";
+
+    // Loading state while checking
+    if (landingEnabled === null) {
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-emerald-950">
+                <div className="flex items-center gap-3 text-emerald-300">
+                    <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-emerald-400 border-t-transparent" />
+                    <span className="text-sm">Đang tải...</span>
+                </div>
+            </div>
+        );
+    }
+
+    // Landing disabled by admin
+    if (!landingEnabled) {
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-emerald-950 px-4">
+                <div className="max-w-md rounded-2xl border border-emerald-700/40 bg-emerald-900/40 p-8 text-center backdrop-blur-sm">
+                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/20 text-4xl">🪖</div>
+                    <h1 className="mt-4 text-xl font-bold text-emerald-50">Chương trình tạm ngưng</h1>
+                    <p className="mt-2 text-sm text-emerald-300/70">
+                        Chương trình ưu đãi cho bộ đội xuất ngũ hiện đang tạm ngưng. Vui lòng quay lại sau hoặc liên hệ hotline để biết thêm chi tiết.
+                    </p>
+                    <a
+                        href={HOTLINE_TEL}
+                        className="mt-5 inline-flex items-center gap-2 rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold text-white transition hover:bg-amber-400"
+                    >
+                        📞 Gọi ngay: {HOTLINE}
+                    </a>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-emerald-950 text-white">

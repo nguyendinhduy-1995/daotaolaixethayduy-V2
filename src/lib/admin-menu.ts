@@ -275,6 +275,14 @@ export const ADMIN_MENU: AdminMenuItem[] = [
     icon: "⚙️",
   },
   {
+    key: "admin-landings",
+    label: "Quản lý Landing",
+    href: "/admin/landings",
+    group: "Quản trị",
+    keywords: ["landing", "trang dang ky", "bat tat", "bo doi"],
+    icon: "🌐",
+  },
+  {
     key: "admin-guide",
     label: "Hướng dẫn vận hành",
     href: "/admin/guide",

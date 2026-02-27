@@ -54,6 +54,31 @@ export async function POST(req: Request) {
             return NextResponse.json({ ok: true, message: "Đã ghi nhận thông tin. Chúng tôi sẽ liên hệ bạn sớm!" });
         }
 
+        // ── Province alias normalisation ──
+        const PROVINCE_ALIASES: Record<string, string> = {
+            "tphcm": "hồ chí minh",
+            "tp.hcm": "hồ chí minh",
+            "tp hcm": "hồ chí minh",
+            "tp. hồ chí minh": "hồ chí minh",
+            "sài gòn": "hồ chí minh",
+            "saigon": "hồ chí minh",
+            "sg": "hồ chí minh",
+            "bình dương": "bình dương",
+            "biên hòa": "đồng nai",
+            "vũng tàu": "bà rịa - vũng tàu",
+        };
+
+        function normalizeProvince(raw: string): string {
+            const norm = raw.toLowerCase().replace(/[-–—]/g, " ").replace(/\s+/g, " ").trim();
+            // Check aliases
+            if (PROVINCE_ALIASES[norm]) return PROVINCE_ALIASES[norm];
+            // Check if raw starts with alias (e.g. "Gò vấp- Hồ Chí Minh")
+            for (const [alias, canonical] of Object.entries(PROVINCE_ALIASES)) {
+                if (norm.includes(alias)) return canonical;
+            }
+            return norm;
+        }
+
         // ── Resolve branch & owner via auto-assign ──
         let branchId: string | null = null;
         let ownerId: string | null = null;
@@ -64,7 +89,7 @@ export async function POST(req: Request) {
         });
 
         if (autoAssignSetting?.enabled && province) {
-            const provinceNorm = province.toLowerCase().replace(/\s+/g, " ").trim();
+            const provinceNorm = normalizeProvince(province);
 
             // Find branch matching province
             const branches = await prisma.branch.findMany({
@@ -73,27 +98,36 @@ export async function POST(req: Request) {
             });
 
             const matchedBranch = branches.find((b) =>
-                (b.provinces as string[]).some((p) =>
-                    p.toLowerCase().replace(/\s+/g, " ").trim() === provinceNorm ||
-                    provinceNorm.includes(p.toLowerCase().trim()) ||
-                    p.toLowerCase().trim().includes(provinceNorm)
-                )
+                (b.provinces as string[]).some((p) => {
+                    const pNorm = p.toLowerCase().replace(/\s+/g, " ").trim();
+                    return pNorm === provinceNorm ||
+                        provinceNorm.includes(pNorm) ||
+                        pNorm.includes(provinceNorm);
+                })
             );
 
             if (matchedBranch) {
                 branchId = matchedBranch.id;
 
-                // Round-robin: find telesales in this branch, pick the one with fewest leads
-                const telesales = await prisma.user.findMany({
+                // Round-robin: find telesales in this branch; fallback to managers if no telesales
+                let staff = await prisma.user.findMany({
                     where: { branchId: matchedBranch.id, role: "telesales", isActive: true },
                     select: { id: true },
                     orderBy: { createdAt: "asc" },
                 });
 
-                if (telesales.length > 0) {
-                    // Count leads per telesales for load balancing
+                if (staff.length === 0) {
+                    staff = await prisma.user.findMany({
+                        where: { branchId: matchedBranch.id, role: "manager", isActive: true },
+                        select: { id: true },
+                        orderBy: { createdAt: "asc" },
+                    });
+                }
+
+                if (staff.length > 0) {
+                    // Count leads per staff for load balancing
                     const leadCounts = await Promise.all(
-                        telesales.map(async (t) => ({
+                        staff.map(async (t) => ({
                             id: t.id,
                             count: await prisma.lead.count({ where: { ownerId: t.id } }),
                         }))
@@ -121,13 +155,15 @@ export async function POST(req: Request) {
             branchId = defaultBranch.id;
         }
 
+        const leadSource = typeof body.source === "string" && body.source.trim() ? body.source.trim() : "landing";
+
         const lead = await prisma.lead.create({
             data: {
                 fullName,
                 phone,
                 province: province || null,
                 licenseType: licenseType || null,
-                source: "landing",
+                source: leadSource,
                 channel: "web",
                 status: "HAS_PHONE",
                 branchId,
