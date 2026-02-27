@@ -126,6 +126,22 @@ type AiSummaryResponse = {
 
 type StaleSummary = { total: number };
 
+type ProvinceStaffData = {
+  date: string;
+  provinceBreakdown: Array<{ province: string; count: number }>;
+  staffBreakdown: Array<{
+    id: string;
+    name: string;
+    role: string;
+    branch: string;
+    totalOwned: number;
+    receivedToday: number;
+    calledToday: number;
+    progressedToday: number;
+  }>;
+  branchSummary: Array<{ id: string; name: string; totalLeads: number; todayLeads: number }>;
+};
+
 type MetricStatus = "NEW" | "HAS_PHONE" | "APPOINTED" | "ARRIVED" | "SIGNED" | "LOST";
 
 type DrilldownState = {
@@ -281,6 +297,7 @@ export default function DashboardPage() {
   const [aiSuggestions, setAiSuggestions] = useState<AiSuggestionMini[]>([]);
   const [aiSummary, setAiSummary] = useState<AiSummaryResponse | null>(null);
   const [staleCount, setStaleCount] = useState(0);
+  const [provinceStaff, setProvinceStaff] = useState<ProvinceStaffData | null>(null);
 
   // ── Analytics state ──────────────────────────────────────
   type AnalyticsDashboardData = {
@@ -458,6 +475,11 @@ export default function DashboardPage() {
           .then((data) => setAnalyticsData(data))
           .catch(() => setAnalyticsData(null));
       }
+
+      // Load province/staff summary
+      fetchJson<ProvinceStaffData>(`/api/leads/province-staff-summary?date=${today}`, { token })
+        .then((data) => setProvinceStaff(data))
+        .catch(() => setProvinceStaff(null));
 
       if (isAdminRole(userRole)) {
         const unassigned = await loadUnassignedCount(today, token);
@@ -822,6 +844,109 @@ export default function DashboardPage() {
               </Link>
             </div>
           </div>
+
+          {/* ── Data theo tỉnh & nhân viên ─────────────── */}
+          {provinceStaff ? (
+            <div className="animate-fadeInUp delay-5 rounded-2xl border border-zinc-200/60 bg-white p-5 shadow-sm lg:col-span-2">
+              <SectionHeader icon="🗺️" gradient="from-teal-500 to-cyan-600" title="Data theo tỉnh & nhân viên" badge={<Badge text="Hôm nay" tone="primary" />} />
+
+              {/* Branch summary */}
+              <div className="grid gap-2.5 sm:grid-cols-2 mb-4">
+                {provinceStaff.branchSummary.map((branch) => (
+                  <div key={branch.id} className="rounded-xl border border-zinc-200/60 bg-gradient-to-br from-teal-50 to-cyan-50 p-3.5">
+                    <p className="text-xs uppercase tracking-wide text-zinc-400 mb-1">🏢 {branch.name}</p>
+                    <div className="flex items-baseline gap-3">
+                      <p className="text-2xl font-bold text-teal-700">{branch.todayLeads}</p>
+                      <p className="text-xs text-zinc-500">hôm nay / <strong>{branch.totalLeads}</strong> tổng</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Province breakdown */}
+              {provinceStaff.provinceBreakdown.length > 0 ? (
+                <div className="mb-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-2">📍 Phân bổ theo tỉnh (hôm nay)</p>
+                  <div className="space-y-1.5">
+                    {provinceStaff.provinceBreakdown.map((item) => {
+                      const maxCount = provinceStaff.provinceBreakdown[0]?.count || 1;
+                      const pct = Math.round((item.count / maxCount) * 100);
+                      return (
+                        <div key={item.province} className="flex items-center gap-2">
+                          <span className="w-24 truncate text-xs text-zinc-600 text-right">{item.province}</span>
+                          <div className="flex-1 h-5 rounded-full bg-zinc-100 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-teal-400 to-cyan-500 transition-all duration-700 flex items-center justify-end pr-2"
+                              style={{ width: `${Math.max(pct, 12)}%` }}
+                            >
+                              <span className="text-[10px] font-bold text-white">{item.count}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Staff breakdown table */}
+              {provinceStaff.staffBreakdown.length > 0 ? (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-2">👤 Hiệu suất nhân viên (hôm nay)</p>
+                  <div className="overflow-x-auto -mx-2">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-zinc-100">
+                          <th className="text-left py-2 px-2 text-xs font-semibold text-zinc-400">Nhân viên</th>
+                          <th className="text-left py-2 px-2 text-xs font-semibold text-zinc-400 hidden sm:table-cell">Chi nhánh</th>
+                          <th className="text-center py-2 px-1 text-xs font-semibold text-zinc-400">Nhận</th>
+                          <th className="text-center py-2 px-1 text-xs font-semibold text-zinc-400">Gọi</th>
+                          <th className="text-center py-2 px-1 text-xs font-semibold text-zinc-400">Tiến</th>
+                          <th className="text-center py-2 px-1 text-xs font-semibold text-zinc-400 hidden sm:table-cell">Tổng</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {provinceStaff.staffBreakdown.map((staff) => (
+                          <tr key={staff.id} className="border-b border-zinc-50 hover:bg-zinc-50/50 transition-colors">
+                            <td className="py-2 px-2">
+                              <p className="font-medium text-zinc-800 text-xs">{staff.name}</p>
+                              <p className="text-[10px] text-zinc-400 sm:hidden">{staff.branch}</p>
+                            </td>
+                            <td className="py-2 px-2 text-xs text-zinc-500 hidden sm:table-cell">{staff.branch}</td>
+                            <td className="py-2 px-1 text-center">
+                              <span className={`inline-flex h-6 min-w-[24px] items-center justify-center rounded-md text-xs font-bold ${staff.receivedToday > 0 ? "bg-blue-100 text-blue-700" : "bg-zinc-100 text-zinc-400"}`}>
+                                {staff.receivedToday}
+                              </span>
+                            </td>
+                            <td className="py-2 px-1 text-center">
+                              <span className={`inline-flex h-6 min-w-[24px] items-center justify-center rounded-md text-xs font-bold ${staff.calledToday > 0 ? "bg-emerald-100 text-emerald-700" : "bg-zinc-100 text-zinc-400"}`}>
+                                {staff.calledToday}
+                              </span>
+                            </td>
+                            <td className="py-2 px-1 text-center">
+                              <span className={`inline-flex h-6 min-w-[24px] items-center justify-center rounded-md text-xs font-bold ${staff.progressedToday > 0 ? "bg-amber-100 text-amber-700" : "bg-zinc-100 text-zinc-400"}`}>
+                                {staff.progressedToday}
+                              </span>
+                            </td>
+                            <td className="py-2 px-1 text-center hidden sm:table-cell">
+                              <span className="text-xs font-medium text-zinc-500">{staff.totalOwned}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-3 text-[10px] text-zinc-400">
+                    <span>📥 <strong>Nhận</strong> = data nhận hôm nay</span>
+                    <span>📞 <strong>Gọi</strong> = lượt gọi/ghi chú</span>
+                    <span>📈 <strong>Tiến</strong> = chuyển trạng thái</span>
+                    <span>📊 <strong>Tổng</strong> = tổng data đang quản lý</span>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
         </div>
 
         {/* ── Alerts ─────────────────────────────────────── */}
