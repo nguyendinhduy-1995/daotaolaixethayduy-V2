@@ -38,7 +38,7 @@ export async function GET(req: Request, context: RouteContext) {
     const student = await prisma.student.findFirst({
       where: applyScopeToWhere({ id }, scope, "student"),
       include: {
-        lead: { select: { id: true, fullName: true, phone: true, status: true, ownerId: true } },
+        lead: { select: { id: true, fullName: true, phone: true, status: true, ownerId: true, province: true } },
         course: { select: { id: true, code: true } },
         instructor: { select: { id: true, name: true, phone: true } },
         tuitionPlan: {

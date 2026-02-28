@@ -36,6 +36,7 @@ type StudentDetail = {
     phone: string | null;
     status: string;
     ownerId: string | null;
+    province: string | null;
   };
   course: { id: string; code: string } | null;
   instructor: { id: string; name: string; phone: string | null } | null;
@@ -116,7 +117,7 @@ type TimelineItem = {
 type TuitionPlan = {
   id: string;
   province: string;
-  licenseType: "B" | "C1";
+  licenseType: string;
   totalAmount: number;
   paid50Amount: number;
   tuition: number;
@@ -233,7 +234,6 @@ export default function StudentDetailPage() {
   const [messagesError, setMessagesError] = useState("");
   const [messages, setMessages] = useState<OutboundMessageItem[]>([]);
   const [tuitionProvince, setTuitionProvince] = useState("");
-  const [tuitionLicenseType, setTuitionLicenseType] = useState<"B" | "C1">("B");
   const [tuitionPlans, setTuitionPlans] = useState<TuitionPlan[]>([]);
   const [selectedTuitionPlanId, setSelectedTuitionPlanId] = useState("");
   const [tuitionTotalOverride, setTuitionTotalOverride] = useState("");
@@ -271,8 +271,7 @@ export default function StudentDetailPage() {
     try {
       const data = await fetchJson<{ student: StudentDetail }>(`/api/students/${studentId}`, { token });
       setStudent(data.student);
-      setTuitionProvince(data.student.tuitionPlan?.province || "");
-      setTuitionLicenseType((data.student.tuitionPlan?.licenseType as "B" | "C1") || "B");
+      setTuitionProvince(data.student.lead?.province || data.student.tuitionPlan?.province || "");
       setSelectedTuitionPlanId(data.student.tuitionPlanId || "");
       setTuitionTotalOverride(data.student.tuitionSnapshot !== null ? String(data.student.tuitionSnapshot) : "");
     } catch (e) {
@@ -307,7 +306,6 @@ export default function StudentDetailPage() {
     try {
       const params = new URLSearchParams({
         province: tuitionProvince.trim(),
-        licenseType: tuitionLicenseType,
         isActive: "true",
         page: "1",
         pageSize: "100",
@@ -317,7 +315,7 @@ export default function StudentDetailPage() {
     } catch {
       setTuitionPlans([]);
     }
-  }, [isAdmin, tuitionLicenseType, tuitionProvince]);
+  }, [isAdmin, tuitionProvince]);
 
   const loadReceipts = useCallback(async () => {
     const token = getToken();
@@ -766,33 +764,32 @@ export default function StudentDetailPage() {
             <h3 className="mb-3 text-sm font-semibold text-zinc-900">Thiết lập học phí</h3>
             {isAdmin ? (
               <div className="space-y-3">
-                <div className="grid gap-2 md:grid-cols-3">
-                  <Input
-                    placeholder="Tỉnh"
-                    value={tuitionProvince}
-                    onChange={(e) => setTuitionProvince(e.target.value)}
-                  />
-                  <Select
-                    value={tuitionLicenseType}
-                    onChange={(e) => setTuitionLicenseType(e.target.value as "B" | "C1")}
-                  >
-                    <option value="B">B</option>
-                    <option value="C1">C1</option>
-                  </Select>
-                  <Select
-                    value={selectedTuitionPlanId}
-                    onChange={(e) => setSelectedTuitionPlanId(e.target.value)}
-                  >
-                    <option value="">Chọn bảng học phí</option>
-                    {tuitionPlans.map((plan) => (
-                      <option key={plan.id} value={plan.id}>
-                        {plan.province} - {plan.licenseType} - {formatCurrencyVnd(plan.totalAmount || plan.tuition)}
-                      </option>
-                    ))}
-                  </Select>
+                <div className="grid gap-2 md:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-zinc-500">Tỉnh</label>
+                    <Input
+                      placeholder="Tỉnh"
+                      value={tuitionProvince}
+                      onChange={(e) => setTuitionProvince(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-zinc-500">Bảng học phí</label>
+                    <Select
+                      value={selectedTuitionPlanId}
+                      onChange={(e) => setSelectedTuitionPlanId(e.target.value)}
+                    >
+                      <option value="">Chọn bảng học phí ({tuitionPlans.length} kế hoạch)</option>
+                      {tuitionPlans.map((plan) => (
+                        <option key={plan.id} value={plan.id}>
+                          {plan.licenseType} — {formatCurrencyVnd(plan.totalAmount || plan.tuition)}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
                 </div>
                 <div className="flex justify-end">
-                  <Button onClick={applyTuitionPlan} disabled={tuitionSaving}>
+                  <Button onClick={applyTuitionPlan} disabled={tuitionSaving || !selectedTuitionPlanId}>
                     {tuitionSaving ? "Đang lưu..." : "Áp dụng bảng học phí"}
                   </Button>
                 </div>
