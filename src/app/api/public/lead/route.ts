@@ -38,6 +38,10 @@ export async function POST(req: Request) {
             return jsonError(400, "VALIDATION_ERROR", "Số điện thoại không hợp lệ");
         }
 
+        if (!province) {
+            return jsonError(400, "VALIDATION_ERROR", "Vui lòng chọn tỉnh / thành phố");
+        }
+
         // Check for duplicate phone – touch updatedAt so it surfaces in admin
         const existing = await prisma.lead.findUnique({ where: { phone } });
         if (existing) {
@@ -107,23 +111,27 @@ export async function POST(req: Request) {
                 })
             );
 
+            console.log(`[public.lead] province="${province}" norm="${provinceNorm}" matched=${matchedBranch?.name || 'NONE'} branches=${JSON.stringify(branches.map(b => ({ name: b.name, provinces: b.provinces })))}`);
+
             if (matchedBranch) {
                 branchId = matchedBranch.id;
 
                 // Round-robin: find telesales in this branch; fallback to managers if no telesales
                 let staff = await prisma.user.findMany({
                     where: { branchId: matchedBranch.id, role: "telesales", isActive: true },
-                    select: { id: true },
+                    select: { id: true, name: true },
                     orderBy: { createdAt: "asc" },
                 });
 
                 if (staff.length === 0) {
                     staff = await prisma.user.findMany({
                         where: { branchId: matchedBranch.id, role: "manager", isActive: true },
-                        select: { id: true },
+                        select: { id: true, name: true },
                         orderBy: { createdAt: "asc" },
                     });
                 }
+
+                console.log(`[public.lead] branch=${matchedBranch.name} staff=${JSON.stringify(staff.map(s => s.name))}`);
 
                 if (staff.length > 0) {
                     // Count leads per staff for load balancing
