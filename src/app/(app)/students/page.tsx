@@ -122,6 +122,7 @@ export default function StudentsPage() {
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
 
   const [courses, setCourses] = useState<CourseItem[]>([]);
   const [coursesLoading, setCoursesLoading] = useState(false);
@@ -186,6 +187,24 @@ export default function StudentsPage() {
     }
   }, [handleAuthError, queryString]);
 
+  const loadStatusCounts = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+    try {
+      const counts: Record<string, number> = {};
+      await Promise.all(
+        STATUS_OPTIONS.map(async (opt) => {
+          const data = await fetchJson<StudentsResponse>(
+            `/api/students?page=1&pageSize=1&studyStatus=${opt.value}`,
+            { token }
+          );
+          counts[opt.value] = data.total;
+        })
+      );
+      setStatusCounts(counts);
+    } catch { }
+  }, []);
+
   const loadCourses = useCallback(async () => {
     const token = getToken();
     if (!token) return;
@@ -243,6 +262,10 @@ export default function StudentsPage() {
   useEffect(() => {
     loadStudents();
   }, [loadStudents]);
+
+  useEffect(() => {
+    loadStatusCounts();
+  }, [loadStatusCounts]);
 
   useEffect(() => {
     loadCourses();
@@ -364,14 +387,16 @@ export default function StudentsPage() {
         {/* Stats */}
         <div className="relative mt-3 flex flex-wrap gap-2">
           {STATUS_OPTIONS.map((opt) => {
-            const count = items.filter((i) => i.studyStatus === opt.value).length;
             const s = getStudyStyle(opt.value);
             return (
               <span key={opt.value} className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">
-                {s.icon} {opt.label}: {count}
+                {s.icon} {opt.label}: {statusCounts[opt.value] ?? "..."}
               </span>
             );
           })}
+          <span className="inline-flex items-center gap-1 rounded-full bg-white/25 px-2.5 py-1 text-xs font-bold text-white backdrop-blur-sm">
+            📊 Tổng: {(Object.values(statusCounts) as number[]).reduce((a, b) => a + b, 0)}
+          </span>
         </div>
       </div>
 

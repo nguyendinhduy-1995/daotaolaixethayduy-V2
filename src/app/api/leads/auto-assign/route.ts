@@ -69,30 +69,21 @@ export async function POST(req: Request) {
       return jsonError(400, "VALIDATION_ERROR", API_ERROR_VI.required);
     }
 
-    // Include all roles that can receive lead assignments
-    const telesales = await prisma.user.findMany({
-      where: { role: { in: ["telesales", "manager", "direct_page"] }, isActive: true },
-      select: { id: true },
-      orderBy: { createdAt: "asc" },
-    });
-    if (telesales.length === 0) {
-      return jsonError(404, "NOT_FOUND", API_ERROR_VI.required);
-    }
-
-    let leads: Array<{ id: string; ownerId: string | null }> = [];
+    // ── Fetch leads ──
+    let leads: Array<{ id: string; ownerId: string | null; branchId: string }> = [];
     if (Array.isArray(body.leadIds) && body.leadIds.length > 0) {
       const leadIds = body.leadIds as string[];
       const uniqueLeadIds = Array.from(new Set(leadIds));
       leads = await prisma.lead.findMany({
         where: { id: { in: uniqueLeadIds } },
-        select: { id: true, ownerId: true },
+        select: { id: true, ownerId: true, branchId: true },
         orderBy: { createdAt: "asc" },
       });
     } else {
       const where = buildLeadWhere((body.filters as Record<string, unknown>) || {});
       leads = await prisma.lead.findMany({
         where,
-        select: { id: true, ownerId: true },
+        select: { id: true, ownerId: true, branchId: true },
         orderBy: { createdAt: "asc" },
       });
     }
@@ -101,19 +92,42 @@ export async function POST(req: Request) {
       return NextResponse.json({ updated: 0, assigned: [] });
     }
 
+    // Get all eligible staff, grouped by branch
+    const allStaff = await prisma.user.findMany({
+      where: { role: { in: ["telesales", "manager", "direct_page"] }, isActive: true },
+      select: { id: true, branchId: true },
+      orderBy: { createdAt: "asc" },
+    });
+
+    // Build a map: branchId -> staff[]
+    const staffByBranch = new Map<string, Array<{ id: string }>>();
+    for (const s of allStaff) {
+      if (!s.branchId) continue;
+      if (!staffByBranch.has(s.branchId)) staffByBranch.set(s.branchId, []);
+      staffByBranch.get(s.branchId)!.push({ id: s.id });
+    }
+
     const prioritized = [
       ...leads.filter((lead) => !lead.ownerId),
       ...leads.filter((lead) => lead.ownerId),
     ];
 
+    // Track round-robin index per branch
+    const branchIdx = new Map<string, number>();
+
     const result = await prisma.$transaction(async (tx) => {
       const assigned: Array<{ leadId: string; ownerId: string }> = [];
       let updated = 0;
-      let idx = 0;
 
       for (const lead of prioritized) {
-        const nextOwnerId = telesales[idx % telesales.length].id;
-        idx += 1;
+        // Get staff for THIS lead's branch only
+        const branchStaff = staffByBranch.get(lead.branchId);
+        if (!branchStaff || branchStaff.length === 0) continue;
+
+        const idx = branchIdx.get(lead.branchId) || 0;
+        const nextOwnerId = branchStaff[idx % branchStaff.length].id;
+        branchIdx.set(lead.branchId, idx + 1);
+
         if (lead.ownerId === nextOwnerId) continue;
 
         await tx.lead.update({
