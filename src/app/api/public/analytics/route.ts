@@ -48,9 +48,20 @@ export async function POST(req: Request) {
     try {
         // Parse body - support both application/json and text/plain (used by sendBeacon to avoid CORS preflight)
         const rawText = await req.text();
-        const body = JSON.parse(rawText) as
-            | { events: AnalyticsEvent[] }
-            | AnalyticsEvent;
+        if (!rawText || rawText.trim().length === 0) {
+            return NextResponse.json({ ok: true, count: 0 }, {
+                headers: { "Access-Control-Allow-Origin": getCorsOrigin(req) },
+            });
+        }
+        let body: { events: AnalyticsEvent[] } | AnalyticsEvent;
+        try {
+            body = JSON.parse(rawText) as { events: AnalyticsEvent[] } | AnalyticsEvent;
+        } catch {
+            // Malformed JSON (e.g. truncated sendBeacon payload) — silently accept
+            return NextResponse.json({ ok: true, count: 0 }, {
+                headers: { "Access-Control-Allow-Origin": getCorsOrigin(req) },
+            });
+        }
 
         // Support single event or batch
         const events: AnalyticsEvent[] = Array.isArray((body as { events: AnalyticsEvent[] }).events)
