@@ -431,6 +431,7 @@ model Lead {
 
   note         String?
   tags         String[]   @default([])
+  formSubmitCount Int      @default(1)
   lastContactAt DateTime?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt

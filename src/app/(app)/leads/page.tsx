@@ -38,6 +38,7 @@ type Lead = {
   ownerId: string | null;
   note: string | null;
   tags: string[];
+  formSubmitCount?: number;
   createdAt: string;
   updatedAt: string;
   owner?: {
@@ -823,6 +824,9 @@ export default function LeadsPage() {
                       <p>📡 {lead.source || "-"} · {lead.channel || "-"}</p>
                       <p>👤 {lead.owner?.name || lead.owner?.email || "-"}</p>
                       <p>📅 {formatDateTimeVi(lead.createdAt)}</p>
+                      {(lead.formSubmitCount ?? 0) > 1 ? (
+                        <p className="font-semibold text-orange-600">📝 Gửi form: {lead.formSubmitCount} lần</p>
+                      ) : null}
                     </div>
                     <div className="mt-2 flex items-center gap-2">
                       <button
@@ -853,7 +857,7 @@ export default function LeadsPage() {
             isEmpty={!loading && items.length === 0}
             emptyText="Không có dữ liệu khách hàng."
           >
-            <Table headers={["Khách hàng", "SĐT", "Trạng thái", "Người phụ trách", "Nguồn/Kênh", "Ngày tạo", "Hành động"]}>
+            <Table headers={["Khách hàng", "SĐT", "Trạng thái", "Người phụ trách", "Nguồn/Kênh", "Gửi form", "Ngày tạo", "Hành động"]}>
               {items.map((lead) => {
                 const s = statusStyle(lead.status);
                 return (
@@ -877,6 +881,15 @@ export default function LeadsPage() {
                     <td className="px-3 py-2">
                       <div className="text-sm">{lead.source || "-"}</div>
                       <div className="text-xs text-zinc-500">{lead.channel || "-"}</div>
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      {(lead.formSubmitCount ?? 0) > 1 ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 text-orange-700 border border-orange-200 px-2 py-0.5 text-xs font-bold">
+                          📝 {lead.formSubmitCount}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-zinc-400">{lead.formSubmitCount ?? 1}</span>
+                      )}
                     </td>
                     <td className="px-3 py-2 text-xs text-zinc-600">{formatDateTimeVi(lead.createdAt)}</td>
                     <td className="px-3 py-2">

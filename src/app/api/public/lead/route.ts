@@ -45,6 +45,7 @@ export async function POST(req: Request) {
                 where: { id: existing.id },
                 data: {
                     updatedAt: new Date(),
+                    formSubmitCount: { increment: 1 },
                     ...(fullName && !existing.fullName ? { fullName } : {}),
                     ...(province && !existing.province ? { province } : {}),
                     ...(licenseType && !existing.licenseType ? { licenseType } : {}),
