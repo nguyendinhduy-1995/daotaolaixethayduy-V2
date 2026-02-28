@@ -56,6 +56,7 @@ export async function POST(req: Request) {
                     ...(tags.length > 0 ? { tags: { set: [...new Set([...existing.tags, ...tags])] } } : {}),
                 },
             });
+            console.log(`[public.lead] DUPLICATE phone=${phone} name="${fullName}" existingId=${existing.id} formCount=${(existing.formSubmitCount || 1) + 1}`);
             return NextResponse.json({ ok: true, message: "Đã ghi nhận thông tin. Chúng tôi sẽ liên hệ bạn sớm!" });
         }
 
@@ -195,6 +196,8 @@ export async function POST(req: Request) {
                 },
             },
         });
+
+        console.log(`[public.lead] NEW lead=${lead.id} phone=${phone} name="${fullName}" province="${province}" branch=${branchId} owner=${ownerId || 'NONE'}`);
 
         return NextResponse.json({ ok: true, message: "Đã ghi nhận thông tin. Chúng tôi sẽ liên hệ bạn sớm!" });
     } catch (err) {

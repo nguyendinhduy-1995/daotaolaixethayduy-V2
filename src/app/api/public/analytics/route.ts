@@ -29,6 +29,12 @@ const VALID_EVENT_TYPES = [
     // Landing-specific
     "section_view", "cta_click", "phone_click", "zalo_click",
     "form_focus", "form_submit", "form_view", "pricing_view",
+    // Lead form tracking (custom events from LeadForm.tsx)
+    "lead_form_start", "lead_form_complete",
+    "lead_submit_success", "lead_submit_fail",
+    // Veteran landing (bo-doi-xuat-ngu)
+    "veteran_lead_form_start", "veteran_lead_form_complete",
+    "veteran_lead_submit_success", "veteran_lead_submit_fail",
 ];
 
 type AnalyticsEvent = {
