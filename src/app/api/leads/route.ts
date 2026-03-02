@@ -90,6 +90,10 @@ export async function GET(req: Request) {
         }
         : {}),
       ...(noCalled ? { events: { none: { type: "CALLED" } } } : {}),
+      ...(searchParams.get("callbackToday") === "true" ? {
+        callbackAt: { lte: new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }).split(",")[0] + "T23:59:59.999+07:00") },
+        NOT: { status: { in: ["SIGNED", "STUDYING", "EXAMED", "RESULT", "LOST"] as LeadStatus[] } },
+      } : {}),
     };
     const where = applyScopeToWhere(whereBase, scope, "lead");
 

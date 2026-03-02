@@ -40,6 +40,9 @@ type Lead = {
   tags: string[];
   formSubmitCount?: number;
   lastContactAt: string | null;
+  callOutcome?: string | null;
+  callbackAt?: string | null;
+  callbackNote?: string | null;
   createdAt: string;
   updatedAt: string;
   _count?: { events: number };
@@ -93,6 +96,26 @@ const STATUS_LABELS: Record<string, string> = {
   RESULT: "Có kết quả",
   LOST: "Mất",
   CALLED: "Đã gọi",
+};
+
+const CALL_OUTCOMES = ["answered", "no_answer", "busy", "interested", "not_interested", "wrong_number", "call_back"] as const;
+const CALL_OUTCOME_LABELS: Record<string, string> = {
+  answered: "Nghe máy",
+  no_answer: "Không nghe",
+  busy: "Máy bận",
+  interested: "Quan tâm",
+  not_interested: "Từ chối",
+  wrong_number: "Sai số",
+  call_back: "Hẹn gọi lại",
+};
+const CALL_OUTCOME_ICONS: Record<string, string> = {
+  answered: "✅",
+  no_answer: "📵",
+  busy: "🔴",
+  interested: "⭐",
+  not_interested: "❌",
+  wrong_number: "⚠️",
+  call_back: "🔄",
 };
 
 const STATUS_STYLE: Record<string, { icon: string; bg: string; text: string; border: string; gradient: string }> = {
@@ -260,6 +283,10 @@ export default function LeadsPage() {
   const [uncalledLeads, setUncalledLeads] = useState<Lead[]>([]);
   const [uncalledExpanded, setUncalledExpanded] = useState(true);
 
+  // Callback leads (scheduled for today or overdue)
+  const [callbackLeads, setCallbackLeads] = useState<Lead[]>([]);
+  const [callbackExpanded, setCallbackExpanded] = useState(true);
+
   const query = useMemo(() => {
     const params = new URLSearchParams();
     params.set("page", String(page));
@@ -287,14 +314,16 @@ export default function LeadsPage() {
     setLoading(true);
     setError("");
     try {
-      const [data, uncalledData] = await Promise.all([
+      const [data, uncalledData, callbackData] = await Promise.all([
         fetchJson<LeadListResponse>(`/api/leads?${query}`, { token }),
         fetchJson<LeadListResponse>(`/api/leads?page=1&pageSize=20&sort=createdAt&order=desc&noCalled=true`, { token }).catch(() => ({ items: [] as Lead[], total: 0 })),
+        fetchJson<LeadListResponse>(`/api/leads?page=1&pageSize=20&sort=createdAt&order=desc&callbackToday=true`, { token }).catch(() => ({ items: [] as Lead[], total: 0 })),
       ]);
       setItems(data.items);
       setTotal(data.total);
       if (data.statusCounts) setStatusCounts(data.statusCounts);
       setUncalledLeads(uncalledData.items || []);
+      setCallbackLeads(callbackData.items || []);
     } catch (e) {
       const err = e as ApiClientError;
       if (!handleAuthError(err)) setError(formatError(err));
@@ -676,6 +705,69 @@ export default function LeadsPage() {
                 {uncalledLeads.length > 5 ? (
                   <p className="pt-1 text-center text-xs text-red-500/70">
                     và {uncalledLeads.length - 5} khách nữa...
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        {/* ── Cần gọi hôm nay (callback) ── */}
+        {callbackLeads.length > 0 ? (
+          <div className="overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 shadow-sm animate-fadeInUp">
+            <button
+              type="button"
+              onClick={() => setCallbackExpanded((v) => !v)}
+              className="flex w-full items-center justify-between px-4 py-3 text-left"
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 text-lg text-white shadow-sm">🔔</span>
+                <div>
+                  <p className="text-sm font-bold text-amber-800">Cần gọi hôm nay ({callbackLeads.length})</p>
+                  <p className="text-xs text-amber-600/70">Khách hẹn gọi lại</p>
+                </div>
+              </div>
+              <span className={`text-amber-400 transition-transform duration-200 ${callbackExpanded ? "rotate-0" : "-rotate-90"}`}>▾</span>
+            </button>
+            {callbackExpanded ? (
+              <div className="space-y-1.5 px-3 pb-3">
+                {callbackLeads.slice(0, 5).map((lead) => (
+                  <div
+                    key={lead.id}
+                    className="flex items-center gap-3 rounded-xl border border-amber-100 bg-white px-3 py-2.5 shadow-sm transition hover:shadow-md"
+                  >
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-sm">🔔</div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-zinc-900">{lead.fullName || "Chưa có tên"}</p>
+                      <div className="flex items-center gap-2 text-xs text-zinc-500">
+                        <span className="font-mono">{lead.phone || "—"}</span>
+                        {lead.callbackNote ? (
+                          <span className="truncate text-amber-600">· {lead.callbackNote}</span>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      {lead.phone ? (
+                        <a
+                          href={`tel:${lead.phone}`}
+                          className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 px-2.5 py-1 text-[11px] font-bold text-white shadow-sm transition hover:shadow-md active:scale-95"
+                        >
+                          📞 Gọi
+                        </a>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => openDetail(lead.id)}
+                        className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 px-2.5 py-1 text-[11px] font-bold text-white shadow-sm transition hover:shadow-md active:scale-95"
+                      >
+                        👁️ Xem
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {callbackLeads.length > 5 ? (
+                  <p className="pt-1 text-center text-xs text-amber-500/70">
+                    và {callbackLeads.length - 5} khách nữa...
                   </p>
                 ) : null}
               </div>
@@ -1375,35 +1467,94 @@ export default function LeadsPage() {
                           <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-teal-600 text-xs text-white">📞</span>
                           Lịch sử cuộc gọi ({callEvents.length})
                         </h3>
-                        <Button
-                          className="!bg-gradient-to-r !from-green-500 !to-emerald-500 !text-white !text-xs !px-3 !py-1.5"
-                          disabled={eventSaving}
-                          onClick={() => {
-                            setEventForm({ type: "CALLED", note: "", meta: "" });
-                            addEvent(detailLead.id);
-                          }}
-                        >
-                          📞 Ghi nhận cuộc gọi
-                        </Button>
+                        {detailLead.callOutcome ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-white border border-cyan-200 px-2 py-0.5 text-xs font-bold text-cyan-700">
+                            {CALL_OUTCOME_ICONS[detailLead.callOutcome] || "📞"} {CALL_OUTCOME_LABELS[detailLead.callOutcome] || detailLead.callOutcome}
+                          </span>
+                        ) : null}
                       </div>
-                      {/* Quick call note */}
+
+                      {/* Call outcome + callback scheduling */}
+                      {detailLead.callbackAt ? (
+                        <div className="flex items-center gap-2 mb-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs">
+                          <span>🔔</span>
+                          <span className="font-bold text-amber-800">Hẹn gọi lại: {formatDateTimeVi(detailLead.callbackAt)}</span>
+                          {detailLead.callbackNote ? <span className="text-amber-600">· {detailLead.callbackNote}</span> : null}
+                        </div>
+                      ) : null}
+
+                      {/* Outcome buttons */}
+                      <div className="mb-2">
+                        <p className="text-[11px] text-cyan-600 mb-1.5 font-medium">Ghi nhận kết quả cuộc gọi:</p>
+                        <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-7">
+                          {CALL_OUTCOMES.map((outcome) => (
+                            <button
+                              key={outcome}
+                              type="button"
+                              disabled={eventSaving}
+                              onClick={async () => {
+                                const token = getToken();
+                                if (!token || !detailLead) return;
+                                setEventSaving(true);
+                                try {
+                                  // Log CALLED event with outcome
+                                  await fetchJson(`/api/leads/${detailLead.id}/events`, {
+                                    method: "POST",
+                                    token,
+                                    body: { type: "CALLED", note: `${CALL_OUTCOME_LABELS[outcome]}${eventForm.note ? `: ${eventForm.note}` : ""}` },
+                                  });
+                                  // Update callOutcome on lead
+                                  const patchBody: Record<string, unknown> = { callOutcome: outcome };
+                                  // If call_back, prompt for callbackAt
+                                  if (outcome === "call_back") {
+                                    const when = prompt("Hẹn gọi lại khi nào? (VD: 2025-03-03 14:00)");
+                                    if (when) {
+                                      patchBody.callbackAt = new Date(when).toISOString();
+                                      patchBody.callbackNote = eventForm.note || null;
+                                    }
+                                  } else {
+                                    patchBody.callbackAt = null;
+                                    patchBody.callbackNote = null;
+                                  }
+                                  await fetchJson(`/api/leads/${detailLead.id}`, {
+                                    method: "PATCH",
+                                    token,
+                                    body: patchBody,
+                                  });
+                                  setEventForm({ type: "CALLED", note: "", meta: "" });
+                                  toast.success(`Đã ghi nhận: ${CALL_OUTCOME_ICONS[outcome]} ${CALL_OUTCOME_LABELS[outcome]}`);
+                                  await loadLeads();
+                                  openDetail(detailLead.id);
+                                } catch (e) {
+                                  const err = e as ApiClientError;
+                                  toast.error(formatError(err));
+                                } finally {
+                                  setEventSaving(false);
+                                }
+                              }}
+                              className="flex flex-col items-center gap-0.5 rounded-lg border border-cyan-100 bg-white/80 px-1 py-1.5 text-center transition hover:bg-cyan-50 hover:border-cyan-300 active:scale-95 disabled:opacity-50"
+                            >
+                              <span className="text-sm">{CALL_OUTCOME_ICONS[outcome]}</span>
+                              <span className="text-[9px] font-medium text-zinc-600 leading-tight">{CALL_OUTCOME_LABELS[outcome]}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Quick note input */}
                       <div className="flex gap-2 mb-3">
                         <Input
-                          placeholder="Ghi chú cuộc gọi (nhấn Enter)…"
+                          placeholder="Ghi chú cuộc gọi…"
                           value={eventForm.type === "CALLED" ? eventForm.note : ""}
                           onChange={(e) => setEventForm({ type: "CALLED", note: e.target.value, meta: "" })}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && !eventSaving && detailLead) {
-                              setEventForm(prev => ({ ...prev, type: "CALLED" }));
-                              addEvent(detailLead.id);
-                            }
-                          }}
                           className="!text-xs"
                         />
                       </div>
+
+                      {/* Timeline */}
                       {callEvents.length === 0 ? (
                         <div className="rounded-lg border border-dashed border-cyan-200 bg-white/50 p-3 text-center text-xs text-cyan-600">
-                          Chưa có cuộc gọi nào. Bấm &quot;Ghi nhận cuộc gọi&quot; để thêm.
+                          Chưa có cuộc gọi nào. Chọn kết quả ở trên để ghi nhận.
                         </div>
                       ) : (
                         <div className="space-y-1.5 max-h-48 overflow-y-auto">

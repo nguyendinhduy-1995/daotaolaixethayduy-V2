@@ -44,7 +44,9 @@ enum LeadEventType {
 }
 
 enum CallOutcome {
+  answered
   no_answer
+  busy
   interested
   not_interested
   wrong_number
@@ -433,6 +435,8 @@ model Lead {
   tags         String[]   @default([])
   formSubmitCount Int      @default(1)
   lastContactAt DateTime?
+  callbackAt    DateTime?
+  callbackNote  String?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 

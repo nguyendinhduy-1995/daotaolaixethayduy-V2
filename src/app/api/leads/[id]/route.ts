@@ -80,6 +80,8 @@ export async function PATCH(req: Request, context: RouteContext) {
         }
       }
 
+      const VALID_CALL_OUTCOMES = ["answered", "no_answer", "busy", "interested", "not_interested", "wrong_number", "call_back"];
+
       const data: Prisma.LeadUpdateInput = {
         ...(body.fullName !== undefined ? { fullName: typeof body.fullName === "string" ? body.fullName : null } : {}),
         ...(body.phone !== undefined
@@ -95,6 +97,15 @@ export async function PATCH(req: Request, context: RouteContext) {
         ...(body.ownerId !== undefined ? { ownerId: nextOwnerId } : {}),
         ...(body.note !== undefined ? { note: typeof body.note === "string" ? body.note : null } : {}),
         ...(body.tags !== undefined ? { tags: body.tags } : {}),
+        ...(body.callOutcome !== undefined && VALID_CALL_OUTCOMES.includes(body.callOutcome)
+          ? { callOutcome: body.callOutcome }
+          : {}),
+        ...(body.callbackAt !== undefined
+          ? { callbackAt: body.callbackAt ? new Date(body.callbackAt) : null }
+          : {}),
+        ...(body.callbackNote !== undefined
+          ? { callbackNote: typeof body.callbackNote === "string" ? body.callbackNote : null }
+          : {}),
       };
 
       const updated = await tx.lead.update({
