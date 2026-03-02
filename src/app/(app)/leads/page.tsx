@@ -73,6 +73,13 @@ type LeadEvent = {
   createdById?: string | null;
 };
 type LeadEventsResponse = { items: LeadEvent[] };
+type CallStats = {
+  todayCalls: number;
+  todayOutcomes: Record<string, number>;
+  callbackOverdue: number;
+  uncalledCount: number;
+  weekCalls: Record<string, number>;
+};
 type UserOption = {
   id: string;
   name: string | null;
@@ -287,6 +294,9 @@ export default function LeadsPage() {
   const [callbackLeads, setCallbackLeads] = useState<Lead[]>([]);
   const [callbackExpanded, setCallbackExpanded] = useState(true);
 
+  // Call stats
+  const [callStats, setCallStats] = useState<CallStats | null>(null);
+
   const query = useMemo(() => {
     const params = new URLSearchParams();
     params.set("page", String(page));
@@ -314,16 +324,18 @@ export default function LeadsPage() {
     setLoading(true);
     setError("");
     try {
-      const [data, uncalledData, callbackData] = await Promise.all([
+      const [data, uncalledData, callbackData, statsData] = await Promise.all([
         fetchJson<LeadListResponse>(`/api/leads?${query}`, { token }),
         fetchJson<LeadListResponse>(`/api/leads?page=1&pageSize=20&sort=createdAt&order=desc&noCalled=true`, { token }).catch(() => ({ items: [] as Lead[], total: 0 })),
         fetchJson<LeadListResponse>(`/api/leads?page=1&pageSize=20&sort=createdAt&order=desc&callbackToday=true`, { token }).catch(() => ({ items: [] as Lead[], total: 0 })),
+        fetchJson<CallStats>(`/api/leads/call-stats`, { token }).catch(() => null),
       ]);
       setItems(data.items);
       setTotal(data.total);
       if (data.statusCounts) setStatusCounts(data.statusCounts);
       setUncalledLeads(uncalledData.items || []);
       setCallbackLeads(callbackData.items || []);
+      if (statsData) setCallStats(statsData);
     } catch (e) {
       const err = e as ApiClientError;
       if (!handleAuthError(err)) setError(formatError(err));
@@ -653,6 +665,69 @@ export default function LeadsPage() {
             ) : null}
           </div>
         </div>
+
+        {/* ── Telesales Dashboard ── */}
+        {callStats ? (
+          <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm p-4 animate-fadeInUp">
+            <h3 className="flex items-center gap-2 text-sm font-bold text-zinc-900 mb-3">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-xs text-white">📊</span>
+              Thống kê cuộc gọi
+            </h3>
+            {/* KPI Cards */}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 mb-3">
+              <div className="rounded-xl border border-cyan-100 bg-gradient-to-br from-cyan-50 to-teal-50 p-3 text-center">
+                <p className="text-2xl font-black text-cyan-700">{callStats.todayCalls}</p>
+                <p className="text-[10px] font-medium text-cyan-600 mt-0.5">📞 Cuộc gọi hôm nay</p>
+              </div>
+              <div className="rounded-xl border border-amber-100 bg-gradient-to-br from-amber-50 to-orange-50 p-3 text-center">
+                <p className="text-2xl font-black text-amber-700">{callStats.callbackOverdue}</p>
+                <p className="text-[10px] font-medium text-amber-600 mt-0.5">🔔 Cần gọi lại</p>
+              </div>
+              <div className="rounded-xl border border-red-100 bg-gradient-to-br from-red-50 to-rose-50 p-3 text-center">
+                <p className="text-2xl font-black text-red-700">{callStats.uncalledCount}</p>
+                <p className="text-[10px] font-medium text-red-600 mt-0.5">⚠️ Chưa gọi</p>
+              </div>
+              <div className="rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-green-50 p-3 text-center">
+                <p className="text-2xl font-black text-emerald-700">
+                  {callStats.todayCalls > 0
+                    ? Math.round(((callStats.todayOutcomes.answered || 0) + (callStats.todayOutcomes.interested || 0)) / callStats.todayCalls * 100)
+                    : 0}%
+                </p>
+                <p className="text-[10px] font-medium text-emerald-600 mt-0.5">✅ Tỷ lệ nghe máy</p>
+              </div>
+            </div>
+
+            {/* Outcome breakdown */}
+            {callStats.todayCalls > 0 ? (
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {Object.entries(callStats.todayOutcomes).map(([key, count]) => (
+                  <span key={key} className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600">
+                    {CALL_OUTCOME_ICONS[key] || "📞"} {CALL_OUTCOME_LABELS[key] || key}: {count}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+
+            {/* Mini weekly chart */}
+            <div className="flex items-end gap-1 h-12">
+              {Object.entries(callStats.weekCalls).map(([date, count]) => {
+                const max = Math.max(1, ...Object.values(callStats.weekCalls));
+                const heightPct = Math.max(4, (count / max) * 100);
+                const isToday = date === Object.keys(callStats.weekCalls).at(-1);
+                return (
+                  <div key={date} className="flex-1 flex flex-col items-center gap-0.5">
+                    <span className="text-[8px] font-bold text-zinc-500">{count || ""}</span>
+                    <div
+                      className={`w-full rounded-t-sm transition-all ${isToday ? "bg-gradient-to-t from-cyan-500 to-teal-400" : "bg-zinc-200"}`}
+                      style={{ height: `${heightPct}%`, minHeight: "2px" }}
+                    />
+                    <span className="text-[7px] text-zinc-400">{date.slice(8)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
 
         {/* ── Chưa gọi card ── */}
         {uncalledLeads.length > 0 ? (

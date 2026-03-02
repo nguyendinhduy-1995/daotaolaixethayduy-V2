@@ -90,12 +90,20 @@ export async function GET(req: Request) {
         }
         : {}),
       ...(noCalled ? { events: { none: { type: "CALLED" } } } : {}),
-      ...(searchParams.get("callbackToday") === "true" ? {
-        callbackAt: { lte: new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }).split(",")[0] + "T23:59:59.999+07:00") },
-        NOT: { status: { in: ["SIGNED", "STUDYING", "EXAMED", "RESULT", "LOST"] as LeadStatus[] } },
-      } : {}),
     };
-    const where = applyScopeToWhere(whereBase, scope, "lead");
+
+    // Add callbackToday filter if requested (must be separate to avoid type conflict)
+    const callbackToday = searchParams.get("callbackToday") === "true";
+    const combinedWhere = applyScopeToWhere(whereBase, scope, "lead");
+    const where = callbackToday
+      ? {
+        AND: [
+          combinedWhere,
+          { callbackAt: { lte: new Date() } },
+          { NOT: { status: { in: ["SIGNED", "STUDYING", "EXAMED", "RESULT", "LOST"] as LeadStatus[] } } },
+        ],
+      }
+      : combinedWhere;
 
     const [items, total, statusGroups] = await Promise.all([
       prisma.lead.findMany({
