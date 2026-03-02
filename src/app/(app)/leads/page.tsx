@@ -39,8 +39,10 @@ type Lead = {
   note: string | null;
   tags: string[];
   formSubmitCount?: number;
+  lastContactAt: string | null;
   createdAt: string;
   updatedAt: string;
+  _count?: { events: number };
   owner?: {
     id: string;
     name: string | null;
@@ -108,6 +110,23 @@ const STATUS_STYLE: Record<string, { icon: string; bg: string; text: string; bor
 
 function statusStyle(status: string) {
   return STATUS_STYLE[status] || STATUS_STYLE.NEW;
+}
+
+/** Format relative time in Vietnamese: '5 phút trước', '2 giờ trước', '3 ngày trước' */
+function relativeTime(dateStr: string | null | undefined): string {
+  if (!dateStr) return "—";
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diffMs = now - then;
+  if (diffMs < 0) return "vừa xong";
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "vừa xong";
+  if (mins < 60) return `${mins} phút trước`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} giờ trước`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days} ngày trước`;
+  return `${Math.floor(days / 30)} tháng trước`;
 }
 
 function LeadsSkeleton() {
@@ -802,6 +821,7 @@ export default function LeadsPage() {
           ) : (
             items.map((lead, idx) => {
               const s = statusStyle(lead.status);
+              const callCount = lead._count?.events ?? 0;
               return (
                 <div
                   key={lead.id}
@@ -816,19 +836,41 @@ export default function LeadsPage() {
                         <p className="truncate text-sm font-bold text-zinc-900">{lead.fullName || "Chưa có tên"}</p>
                         <p className="text-xs text-zinc-500 font-mono">{lead.phone || "Chưa có SĐT"}</p>
                       </div>
-                      <span className={`inline-flex items-center gap-1 rounded-full ${s.bg} ${s.text} border ${s.border} px-2 py-0.5 text-xs font-bold`}>
-                        {STATUS_LABELS[lead.status] || lead.status}
-                      </span>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className={`inline-flex items-center gap-1 rounded-full ${s.bg} ${s.text} border ${s.border} px-2 py-0.5 text-xs font-bold`}>
+                          {STATUS_LABELS[lead.status] || lead.status}
+                        </span>
+                        {callCount > 0 ? (
+                          <span className="inline-flex items-center gap-0.5 rounded-full bg-cyan-50 text-cyan-700 border border-cyan-200 px-1.5 py-0.5 text-[10px] font-bold">
+                            📞 {callCount}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-0.5 rounded-full bg-red-50 text-red-600 border border-red-200 px-1.5 py-0.5 text-[10px] font-bold">
+                            ⚠️ Chưa gọi
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="mt-2 grid grid-cols-2 gap-1 text-xs text-zinc-500">
                       <p>📡 {lead.source || "-"} · {lead.channel || "-"}</p>
                       <p>👤 {lead.owner?.name || lead.owner?.email || "-"}</p>
                       <p>📅 {formatDateTimeVi(lead.createdAt)}</p>
+                      {lead.lastContactAt ? (
+                        <p className="text-cyan-600 font-medium">🕐 {relativeTime(lead.lastContactAt)}</p>
+                      ) : null}
                       {(lead.formSubmitCount ?? 0) > 1 ? (
                         <p className="font-semibold text-orange-600">📝 Gửi form: {lead.formSubmitCount} lần</p>
                       ) : null}
                     </div>
                     <div className="mt-2 flex items-center gap-2">
+                      {lead.phone ? (
+                        <a
+                          href={`tel:${lead.phone}`}
+                          className="inline-flex items-center justify-center gap-1 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 px-3 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:shadow-md active:scale-95"
+                        >
+                          📞 Gọi
+                        </a>
+                      ) : null}
                       <button
                         type="button"
                         onClick={() => openDetail(lead.id)}
@@ -857,9 +899,10 @@ export default function LeadsPage() {
             isEmpty={!loading && items.length === 0}
             emptyText="Không có dữ liệu khách hàng."
           >
-            <Table headers={["Khách hàng", "SĐT", "Trạng thái", "Người phụ trách", "Nguồn/Kênh", "Gửi form", "Ngày tạo", "Hành động"]}>
+            <Table headers={["Khách hàng", "SĐT", "Trạng thái", "Cuộc gọi", "Liên hệ cuối", "Người phụ trách", "Nguồn", "Hành động"]}>
               {items.map((lead) => {
                 const s = statusStyle(lead.status);
+                const callCount = lead._count?.events ?? 0;
                 return (
                   <tr key={lead.id} className="transition-colors hover:bg-zinc-50">
                     <td className="px-3 py-2">
@@ -871,27 +914,48 @@ export default function LeadsPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-3 py-2 font-mono text-sm">{lead.phone || "-"}</td>
+                    <td className="px-3 py-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono text-sm">{lead.phone || "-"}</span>
+                        {lead.phone ? (
+                          <a
+                            href={`tel:${lead.phone}`}
+                            className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-green-100 text-green-700 text-xs transition hover:bg-green-200"
+                            title="Gọi"
+                          >
+                            📞
+                          </a>
+                        ) : null}
+                      </div>
+                    </td>
                     <td className="px-3 py-2">
                       <span className={`inline-flex items-center gap-1 rounded-full ${s.bg} ${s.text} border ${s.border} px-2 py-0.5 text-xs font-bold`}>
                         {s.icon} {STATUS_LABELS[lead.status] || lead.status}
                       </span>
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      {callCount > 0 ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-cyan-50 text-cyan-700 border border-cyan-200 px-2 py-0.5 text-xs font-bold">
+                          📞 {callCount}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-0.5 rounded-full bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 text-[11px] font-bold">
+                          ⚠️ Chưa gọi
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-xs">
+                      {lead.lastContactAt ? (
+                        <span className="text-cyan-600 font-medium">🕐 {relativeTime(lead.lastContactAt)}</span>
+                      ) : (
+                        <span className="text-zinc-400">—</span>
+                      )}
                     </td>
                     <td className="px-3 py-2 text-xs text-zinc-600">{lead.owner?.name || lead.owner?.email || "-"}</td>
                     <td className="px-3 py-2">
                       <div className="text-sm">{lead.source || "-"}</div>
                       <div className="text-xs text-zinc-500">{lead.channel || "-"}</div>
                     </td>
-                    <td className="px-3 py-2 text-center">
-                      {(lead.formSubmitCount ?? 0) > 1 ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 text-orange-700 border border-orange-200 px-2 py-0.5 text-xs font-bold">
-                          📝 {lead.formSubmitCount}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-zinc-400">{lead.formSubmitCount ?? 1}</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-xs text-zinc-600">{formatDateTimeVi(lead.createdAt)}</td>
                     <td className="px-3 py-2">
                       <div className="flex flex-wrap gap-1.5">
                         <button
@@ -1225,25 +1289,37 @@ export default function LeadsPage() {
               {/* Lead info card */}
               <div className="overflow-hidden rounded-xl border border-zinc-100">
                 <div className={`h-1.5 bg-gradient-to-r ${statusStyle(detailLead.status).gradient}`} />
-                <div className="grid gap-2 p-3 text-sm md:grid-cols-2">
-                  <div className="flex items-center gap-2">
-                    <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${statusStyle(detailLead.status).bg} text-sm`}>{statusStyle(detailLead.status).icon}</span>
-                    <div>
-                      <p className="font-bold text-zinc-900">{detailLead.fullName || "-"}</p>
+                <div className="p-3">
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${statusStyle(detailLead.status).bg} text-lg`}>{statusStyle(detailLead.status).icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-zinc-900 truncate">{detailLead.fullName || "-"}</p>
                       <p className="text-xs text-zinc-500 font-mono">{detailLead.phone || "-"}</p>
                     </div>
+                    {detailLead.phone ? (
+                      <a
+                        href={`tel:${detailLead.phone}`}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 px-4 py-2 text-xs font-bold text-white shadow-sm transition-all hover:shadow-md active:scale-95"
+                      >
+                        📞 Gọi ngay
+                      </a>
+                    ) : null}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`inline-flex items-center gap-1 rounded-full ${statusStyle(detailLead.status).bg} ${statusStyle(detailLead.status).text} border ${statusStyle(detailLead.status).border} px-2.5 py-1 text-xs font-bold`}>
-                      {statusStyle(detailLead.status).icon} {STATUS_LABELS[detailLead.status] || detailLead.status}
-                    </span>
+                  <div className="grid gap-1.5 text-sm md:grid-cols-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-flex items-center gap-1 rounded-full ${statusStyle(detailLead.status).bg} ${statusStyle(detailLead.status).text} border ${statusStyle(detailLead.status).border} px-2.5 py-1 text-xs font-bold`}>
+                        {statusStyle(detailLead.status).icon} {STATUS_LABELS[detailLead.status] || detailLead.status}
+                      </span>
+                    </div>
+                    <div><span className="text-zinc-500">Nguồn:</span> {detailLead.source || "-"} · {detailLead.channel || "-"}</div>
+                    <div><span className="text-zinc-500">Hạng bằng:</span> {detailLead.licenseType || "-"}</div>
+                    <div><span className="text-zinc-500">Tỉnh thành:</span> {detailLead.province || "-"}</div>
+                    <div><span className="text-zinc-500">Phụ trách:</span> {detailLead.owner?.name || detailLead.owner?.email || "-"}</div>
+                    <div><span className="text-zinc-500">Ngày tạo:</span> {formatDateTimeVi(detailLead.createdAt)}</div>
+                    {detailLead.lastContactAt ? (
+                      <div className="text-cyan-600 font-medium">🕐 Liên hệ cuối: {relativeTime(detailLead.lastContactAt)}</div>
+                    ) : null}
                   </div>
-                  <div><span className="text-zinc-500">Nguồn:</span> {detailLead.source || "-"}</div>
-                  <div><span className="text-zinc-500">Kênh:</span> {detailLead.channel || "-"}</div>
-                  <div><span className="text-zinc-500">Hạng bằng:</span> {detailLead.licenseType || "-"}</div>
-                  <div><span className="text-zinc-500">Tỉnh thành:</span> {detailLead.province || "-"}</div>
-                  <div><span className="text-zinc-500">Phụ trách:</span> {detailLead.owner?.name || detailLead.owner?.email || "-"}</div>
-                  <div><span className="text-zinc-500">Ngày tạo:</span> {formatDateTimeVi(detailLead.createdAt)}</div>
                 </div>
               </div>
 
@@ -1287,77 +1363,143 @@ export default function LeadsPage() {
                 ) : null}
               </div>
 
-              {/* ── Thêm sự kiện nhanh (inline) ── */}
-              <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-3">
-                <h3 className="mb-2 flex items-center gap-2 text-sm font-bold text-blue-800">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-cyan-600 text-xs text-white">+</span>
-                  Thêm sự kiện
-                </h3>
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                  <div className="flex-1 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    <Select value={eventForm.type} onChange={(e) => setEventForm((s) => ({ ...s, type: e.target.value }))}>
-                      {EVENT_OPTIONS.map((type) => (
-                        <option key={type} value={type}>
-                          {STATUS_LABELS[type] || type}
-                        </option>
-                      ))}
-                    </Select>
-                    <Input
-                      placeholder="Ghi chú sự kiện..."
-                      value={eventForm.note}
-                      className="col-span-1 sm:col-span-2"
-                      onChange={(e) => setEventForm((s) => ({ ...s, note: e.target.value }))}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !eventSaving && detailLead) {
-                          addEvent(detailLead.id);
-                        }
-                      }}
-                    />
-                  </div>
-                  <Button
-                    className="!bg-gradient-to-r !from-blue-600 !to-cyan-600 !text-white shrink-0"
-                    disabled={eventSaving}
-                    onClick={() => addEvent(detailLead.id)}
-                  >
-                    {eventSaving ? "Đang lưu..." : "Lưu"}
-                  </Button>
-                </div>
-              </div>
-
-              {/* ── Nhật ký sự kiện ── */}
-              <div>
-                <h3 className="mb-2 flex items-center gap-2 text-sm font-bold text-zinc-900">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-xs text-white">📋</span>
-                  Nhật ký sự kiện ({detailEvents.length})
-                </h3>
-                {detailEvents.length === 0 ? (
-                  <div className="rounded-xl border-2 border-dashed border-zinc-200 p-4 text-center text-sm text-zinc-500">Chưa có sự kiện.</div>
-                ) : (
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {detailEvents.map((event) => {
-                      const es = statusStyle(event.type);
-                      const payload = event.payload as Record<string, unknown> | null | undefined;
-                      const eventNote = payload?.note as string | undefined;
-                      return (
-                        <div key={event.id} className={`overflow-hidden rounded-xl border ${es.border} bg-white shadow-sm`}>
-                          <div className={`h-0.5 bg-gradient-to-r ${es.gradient}`} />
-                          <div className="p-3">
-                            <div className="flex items-center justify-between text-sm">
-                              <span className={`inline-flex items-center gap-1 rounded-full ${es.bg} ${es.text} px-2 py-0.5 text-xs font-bold`}>
-                                {es.icon} {STATUS_LABELS[event.type] || event.type}
-                              </span>
-                              <span className="text-xs text-zinc-500">{formatDateTimeVi(event.createdAt)}</span>
-                            </div>
-                            {eventNote ? (
-                              <p className="mt-1.5 text-sm text-zinc-700 pl-1">💬 {eventNote}</p>
-                            ) : null}
-                          </div>
+              {/* ── Lịch sử cuộc gọi ── */}
+              {(() => {
+                const callEvents = detailEvents.filter(e => e.type === "CALLED");
+                const otherEvents = detailEvents.filter(e => e.type !== "CALLED");
+                return (
+                  <>
+                    <div className="rounded-xl border border-cyan-200 bg-gradient-to-br from-cyan-50 to-teal-50 p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="flex items-center gap-2 text-sm font-bold text-cyan-800">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-teal-600 text-xs text-white">📞</span>
+                          Lịch sử cuộc gọi ({callEvents.length})
+                        </h3>
+                        <Button
+                          className="!bg-gradient-to-r !from-green-500 !to-emerald-500 !text-white !text-xs !px-3 !py-1.5"
+                          disabled={eventSaving}
+                          onClick={() => {
+                            setEventForm({ type: "CALLED", note: "", meta: "" });
+                            addEvent(detailLead.id);
+                          }}
+                        >
+                          📞 Ghi nhận cuộc gọi
+                        </Button>
+                      </div>
+                      {/* Quick call note */}
+                      <div className="flex gap-2 mb-3">
+                        <Input
+                          placeholder="Ghi chú cuộc gọi (nhấn Enter)…"
+                          value={eventForm.type === "CALLED" ? eventForm.note : ""}
+                          onChange={(e) => setEventForm({ type: "CALLED", note: e.target.value, meta: "" })}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !eventSaving && detailLead) {
+                              setEventForm(prev => ({ ...prev, type: "CALLED" }));
+                              addEvent(detailLead.id);
+                            }
+                          }}
+                          className="!text-xs"
+                        />
+                      </div>
+                      {callEvents.length === 0 ? (
+                        <div className="rounded-lg border border-dashed border-cyan-200 bg-white/50 p-3 text-center text-xs text-cyan-600">
+                          Chưa có cuộc gọi nào. Bấm &quot;Ghi nhận cuộc gọi&quot; để thêm.
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+                      ) : (
+                        <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                          {callEvents.map((event) => {
+                            const payload = event.payload as Record<string, unknown> | null | undefined;
+                            const eventNote = payload?.note as string | undefined;
+                            return (
+                              <div key={event.id} className="flex items-start gap-2 rounded-lg bg-white/70 border border-cyan-100 px-3 py-2">
+                                <span className="mt-0.5 text-cyan-500 text-sm">📞</span>
+                                <div className="flex-1 min-w-0">
+                                  {eventNote ? (
+                                    <p className="text-sm text-zinc-700">{eventNote}</p>
+                                  ) : (
+                                    <p className="text-sm text-zinc-400 italic">Đã gọi (không ghi chú)</p>
+                                  )}
+                                  <p className="text-[11px] text-zinc-400 mt-0.5">{relativeTime(event.createdAt)} · {formatDateTimeVi(event.createdAt)}</p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* ── Thêm sự kiện khác ── */}
+                    <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-3">
+                      <h3 className="mb-2 flex items-center gap-2 text-sm font-bold text-blue-800">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-cyan-600 text-xs text-white">+</span>
+                        Thêm sự kiện khác
+                      </h3>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                        <div className="flex-1 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                          <Select value={eventForm.type} onChange={(e) => setEventForm((s) => ({ ...s, type: e.target.value }))}>
+                            {EVENT_OPTIONS.map((type) => (
+                              <option key={type} value={type}>
+                                {STATUS_LABELS[type] || type}
+                              </option>
+                            ))}
+                          </Select>
+                          <Input
+                            placeholder="Ghi chú sự kiện..."
+                            value={eventForm.note}
+                            className="col-span-1 sm:col-span-2"
+                            onChange={(e) => setEventForm((s) => ({ ...s, note: e.target.value }))}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && !eventSaving && detailLead) {
+                                addEvent(detailLead.id);
+                              }
+                            }}
+                          />
+                        </div>
+                        <Button
+                          className="!bg-gradient-to-r !from-blue-600 !to-cyan-600 !text-white shrink-0"
+                          disabled={eventSaving}
+                          onClick={() => addEvent(detailLead.id)}
+                        >
+                          {eventSaving ? "Đang lưu..." : "Lưu"}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* ── Nhật ký sự kiện khác ── */}
+                    {otherEvents.length > 0 ? (
+                      <div>
+                        <h3 className="mb-2 flex items-center gap-2 text-sm font-bold text-zinc-900">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-xs text-white">📋</span>
+                          Sự kiện khác ({otherEvents.length})
+                        </h3>
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {otherEvents.map((event) => {
+                            const es = statusStyle(event.type);
+                            const payload = event.payload as Record<string, unknown> | null | undefined;
+                            const eventNote = payload?.note as string | undefined;
+                            return (
+                              <div key={event.id} className={`overflow-hidden rounded-xl border ${es.border} bg-white shadow-sm`}>
+                                <div className={`h-0.5 bg-gradient-to-r ${es.gradient}`} />
+                                <div className="p-3">
+                                  <div className="flex items-center justify-between text-sm">
+                                    <span className={`inline-flex items-center gap-1 rounded-full ${es.bg} ${es.text} px-2 py-0.5 text-xs font-bold`}>
+                                      {es.icon} {STATUS_LABELS[event.type] || event.type}
+                                    </span>
+                                    <span className="text-xs text-zinc-500">{relativeTime(event.createdAt)}</span>
+                                  </div>
+                                  {eventNote ? (
+                                    <p className="mt-1.5 text-sm text-zinc-700 pl-1">💬 {eventNote}</p>
+                                  ) : null}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : null}
+                  </>
+                );
+              })()}
             </div>
           ) : null}
         </Modal>

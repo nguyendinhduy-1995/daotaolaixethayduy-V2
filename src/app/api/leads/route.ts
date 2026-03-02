@@ -101,6 +101,7 @@ export async function GET(req: Request) {
         take: pageSize,
         include: {
           owner: { select: { id: true, name: true, email: true, role: true, isActive: true } },
+          _count: { select: { events: { where: { type: "CALLED" } } } },
         },
       }),
       prisma.lead.count({ where }),
