@@ -836,17 +836,17 @@ export default function LeadsPage() {
                         <p className="truncate text-sm font-bold text-zinc-900">{lead.fullName || "Chưa có tên"}</p>
                         <p className="text-xs text-zinc-500 font-mono">{lead.phone || "Chưa có SĐT"}</p>
                       </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <span className={`inline-flex items-center gap-1 rounded-full ${s.bg} ${s.text} border ${s.border} px-2 py-0.5 text-xs font-bold`}>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className={`inline-flex items-center gap-1 rounded-full ${s.bg} ${s.text} border ${s.border} px-2 py-0.5 text-[10px] font-bold whitespace-nowrap`}>
                           {STATUS_LABELS[lead.status] || lead.status}
                         </span>
                         {callCount > 0 ? (
-                          <span className="inline-flex items-center gap-0.5 rounded-full bg-cyan-50 text-cyan-700 border border-cyan-200 px-1.5 py-0.5 text-[10px] font-bold">
-                            📞 {callCount}
+                          <span className="inline-flex items-center gap-0.5 rounded-full bg-cyan-50 text-cyan-700 border border-cyan-200 px-1.5 py-0.5 text-[10px] font-bold whitespace-nowrap">
+                            📞{callCount}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-0.5 rounded-full bg-red-50 text-red-600 border border-red-200 px-1.5 py-0.5 text-[10px] font-bold">
-                            ⚠️ Chưa gọi
+                          <span className="inline-flex items-center rounded-full bg-red-50 text-red-600 border border-red-200 px-1.5 py-0.5 text-[10px] font-bold whitespace-nowrap">
+                            ⚠️
                           </span>
                         )}
                       </div>
