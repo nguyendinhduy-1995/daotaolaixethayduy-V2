@@ -105,8 +105,13 @@ export async function resolveScope(user: { sub: string; role: string }): Promise
     return { mode: "OWNER", ownerId: user.sub };
   }
 
-  if (role === "telesales" || role === "direct_page") {
+  if (role === "telesales") {
     return { mode: "OWNER", ownerId: user.sub, branchId: dbUser?.branchId ?? undefined };
+  }
+
+  // direct_page gets full access to leads (SYSTEM mode)
+  if (role === "direct_page") {
+    return { mode: "SYSTEM" };
   }
 
   if (dbUser?.branchId) return { mode: "BRANCH", branchId: dbUser.branchId };

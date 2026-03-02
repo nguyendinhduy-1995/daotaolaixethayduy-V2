@@ -380,7 +380,7 @@ export default function LeadsPage() {
     try {
       const data = await fetchJson<UsersResponse>("/api/users?page=1&pageSize=100&isActive=true", { token });
       const active = data.items.filter((item) => item.isActive && item.role !== "admin");
-      const saleLike = active.filter((item) => item.role === "telesales" || item.role === "direct_page");
+      const saleLike = active.filter((item) => item.role === "telesales" || item.role === "direct_page" || item.role === "manager");
       setOwners(saleLike.length > 0 ? saleLike : active);
     } catch {
       setOwners([]);

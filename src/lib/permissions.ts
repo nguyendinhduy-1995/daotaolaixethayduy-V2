@@ -105,6 +105,9 @@ const TELESALES_DEFAULT: PermissionMatrix = {
 };
 
 const DIRECT_PAGE_DEFAULT: PermissionMatrix = mergeMatrix(TELESALES_DEFAULT, {
+  leads: ["VIEW", "CREATE", "UPDATE", "DELETE", "ASSIGN", "EXPORT"],
+  leads_board: ["VIEW", "UPDATE", "ASSIGN"],
+  admin_users: ["VIEW"],
   messaging: ["VIEW", "CREATE"],
   receipts: ["VIEW", "CREATE"],
   my_payroll: VIEW_ONLY,
