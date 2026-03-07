@@ -877,16 +877,36 @@ export default function LeadsPage() {
         <div className="hidden md:block">
           <FilterCard
             actions={
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setQInput("");
-                  setFilters(INITIAL_FILTERS);
-                  setPage(1);
-                }}
-              >
-                Làm mới
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setQInput("");
+                    setFilters(INITIAL_FILTERS);
+                    setPage(1);
+                  }}
+                >
+                  Làm mới
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    const params = new URLSearchParams();
+                    if (filters.status) params.set("status", filters.status);
+                    if (filters.source) params.set("source", filters.source);
+                    if (filters.ownerId) params.set("ownerId", filters.ownerId);
+                    const url = `/api/leads/export${params.toString() ? `?${params}` : ""}`;
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "";
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                  }}
+                >
+                  📥 Xuất CSV
+                </Button>
+              </div>
             }
           >
             <div className="grid gap-2 md:grid-cols-4">
