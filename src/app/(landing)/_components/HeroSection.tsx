@@ -72,40 +72,43 @@ export default function HeroSection({ scrollTo }: Props) {
                 background: "linear-gradient(135deg, #FFF8E7 0%, #FFF3CD 50%, #FFEAA0 100%)",
             }}
         >
-            {/* ── Sun in top-right corner ── */}
-            <div className="absolute top-6 right-6 md:top-10 md:right-16 pointer-events-none" style={{ zIndex: 1 }}>
-                <svg width="120" height="120" viewBox="0 0 120 120" className="md:w-[160px] md:h-[160px]">
+            {/* ── Sun in top-right corner (professional, no face) ── */}
+            <div className="absolute -top-10 -right-10 md:-top-12 md:-right-12 pointer-events-none" style={{ zIndex: 1 }}>
+                <svg width="160" height="160" viewBox="0 0 160 160" className="md:w-[200px] md:h-[200px]">
+                    <defs>
+                        <radialGradient id="sunGrad" cx="50%" cy="50%" r="50%">
+                            <stop offset="0%" stopColor="#fde68a" />
+                            <stop offset="60%" stopColor="#fbbf24" />
+                            <stop offset="100%" stopColor="#f59e0b" />
+                        </radialGradient>
+                        <radialGradient id="sunGlow" cx="50%" cy="50%" r="50%">
+                            <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.3" />
+                            <stop offset="100%" stopColor="#fbbf24" stopOpacity="0" />
+                        </radialGradient>
+                    </defs>
                     <style>{`
-                        @keyframes sun-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-                        @keyframes sun-pulse { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
-                        .sun-rays { animation: sun-spin 30s linear infinite; transform-origin: 60px 60px; }
-                        .sun-glow { animation: sun-pulse 3s ease-in-out infinite; }
+                        @keyframes sun-rotate { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                        @keyframes sun-glow-pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+                        .sun-ray-group { animation: sun-rotate 60s linear infinite; transform-origin: 80px 80px; }
+                        .sun-outer-glow { animation: sun-glow-pulse 4s ease-in-out infinite; }
                     `}</style>
-                    {/* Glow */}
-                    <circle cx="60" cy="60" r="40" fill="#fbbf24" opacity="0.15" className="sun-glow" />
-                    <circle cx="60" cy="60" r="30" fill="#fbbf24" opacity="0.2" className="sun-glow" />
-                    {/* Rays */}
-                    <g className="sun-rays">
-                        {Array.from({ length: 12 }).map((_, i) => (
-                            <line
+                    {/* Outer glow */}
+                    <circle cx="80" cy="80" r="70" fill="url(#sunGlow)" className="sun-outer-glow" />
+                    {/* Rays — elegant triangular */}
+                    <g className="sun-ray-group" opacity="0.6">
+                        {Array.from({ length: 16 }).map((_, i) => (
+                            <polygon
                                 key={i}
-                                x1="60" y1="10" x2="60" y2="22"
-                                stroke="#f59e0b" strokeWidth="3" strokeLinecap="round"
-                                transform={`rotate(${i * 30} 60 60)`}
+                                points="80,12 76,32 84,32"
+                                fill="#f59e0b"
+                                opacity={i % 2 === 0 ? "0.7" : "0.4"}
+                                transform={`rotate(${i * 22.5} 80 80)`}
                             />
                         ))}
                     </g>
-                    {/* Sun face */}
-                    <circle cx="60" cy="60" r="22" fill="#fbbf24" />
-                    <circle cx="60" cy="60" r="18" fill="#fcd34d" />
-                    {/* Eyes */}
-                    <circle cx="52" cy="56" r="2.5" fill="#92400e" />
-                    <circle cx="68" cy="56" r="2.5" fill="#92400e" />
-                    {/* Smile */}
-                    <path d="M52 65 Q60 72 68 65" stroke="#92400e" strokeWidth="2" fill="none" strokeLinecap="round" />
-                    {/* Cheeks */}
-                    <circle cx="48" cy="63" r="3" fill="#f97316" opacity="0.3" />
-                    <circle cx="72" cy="63" r="3" fill="#f97316" opacity="0.3" />
+                    {/* Sun body */}
+                    <circle cx="80" cy="80" r="28" fill="url(#sunGrad)" />
+                    <circle cx="80" cy="80" r="22" fill="#fde68a" opacity="0.5" />
                 </svg>
             </div>
 
