@@ -72,6 +72,49 @@ export default function HeroSection({ scrollTo }: Props) {
                 background: "linear-gradient(135deg, #FFF8E7 0%, #FFF3CD 50%, #FFEAA0 100%)",
             }}
         >
+            {/* ── Driving Car Animation CSS ── */}
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                @keyframes drive-car {
+                    0% { transform: translateX(-220px); }
+                    100% { transform: translateX(calc(100vw + 50px)); }
+                }
+                @keyframes car-bounce {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-2px); }
+                }
+                @keyframes wheel-spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+                @keyframes dust-puff {
+                    0% { opacity: 0.6; transform: scale(0.5) translateX(0); }
+                    60% { opacity: 0.3; }
+                    100% { opacity: 0; transform: scale(2) translateX(-30px); }
+                }
+                @keyframes road-dash {
+                    0% { stroke-dashoffset: 0; }
+                    100% { stroke-dashoffset: -40; }
+                }
+                .hero-car-wrapper {
+                    animation: drive-car 12s linear infinite;
+                }
+                .hero-car-body {
+                    animation: car-bounce 0.4s ease-in-out infinite;
+                }
+                .hero-wheel {
+                    animation: wheel-spin 0.6s linear infinite;
+                }
+                .hero-dust {
+                    animation: dust-puff 0.8s ease-out infinite;
+                }
+                .hero-dust:nth-child(2) { animation-delay: 0.25s; }
+                .hero-dust:nth-child(3) { animation-delay: 0.5s; }
+                .hero-road-dash {
+                    animation: road-dash 0.8s linear infinite;
+                }
+            `}} />
+
             <div className="mx-auto max-w-[1040px] px-4 py-12 md:py-20">
                 <h1 className="ld-fade-up text-[28px] font-semibold leading-[1.12] tracking-tight text-slate-900 md:text-[34px]">
                     Học lái xe nhanh –<br />
@@ -121,7 +164,60 @@ export default function HeroSection({ scrollTo }: Props) {
                 </div>
             </div>
 
-            <svg className="absolute bottom-0 left-0 w-full" viewBox="0 0 1440 60" preserveAspectRatio="none">
+            {/* ── Road + Driving Car ── */}
+            <div className="absolute bottom-[18px] left-0 w-full pointer-events-none" style={{ zIndex: 2 }}>
+                {/* Road surface */}
+                <svg className="absolute bottom-0 left-0 w-full" height="28" preserveAspectRatio="none" viewBox="0 0 1440 28">
+                    <rect y="0" width="1440" height="28" fill="#4a4a4a" rx="2" />
+                    <line x1="0" y1="14" x2="1440" y2="14"
+                        stroke="#e2e2a0" strokeWidth="2" strokeDasharray="20 20"
+                        className="hero-road-dash" />
+                </svg>
+
+                {/* Animated car */}
+                <div className="hero-car-wrapper" style={{ position: "absolute", bottom: "14px" }}>
+                    <div className="hero-car-body" style={{ position: "relative" }}>
+                        {/* Dust particles behind car */}
+                        <div style={{ position: "absolute", right: "160px", bottom: "2px" }}>
+                            <div className="hero-dust" style={{ position: "absolute", width: 8, height: 8, borderRadius: "50%", background: "rgba(180,160,120,0.5)", right: 0, bottom: 0 }} />
+                            <div className="hero-dust" style={{ position: "absolute", width: 6, height: 6, borderRadius: "50%", background: "rgba(180,160,120,0.4)", right: 8, bottom: 4 }} />
+                            <div className="hero-dust" style={{ position: "absolute", width: 10, height: 10, borderRadius: "50%", background: "rgba(180,160,120,0.3)", right: -4, bottom: -2 }} />
+                        </div>
+
+                        {/* Car SVG */}
+                        <svg width="200" height="80" viewBox="0 0 200 80" fill="none">
+                            {/* Car body */}
+                            <rect x="20" y="30" width="160" height="32" rx="6" fill="#FFFFFF" stroke="#cbd5e1" strokeWidth="1.5" />
+                            {/* Cabin/windows */}
+                            <path d="M55 30 L70 12 L130 12 L145 30" fill="#bfdbfe" stroke="#94a3b8" strokeWidth="1" />
+                            <line x1="100" y1="12" x2="100" y2="30" stroke="#94a3b8" strokeWidth="1" />
+                            {/* Roof sign: TẬP LÁI */}
+                            <rect x="75" y="2" width="50" height="12" rx="3" fill="#f59e0b" />
+                            <text x="100" y="11" textAnchor="middle" fill="#fff" fontSize="7" fontWeight="700" fontFamily="sans-serif">TẬP LÁI</text>
+                            {/* Headlight */}
+                            <rect x="174" y="38" width="8" height="6" rx="2" fill="#fef08a" />
+                            {/* Tail light */}
+                            <rect x="18" y="38" width="6" height="6" rx="2" fill="#ef4444" />
+                            {/* Front wheel */}
+                            <g transform="translate(145, 62)">
+                                <circle r="12" fill="#374151" />
+                                <circle r="8" fill="#6b7280" />
+                                <circle r="3" fill="#374151" />
+                                <line x1="-6" y1="0" x2="6" y2="0" stroke="#9ca3af" strokeWidth="1" className="hero-wheel" style={{ transformOrigin: "0 0" }} />
+                            </g>
+                            {/* Rear wheel */}
+                            <g transform="translate(55, 62)">
+                                <circle r="12" fill="#374151" />
+                                <circle r="8" fill="#6b7280" />
+                                <circle r="3" fill="#374151" />
+                                <line x1="-6" y1="0" x2="6" y2="0" stroke="#9ca3af" strokeWidth="1" className="hero-wheel" style={{ transformOrigin: "0 0" }} />
+                            </g>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <svg className="absolute bottom-0 left-0 w-full" style={{ zIndex: 3 }} viewBox="0 0 1440 60" preserveAspectRatio="none">
                 <path fill="#ffffff" d="M0,40 C480,80 960,0 1440,40 L1440,60 L0,60 Z" />
             </svg>
 

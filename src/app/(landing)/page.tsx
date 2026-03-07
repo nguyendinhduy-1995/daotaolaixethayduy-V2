@@ -11,6 +11,8 @@ import TrainingRoadmap from "./_components/TrainingRoadmap";
 import UpgradeProcess from "./_components/UpgradeProcess";
 import PostEnrollRoadmap from "./_components/PostEnrollRoadmap";
 import ToolsHub from "./_components/ToolsHub";
+import GallerySection from "./_components/GallerySection";
+import VideoSection from "./_components/VideoSection";
 import LeadForm from "./_components/LeadForm";
 import FooterCTA from "./_components/FooterCTA";
 import BottomNav from "./_components/BottomNav";
@@ -75,6 +77,12 @@ export default function LandingPage() {
                 <div ref={(el) => { sectionRefs.current.tools = el; }} id="tools">
                     <ToolsHub />
                 </div>
+
+                <div ref={(el) => { sectionRefs.current.gallery = el; }} id="gallery">
+                    <GallerySection />
+                </div>
+
+                <VideoSection />
 
                 <div ref={(el) => { sectionRefs.current["dang-ky"] = el; }} id="dang-ky">
                     <LeadForm />
