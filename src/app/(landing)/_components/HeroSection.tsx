@@ -72,6 +72,43 @@ export default function HeroSection({ scrollTo }: Props) {
                 background: "linear-gradient(135deg, #FFF8E7 0%, #FFF3CD 50%, #FFEAA0 100%)",
             }}
         >
+            {/* ── Sun in top-right corner ── */}
+            <div className="absolute top-6 right-6 md:top-10 md:right-16 pointer-events-none" style={{ zIndex: 1 }}>
+                <svg width="120" height="120" viewBox="0 0 120 120" className="md:w-[160px] md:h-[160px]">
+                    <style>{`
+                        @keyframes sun-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                        @keyframes sun-pulse { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
+                        .sun-rays { animation: sun-spin 30s linear infinite; transform-origin: 60px 60px; }
+                        .sun-glow { animation: sun-pulse 3s ease-in-out infinite; }
+                    `}</style>
+                    {/* Glow */}
+                    <circle cx="60" cy="60" r="40" fill="#fbbf24" opacity="0.15" className="sun-glow" />
+                    <circle cx="60" cy="60" r="30" fill="#fbbf24" opacity="0.2" className="sun-glow" />
+                    {/* Rays */}
+                    <g className="sun-rays">
+                        {Array.from({ length: 12 }).map((_, i) => (
+                            <line
+                                key={i}
+                                x1="60" y1="10" x2="60" y2="22"
+                                stroke="#f59e0b" strokeWidth="3" strokeLinecap="round"
+                                transform={`rotate(${i * 30} 60 60)`}
+                            />
+                        ))}
+                    </g>
+                    {/* Sun face */}
+                    <circle cx="60" cy="60" r="22" fill="#fbbf24" />
+                    <circle cx="60" cy="60" r="18" fill="#fcd34d" />
+                    {/* Eyes */}
+                    <circle cx="52" cy="56" r="2.5" fill="#92400e" />
+                    <circle cx="68" cy="56" r="2.5" fill="#92400e" />
+                    {/* Smile */}
+                    <path d="M52 65 Q60 72 68 65" stroke="#92400e" strokeWidth="2" fill="none" strokeLinecap="round" />
+                    {/* Cheeks */}
+                    <circle cx="48" cy="63" r="3" fill="#f97316" opacity="0.3" />
+                    <circle cx="72" cy="63" r="3" fill="#f97316" opacity="0.3" />
+                </svg>
+            </div>
+
             {/* ── Driving Car Animation CSS ── */}
             <style dangerouslySetInnerHTML={{
                 __html: `
@@ -115,7 +152,7 @@ export default function HeroSection({ scrollTo }: Props) {
                 }
             `}} />
 
-            <div className="mx-auto max-w-[1040px] px-4 pt-12 pb-28 md:pt-20 md:pb-36">
+            <div className="mx-auto max-w-[1040px] px-4 pt-12 pb-40 md:pt-20 md:pb-48">
                 <h1 className="ld-fade-up text-[28px] font-semibold leading-[1.12] tracking-tight text-slate-900 md:text-[34px]">
                     Học lái xe nhanh –<br />
                     <span className="text-amber-600">Đúng quy trình</span>
