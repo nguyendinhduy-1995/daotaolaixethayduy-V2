@@ -127,7 +127,7 @@ export default function GallerySection() {
                     {[
                         { icon: "🎓", value: "1,000+", label: "Học viên đã tốt nghiệp" },
                         { icon: "🚛", value: "20+", label: "Xe tập lái mới" },
-                        { icon: "📍", value: "2", label: "Chi nhánh hoạt động" },
+                        { icon: "📍", value: "Miền Đông → Cà Mau", label: "Phủ sóng chi nhánh" },
                         { icon: "⭐", value: "98%", label: "Tỷ lệ đậu" },
                     ].map((stat) => (
                         <div

@@ -115,7 +115,7 @@ export default function HeroSection({ scrollTo }: Props) {
                 }
             `}} />
 
-            <div className="mx-auto max-w-[1040px] px-4 py-12 md:py-20">
+            <div className="mx-auto max-w-[1040px] px-4 pt-12 pb-28 md:pt-20 md:pb-36">
                 <h1 className="ld-fade-up text-[28px] font-semibold leading-[1.12] tracking-tight text-slate-900 md:text-[34px]">
                     Học lái xe nhanh –<br />
                     <span className="text-amber-600">Đúng quy trình</span>

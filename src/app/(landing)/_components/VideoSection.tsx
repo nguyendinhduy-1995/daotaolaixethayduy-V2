@@ -57,12 +57,12 @@ export default function VideoSection() {
                     </p>
                 </div>
 
-                <div className={`grid gap-6 md:grid-cols-[1fr_280px] transition-all duration-700 delay-200 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
-                    {/* Main video player */}
-                    <div className="relative overflow-hidden rounded-2xl bg-black shadow-2xl shadow-amber-500/10">
+                <div className={`flex flex-col items-center gap-6 md:flex-row md:justify-center transition-all duration-700 delay-200 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
+                    {/* Main video player — 9:16 portrait */}
+                    <div className="relative overflow-hidden rounded-2xl bg-black shadow-2xl shadow-amber-500/10 w-full max-w-[360px]">
                         <video
                             ref={videoRef}
-                            className="w-full aspect-video"
+                            className="w-full aspect-[9/16]"
                             controls
                             preload="metadata"
                             playsInline
