@@ -3,48 +3,48 @@
 import Link from "next/link";
 import { HOTLINE, HOTLINE_TEL } from "./LandingStyles";
 
+const ZALO_LINK = "https://zalo.me/0948742666";
+
 export default function HeaderBar() {
     return (
-        <header className="fixed top-0 left-0 right-0 z-50 border-b border-slate-200/60 bg-white/70 shadow-sm backdrop-blur-lg">
-            <div className="mx-auto flex max-w-[1040px] items-center justify-between px-4 py-2">
-                {/* Logo */}
-                <Link href="/" className="flex items-center gap-2.5">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500 text-lg font-bold text-white shadow-sm">
-                        🚗
-                    </div>
-                    <span className="hidden text-sm font-semibold text-slate-900 sm:block">
-                        Đào Tạo Lái Xe Thầy Duy
-                    </span>
+        <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100">
+            <div className="mx-auto flex max-w-[1040px] items-center justify-between px-4 h-12">
+                {/* Brand name — clean text only */}
+                <Link href="/" className="text-sm font-bold text-slate-900 tracking-tight">
+                    Thầy Duy <span className="hidden sm:inline text-slate-400 font-normal">| Đào Tạo Lái Xe</span>
                 </Link>
 
-                {/* Hotline */}
-                <a
-                    href={HOTLINE_TEL}
-                    className="flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 transition hover:bg-amber-100"
-                >
-                    <span className="text-sm">📞</span>
-                    <span className="flex flex-col leading-none">
-                        <span className="text-xs font-bold text-slate-900">
-                            <span className="hidden sm:inline">Hotline: </span>{HOTLINE}
-                        </span>
-                        <span className="text-[10px] text-amber-600">Gọi ngay</span>
-                    </span>
-                </a>
-
-                {/* Auth buttons */}
+                {/* Right side */}
                 <div className="flex items-center gap-2">
+                    {/* Hotline — compact pill */}
+                    <a
+                        href={HOTLINE_TEL}
+                        className="flex items-center gap-1.5 rounded-full bg-slate-50 border border-slate-200/60 px-3 py-1.5 transition hover:bg-slate-100"
+                    >
+                        <span className="text-xs">📞</span>
+                        <span className="text-xs font-semibold text-slate-700">{HOTLINE}</span>
+                    </a>
+
+                    {/* Đăng nhập */}
                     <Link
                         href="/student/login"
-                        className="rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 active:scale-[0.97]"
+                        className="hidden sm:inline-flex rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
                     >
                         Đăng nhập
                     </Link>
-                    <Link
-                        href="/student/register"
-                        className="rounded-xl bg-amber-500 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-amber-600 active:scale-[0.97]"
+
+                    {/* Liên hệ Zalo */}
+                    <a
+                        href={ZALO_LINK}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-700 active:scale-[0.97]"
                     >
-                        Đăng ký
-                    </Link>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="flex-shrink-0">
+                            <path d="M12 0C5.373 0 0 4.925 0 11c0 3.178 1.501 6.016 3.875 7.93V24l4.802-2.64A12.52 12.52 0 0012 22c6.627 0 12-4.925 12-11S18.627 0 12 0z" />
+                        </svg>
+                        Zalo
+                    </a>
                 </div>
             </div>
         </header>

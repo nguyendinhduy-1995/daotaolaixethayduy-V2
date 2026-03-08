@@ -173,24 +173,28 @@ export default function HeroSection({ scrollTo }: Props) {
                     </p>
                 </div>
 
-                <div className="ld-fade-up ld-d2 mt-6 flex flex-wrap gap-3">
+                {/* ── CTA Buttons + Urgency ── */}
+                <div className="ld-fade-up ld-d2 mt-6 flex flex-wrap items-center gap-3">
                     <button
                         onClick={() => scrollTo("dang-ky")}
-                        className="ld-pulse inline-flex items-center rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold text-white shadow-md shadow-amber-500/20 transition hover:bg-amber-600 active:scale-[0.97]"
+                        className="ld-pulse inline-flex items-center gap-2 rounded-xl bg-amber-500 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-amber-500/25 transition hover:bg-amber-600 active:scale-[0.97]"
                     >
-                        ĐĂNG KÝ NGAY
+                        <span>✍️</span> ĐĂNG KÝ NGAY — Miễn Phí
                     </button>
                     <button
                         onClick={() => scrollTo("pricing")}
-                        className="inline-flex items-center rounded-xl border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50 active:scale-[0.97]"
+                        className="inline-flex items-center rounded-xl border border-slate-300 bg-white px-6 py-3.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-50 active:scale-[0.97]"
                     >
                         XEM HỌC PHÍ
                     </button>
                 </div>
 
-                <div className="ld-fade-up ld-d3 mt-8 flex flex-wrap gap-2">
+                {/* ── Urgency + Trust badges ── */}
+                <div className="ld-fade-up ld-d3 mt-5 flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 border border-red-200/60 px-3 py-1.5 text-xs font-bold text-red-600 animate-pulse">
+                        🔥 Còn 12 suất tháng 3
+                    </span>
                     {[
-                        { icon: "📁", label: "Hồ Sơ Uy Tín" },
                         { icon: "📅", label: "Lịch Học Linh Hoạt" },
                         { icon: "🏅", label: "Cam Kết Đậu" },
                     ].map((b) => (
@@ -201,6 +205,53 @@ export default function HeroSection({ scrollTo }: Props) {
                             {b.icon} {b.label}
                         </span>
                     ))}
+                </div>
+
+                {/* ── Social Proof Stats ── */}
+                <div className="ld-fade-up ld-d4 mt-6 grid grid-cols-3 gap-2.5 md:gap-4">
+                    {[
+                        { value: "5,000+", label: "Học viên tốt nghiệp", accent: "#d97706" },
+                        { value: "98%", label: "Tỷ lệ đậu sát hạch", accent: "#059669" },
+                        { value: "16", label: "Chi nhánh hoạt động", accent: "#2563eb" },
+                    ].map((stat) => (
+                        <div
+                            key={stat.label}
+                            className="rounded-xl px-2 py-2.5 md:px-3 md:py-3 text-center shadow-sm"
+                            style={{
+                                background: "rgba(255,255,255,0.7)",
+                                backdropFilter: "blur(12px)",
+                                border: "1px solid rgba(255,255,255,0.9)",
+                            }}
+                        >
+                            <p className="text-xl font-black md:text-2xl" style={{ color: stat.accent }}>
+                                {stat.value}
+                            </p>
+                            <p className="mt-0.5 text-[10px] font-medium text-slate-600 md:text-xs leading-tight">{stat.label}</p>
+                        </div>
+                    ))}
+                </div>
+
+                {/* ── Mini testimonial quote ── */}
+                <div
+                    className="ld-fade-up ld-d5 mt-5 flex items-start gap-2.5 rounded-xl px-3.5 py-3 md:max-w-lg"
+                    style={{
+                        background: "rgba(255,255,255,0.55)",
+                        backdropFilter: "blur(8px)",
+                        border: "1px solid rgba(255,255,255,0.8)",
+                    }}
+                >
+                    <div
+                        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                        style={{ background: "linear-gradient(135deg, #10b981, #059669)" }}
+                    >
+                        TH
+                    </div>
+                    <div className="min-w-0">
+                        <p className="text-xs text-slate-600 leading-relaxed italic">
+                            &ldquo;Mình lo lắng lắm nhưng thầy kiên nhẫn chỉ từng bước, giờ tự tin ra đường rồi!&rdquo;
+                        </p>
+                        <p className="mt-1 text-[10px] font-semibold text-slate-500">Thu Hà · B số sàn · <span className="text-emerald-600">Đã tốt nghiệp ✓</span></p>
+                    </div>
                 </div>
             </div>
 

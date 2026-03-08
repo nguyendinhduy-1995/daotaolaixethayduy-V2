@@ -7,7 +7,9 @@ import HeroSection from "./_components/HeroSection";
 import PricingSection from "./_components/PricingSection";
 import PackageIncludes from "./_components/PackageIncludes";
 import PaymentSteps from "./_components/PaymentSteps";
+import RealPhotosStrip from "./_components/RealPhotosStrip";
 import TrainingRoadmap from "./_components/TrainingRoadmap";
+import TestimonialsSection from "./_components/TestimonialsSection";
 import UpgradeProcess from "./_components/UpgradeProcess";
 import PostEnrollRoadmap from "./_components/PostEnrollRoadmap";
 import ToolsHub from "./_components/ToolsHub";
@@ -66,9 +68,15 @@ export default function LandingPage() {
 
                 <PaymentSteps scrollTo={scrollTo} />
 
+                {/* ── Hình ảnh thực tế (mid-page social proof) ── */}
+                <RealPhotosStrip />
+
                 <div ref={(el) => { sectionRefs.current.roadmap = el; }} id="roadmap">
                     <TrainingRoadmap />
                 </div>
+
+                {/* ── Đánh giá từ học viên (trust section) ── */}
+                <TestimonialsSection />
 
                 <UpgradeProcess scrollTo={scrollTo} />
 

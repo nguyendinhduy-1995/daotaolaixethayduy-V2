@@ -8,25 +8,35 @@ interface Props {
 
 const STEPS = [
     {
-        heading: "Ngày 1: Lên trung tâm đăng ký hồ sơ",
-        desc: "Hoàn tất đăng ký, kiểm tra điều kiện, hướng dẫn giấy tờ và vào danh sách lớp.",
+        heading: "Ngày 1",
+        title: "Lên trung tâm đăng ký hồ sơ",
+        desc: "Hoàn tất đăng ký, kiểm tra điều kiện, hướng dẫn giấy tờ.",
+        icon: "📋",
     },
     {
-        heading: "Ngày 2: Học lý thuyết & kiểm tra lý thuyết",
-        desc: "Nếu bận, học viên có thể dời lịch theo sắp xếp của Phòng Đào Tạo.",
-        pill: "Có thể dời lịch",
+        heading: "Ngày 2",
+        title: "Học lý thuyết & kiểm tra",
+        desc: "Nếu bận, học viên có thể dời lịch theo sắp xếp.",
+        icon: "📚",
+        pill: "Linh hoạt",
     },
     {
-        heading: "Ngày 3: Chạy DAT",
+        heading: "Ngày 3",
+        title: "Chạy DAT",
         desc: "Chạy DAT để đủ điều kiện thi theo quy định.",
+        icon: "🛣️",
     },
     {
-        heading: "Ngày 4: Thi tốt nghiệp",
-        desc: "Thi cấp chứng chỉ (tốt nghiệp) theo lịch nhà trường.",
+        heading: "Ngày 4",
+        title: "Thi tốt nghiệp",
+        desc: "Thi cấp chứng chỉ theo lịch nhà trường.",
+        icon: "📝",
     },
     {
-        heading: "Ngày 5: Thi sát hạch",
-        desc: "Thi sát hạch theo lịch Sở để hoàn tất và nhận bằng.",
+        heading: "Ngày 5",
+        title: "Thi sát hạch – Nhận bằng",
+        desc: "Thi sát hạch theo lịch Sở, hoàn tất nhận bằng.",
+        icon: "🏆",
     },
 ];
 
@@ -34,92 +44,80 @@ export default function UpgradeProcess({ scrollTo }: Props) {
     return (
         <section
             id="upgrade-timeline"
-            className="mx-auto max-w-[1040px] px-4 py-10 md:py-14"
-            style={{ scrollMarginTop: 96 }}
+            className="py-12 md:py-16"
+            style={{ scrollMarginTop: 96, background: "linear-gradient(180deg, #fff 0%, #fffbeb 100%)" }}
         >
-            <RevealSection>
-                {(visible) => (
-                    <div className={visible ? "ld-fade-up" : "opacity-0"}>
-                        {/* ── Title + Sub ── */}
-                        <h2 className="mx-auto max-w-[52ch] text-center text-[20px] font-semibold tracking-tight text-slate-900 md:text-[28px]">
-                            Quy trình nâng hạng – Chỉ cần có mặt 5 ngày
-                        </h2>
-                        <p className="mx-auto mt-2 max-w-[52ch] text-center text-[13px] leading-relaxed text-slate-600 md:text-[15px]">
-                            Để học viên chủ động thời gian: 2&nbsp;–&nbsp;2,5
-                            tháng có bằng. Tổng cộng chỉ cần có mặt 5 ngày theo các mốc dưới
-                            đây.
-                        </p>
-
-                        {/* ── Stepper ── */}
-                        <div className="relative mt-8 md:mt-10">
-                            {/* vertical line */}
-                            <div className="absolute left-[15px] top-0 h-full w-0.5 bg-amber-300 md:left-[17px]" />
-
-                            <div className="space-y-3.5 md:space-y-[18px]">
-                                {STEPS.map((s, idx) => (
-                                    <div
-                                        key={idx}
-                                        className={`relative grid items-start gap-3 md:gap-4 ${visible ? `ld-slide-r ld-d${Math.min(idx + 1, 6)}` : "opacity-0"}`}
-                                        style={{ gridTemplateColumns: "44px 1fr" }}
-                                    >
-                                        {/* circle */}
-                                        <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-500 text-xs font-semibold text-white shadow-sm md:h-9 md:w-9 md:text-sm">
-                                            {idx + 1}
-                                        </div>
-
-                                        {/* card */}
-                                        <div className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm transition-[box-shadow,border-color] duration-200 hover:border-slate-200 hover:shadow-md md:p-5">
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <h3 className="text-[15px] font-semibold leading-snug text-slate-900 md:text-base">
-                                                    {s.heading}
-                                                </h3>
-                                                {s.pill && (
-                                                    <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
-                                                        {s.pill}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <p className="mt-1 text-[13px] leading-relaxed text-slate-600 md:text-sm">
-                                                {s.desc}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))}
+            <div className="mx-auto max-w-[1040px] px-4">
+                <RevealSection>
+                    {(visible) => (
+                        <div className={visible ? "ld-fade-up" : "opacity-0"}>
+                            {/* Header */}
+                            <div className="text-center mb-8">
+                                <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 border border-amber-200/60 px-3 py-1 text-xs font-bold text-amber-700 mb-3">
+                                    ⚡ Chỉ cần có mặt 5 ngày
+                                </div>
+                                <h2 className="text-xl font-extrabold text-slate-900 md:text-2xl tracking-tight">
+                                    Quy Trình Nâng Hạng
+                                </h2>
+                                <p className="mt-1.5 text-sm text-slate-500 max-w-md mx-auto">
+                                    2 – 2,5 tháng có bằng. Chủ động thời gian, chỉ cần có mặt 5 ngày
+                                </p>
                             </div>
-                        </div>
 
-                        {/* ── Info box ── */}
-                        <div className="mt-6 rounded-2xl border border-amber-200/70 bg-amber-50 p-4 md:mt-8">
-                            <div className="flex items-start gap-2.5">
-                                <span className="mt-0.5 text-lg text-amber-600" aria-hidden>
-                                    ⚡
-                                </span>
-                                <div>
-                                    <p className="text-[14px] font-semibold text-slate-900 md:text-[15px]">
-                                        Lưu ý quan trọng
-                                    </p>
-                                    <p className="mt-1 max-w-[60ch] text-[13px] leading-relaxed text-slate-700 md:text-sm">
-                                        Mốc thời gian 2&nbsp;–&nbsp;2,5 tháng phụ thuộc lịch thi
-                                        của Sở và lịch tổ chức của nhà trường. Các bước còn lại được
-                                        nhắc lịch và hướng dẫn qua Zalo để học viên chủ động sắp
-                                        xếp.
-                                    </p>
+                            {/* Horizontal timeline on desktop, stacked on mobile */}
+                            <div className="relative">
+                                {/* Connection line - desktop */}
+                                <div className="hidden md:block absolute top-[28px] left-[10%] right-[10%] h-0.5 bg-gradient-to-r from-amber-300 via-amber-500 to-amber-300 z-0" />
+
+                                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5 md:gap-2">
+                                    {STEPS.map((s, idx) => (
+                                        <div
+                                            key={idx}
+                                            className={`relative flex flex-col items-center text-center ${visible ? `ld-scale-in ld-d${idx + 1}` : "opacity-0"}`}
+                                        >
+                                            {/* Circle */}
+                                            <div className="relative z-10 flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-md border border-slate-100 text-xl mb-3">
+                                                {s.icon}
+                                            </div>
+
+                                            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 mb-1">
+                                                {s.heading}
+                                            </span>
+                                            <h3 className="text-xs font-bold text-slate-900 leading-snug mb-1 md:text-sm">{s.title}</h3>
+                                            <p className="text-[11px] text-slate-500 leading-relaxed">{s.desc}</p>
+
+                                            {s.pill && (
+                                                <span className="mt-1.5 inline-flex rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700">
+                                                    {s.pill}
+                                                </span>
+                                            )}
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
-                        </div>
 
-                        {/* ── CTA ── */}
-                        <div className="mt-5 text-center">
-                            <button
-                                onClick={() => scrollTo("dang-ky")}
-                                className="rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold text-white shadow-md shadow-amber-500/20 transition hover:bg-amber-600 active:scale-[0.97]"
-                            >
-                                Đăng ký nâng hạng
-                            </button>
+                            {/* Info + CTA */}
+                            <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-between rounded-2xl bg-amber-50 border border-amber-200/60 p-5">
+                                <div className="flex items-start gap-3">
+                                    <span className="text-lg">⚡</span>
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-900">Lưu ý quan trọng</p>
+                                        <p className="text-xs text-slate-600 mt-0.5 max-w-md">
+                                            Mốc thời gian phụ thuộc lịch thi của Sở. Các bước được nhắc lịch qua Zalo.
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => scrollTo("dang-ky")}
+                                    className="shrink-0 rounded-xl bg-amber-500 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-amber-500/20 transition hover:bg-amber-600 active:scale-[0.97]"
+                                >
+                                    Đăng ký nâng hạng
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                )}
-            </RevealSection>
+                    )}
+                </RevealSection>
+            </div>
         </section>
     );
 }
